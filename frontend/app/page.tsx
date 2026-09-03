@@ -1,69 +1,106 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { FaUsers, FaUserTie, FaTruck } from "react-icons/fa";
+
+export default function LandingPage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+    <div className="bg-white min-h-screen">
+      {/* STICKY HEADER */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+        <nav className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
+          <span className="text-xl font-bold text-gray-900">DETOUR</span>
+          <div className="flex items-center gap-6">
+            <a href="/login" className="text-sm text-gray-700 hover:text-green-500">
+              Sign in
+            </a>
+            <a
+              href="/register"
+              className="text-sm px-4 py-2 rounded-md font-medium text-white bg-orange-500 hover:bg-orange-600"
+            >
+              Get started
+            </a>
+          </div>
+        </nav>
+      </header>
+
+      {/* SECTION 1 — COMPANY */}
+      <section className="max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center">
+        <div>
+          <span className="inline-flex items-center gap-2 text-green-400 font-medium mb-4">
+            <FaUsers /> We are a company
+          </span>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4 leading-tight">
+            Know where your fleet is, without chasing it.
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-gray-600 mb-6">
+            GetOur gives vehicle-owning businesses one place to see every
+            truck, van, or car in real time. Register your company, add your
+            vehicles, and start tracking — no hardware headaches, no
+            spreadsheets, no guessing where a vehicle went.
+          </p>
+          <a
+            href="/register"
+            className="inline-block px-5 py-2.5 rounded-md font-medium text-white bg-orange-500 hover:bg-orange-600"
+          >
+            Register your company
+          </a>
+        </div>
+
+        <div className="w-full aspect-video bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-sm">
+            <img src="viarami-fleet-5153286_1920.jpg" alt="Company Dashboard" className="w-full h-full object-cover" />
+        </div>
+      </section>
+
+      {/* SECTION 2 — ADMIN / COMPANY ASSISTANT */}
+      <section className="max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center">
+        <div className="order-2 md:order-1 w-full aspect-video bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-sm">
+          <img src="/as_photography-digital-marketing-1725340_1920.jpg" alt="Admin Dashboard" className="w-full h-full object-cover" />
+        </div>
+
+        <div className="order-1 md:order-2">
+          <span className="inline-flex items-center gap-2 text-green-400 font-medium mb-4">
+            <FaUserTie /> I am a company admin
+          </span>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
+            Run the fleet from one screen.
+          </h2>
+          <p className="text-gray-600">
+            Add vehicles, assign drivers, and watch every trip unfold live on
+            the map. When something needs your attention — a vehicle idling
+            too long, or straying off route — you'll know before it becomes
+            a problem, not after.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      {/* SECTION 3 — DRIVER */}
+      <section className="max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center">
+        <div>
+          <span className="inline-flex items-center gap-2 text-green-400 font-medium mb-4">
+            <FaTruck /> I am a driver
+          </span>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
+            Your trips, your record, in your pocket.
+          </h2>
+          <p className="text-gray-600">
+            Soon, the GetOur mobile app will let you check in on your
+            assigned vehicle, log trips as you drive, and send an SOS alert
+            the moment something goes wrong. Built for the road, not a desk.
+          </p>
         </div>
-      </main>
+
+        <div className="w-full aspect-video bg-gray-100 flex items-center justify-center text-gray-400 text-sm">
+          <img src="/noelsch-audi-a3-2095801_1920.jpg" alt="Driver Dashboard" className="w-full h-full object-cover" />
+        </div>
+      </section>
+
+      {/* POWERED BY / PARTNERSHIP */}
+      <section className="border-t border-gray-200 py-12">
+        <div className="max-w-6xl mx-auto px-6 text-center">
+          <p className="text-sm text-gray-500 mb-1">Powered by Figbloom</p>
+          <p className="text-sm text-gray-500">In partnership with Movec Systems</p>
+        </div>
+      </section>
     </div>
   );
 }

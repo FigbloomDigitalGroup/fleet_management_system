@@ -1,26 +1,79 @@
 @import "tailwindcss";
 
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+    --ink: #0b1420;
+    --panel: #101b2d;
+    --line: #24344a;
+    --fog: #7c8ba3;
+    --paper: #eef2f8;
+    --signal: #34d399;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+    font-family: var(--font-body), sans-serif;
+    background: var(--ink);
+    color: var(--paper);
+}
+
+input,
+textarea,
+select {
+    color: #111827;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: #9ca3af;
+    opacity: 1;
+}
+
+.font-display {
+    font-family: var(--font-display), sans-serif;
+}
+
+.font-mono {
+    font-family: var(--font-mono), monospace;
+}
+
+@keyframes travel {
+    0% {
+        stroke-dashoffset: 400;
+    }
+
+    100% {
+        stroke-dashoffset: 0;
+    }
+}
+
+.route-line {
+    stroke-dasharray: 400;
+    stroke-dashoffset: 400;
+    animation: travel 2.2s ease-out forwards;
+}
+
+@keyframes pulse-dot {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.4;
+        transform: scale(1.4);
+    }
+}
+
+.pulse-dot {
+    animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .route-line,
+    .pulse-dot {
+        animation: none;
+    }
 }
