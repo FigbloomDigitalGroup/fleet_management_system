@@ -30,7 +30,7 @@ export default function DashboardShell({
       {/* SIDEBAR */}
       <aside className="w-60 bg-white border-r border-gray-200 flex flex-col">
         <div className="px-5 py-5 border-b border-gray-200">
-          <span className="text-lg font-bold text-gray-900">GetOur</span>
+          <span className="text-lg font-bold text-gray-900">DETOUR</span>
           <p className="text-xs text-gray-500 mt-0.5">{title}</p>
         </div>
 
