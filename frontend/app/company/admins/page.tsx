@@ -1,0 +1,149 @@
+"use client";
+
+import { useEffect, useState, FormEvent } from "react";
+import { apiRequest } from "../../lib/api";
+import { AdminRecord } from "../../types/auth";
+
+export default function AdminsPage() {
+  const [admins, setAdmins] = useState<AdminRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  async function loadAdmins() {
+    try {
+      const data = await apiRequest<AdminRecord[]>("/api/users/admins");
+      setAdmins(data);
+    } catch (err: any) {
+      setError(err.message || "Failed to load admins");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadAdmins();
+  }, []);
+
+  async function handleAddAdmin(e: FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+    setIsSubmitting(true);
+
+    try {
+      await apiRequest("/api/auth/users", {
+        method: "POST",
+        body: JSON.stringify({ email, password, fullName, role: "ADMIN" }),
+      });
+      setFullName("");
+      setEmail("");
+      setPassword("");
+      await loadAdmins();
+    } catch (err: any) {
+      setFormError(err.message || "Failed to add admin");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Admins</h1>
+        <p className="text-sm text-gray-500 mt-1">People who manage your fleet's day-to-day tracking</p>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Admins list */}
+        <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg overflow-hidden">
+          {loading && <p className="text-sm text-gray-500 p-5">Loading…</p>}
+          {error && <p className="text-sm text-red-600 p-5">{error}</p>}
+          {!loading && !error && (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+                <tr>
+                  <th className="text-left px-5 py-3 font-medium">Name</th>
+                  <th className="text-left px-5 py-3 font-medium">Email</th>
+                  <th className="text-left px-5 py-3 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {admins.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-5 py-8 text-center text-gray-400">
+                      No admins added yet.
+                    </td>
+                  </tr>
+                ) : (
+                  admins.map((a) => (
+                    <tr key={a._id} className="border-t border-gray-100">
+                      <td className="px-5 py-3 font-medium text-gray-900">{a.fullName}</td>
+                      <td className="px-5 py-3 text-gray-600">{a.email}</td>
+                      <td className="px-5 py-3">
+                        <span className="text-xs px-2 py-1 rounded-full border bg-green-50 text-green-600 border-green-200">
+                          {a.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Add admin form */}
+        <div className="bg-white border border-gray-200 rounded-lg p-5 h-fit">
+          <h3 className="text-sm font-medium text-gray-700 mb-4">Add an admin</h3>
+          <form onSubmit={handleAddAdmin} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Full name</label>
+              <input
+                type="text"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Password</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+              />
+            </div>
+
+            {formError && <p className="text-xs text-red-600">{formError}</p>}
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full py-2 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+            >
+              {isSubmitting ? "Adding…" : "Add admin"}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
