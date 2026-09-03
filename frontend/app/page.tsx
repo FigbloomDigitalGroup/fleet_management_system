@@ -33,7 +33,7 @@ export default function LandingPage() {
             Know where your fleet is, without chasing it.
           </h1>
           <p className="text-gray-600 mb-6">
-            GetOur gives vehicle-owning businesses one place to see every
+            DETOUR gives vehicle-owning businesses one place to see every
             truck, van, or car in real time. Register your company, add your
             vehicles, and start tracking — no hardware headaches, no
             spreadsheets, no guessing where a vehicle went.
@@ -83,7 +83,7 @@ export default function LandingPage() {
             Your trips, your record, in your pocket.
           </h2>
           <p className="text-gray-600">
-            Soon, the GetOur mobile app will let you check in on your
+            Soon, the DETOUR mobile app will let you check in on your
             assigned vehicle, log trips as you drive, and send an SOS alert
             the moment something goes wrong. Built for the road, not a desk.
           </p>
