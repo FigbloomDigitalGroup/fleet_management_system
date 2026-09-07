@@ -17,7 +17,7 @@ router.post("/refresh", refresh);
 router.post(
   "/users",
   authenticate,
-  authorize("COMPANY_OWNER", "PLATFORM_ADMIN"),
+  authorize("COMPANY_OWNER", "PLATFORM_ADMIN", "ADMIN"),
   createUserUnderCompany
 );
 

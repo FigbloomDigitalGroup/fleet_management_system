@@ -1,6 +1,6 @@
 "use client";
 
-import { FaUsers, FaUserTie, FaTruck } from "react-icons/fa";
+import { FaCog } from "react-icons/fa";
 
 export default function LandingPage() {
   return (
@@ -8,7 +8,10 @@ export default function LandingPage() {
       {/* STICKY HEADER */}
       <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
         <nav className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-          <span className="text-xl font-bold text-gray-900">DETOUR</span>
+          <span className="flex items-center gap-2 text-xl font-bold text-blue-400">
+            <FaCog aria-hidden="true" />
+            DETOUR
+          </span>
           <div className="flex items-center gap-6">
             <a href="/login" className="text-sm text-gray-700 hover:text-green-500">
               Sign in
@@ -24,10 +27,10 @@ export default function LandingPage() {
       </header>
 
       {/* SECTION 1 — COMPANY */}
-      <section className="max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center">
+      <section className="landing-section max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center">
         <div>
-          <span className="inline-flex items-center gap-2 text-green-400 font-medium mb-4">
-            <FaUsers /> We are a company
+          <span className="text-2xl text-blue-400 font-bold mb-4 block">
+            We are a company
           </span>
           <h1 className="text-4xl font-bold text-gray-900 mb-4 leading-tight">
             Know where your fleet is, without chasing it.
@@ -46,20 +49,20 @@ export default function LandingPage() {
           </a>
         </div>
 
-        <div className="w-full aspect-video bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-sm">
-            <img src="viarami-fleet-5153286_1920.jpg" alt="Company Dashboard" className="w-full h-full object-cover" />
+        <div className="w-full aspect-video bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-sm">
+          <img src="viarami-fleet-5153286_1920.jpg" alt="Company Dashboard" className="w-full h-full object-cover" />
         </div>
       </section>
 
       {/* SECTION 2 — ADMIN / COMPANY ASSISTANT */}
-      <section className="max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center">
-        <div className="order-2 md:order-1 w-full aspect-video bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-sm">
+      <section className="landing-section max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center">
+        <div className="order-2 md:order-1 w-full aspect-video bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-sm">
           <img src="/as_photography-digital-marketing-1725340_1920.jpg" alt="Admin Dashboard" className="w-full h-full object-cover" />
         </div>
 
         <div className="order-1 md:order-2">
-          <span className="inline-flex items-center gap-2 text-green-400 font-medium mb-4">
-            <FaUserTie /> I am a company admin
+          <span className="text-2xl text-blue-500 font-bold mb-4 block">
+            I am a company admin
           </span>
           <h2 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
             Run the fleet from one screen.
@@ -74,10 +77,10 @@ export default function LandingPage() {
       </section>
 
       {/* SECTION 3 — DRIVER */}
-      <section className="max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center">
+      <section className="landing-section max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center">
         <div>
-          <span className="inline-flex items-center gap-2 text-green-400 font-medium mb-4">
-            <FaTruck /> I am a driver
+          <span className="text-2xl text-blue-400 font-bold mb-4 block">
+            I am a driver
           </span>
           <h2 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
             Your trips, your record, in your pocket.
@@ -89,7 +92,7 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <div className="w-full aspect-video bg-gray-100 flex items-center justify-center text-gray-400 text-sm">
+        <div className="w-full aspect-video bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-sm">
           <img src="/noelsch-audi-a3-2095801_1920.jpg" alt="Driver Dashboard" className="w-full h-full object-cover" />
         </div>
       </section>

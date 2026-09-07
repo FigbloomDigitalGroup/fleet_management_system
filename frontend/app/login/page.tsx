@@ -4,6 +4,8 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { redirectPathForRole } from "../lib/roleRedirect";
+import { FaCog } from "react-icons/fa";
+import BackgroundSlideshow from "../components/BackgroundSlideshow";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -34,40 +36,40 @@ export default function LoginPage() {
       {/* LEFT — Hero panel */}
 
 
-{/* LEFT — Hero panel */}
-<div
-  className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16 border-r border-gray-200 relative bg-cover bg-center"
-  style={{ backgroundImage: "url('/dariuszsankowski-navigation-1048294_1920.jpg')" }}
->
-  {/* dark overlay so text stays readable over the image */}
-  <div className="absolute inset-0 bg-black/50" />
+      {/* LEFT — Hero panel */}
+      <BackgroundSlideshow className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16 border-r border-gray-200">
+        {/* dark overlay so text stays readable over the image */}
+        <div className="absolute inset-0 z-10 bg-black/50" />
 
-  {/* wrap all existing content in a relative div so it sits above the overlay */}
-  <div className="relative z-10 flex flex-col justify-between h-full">
-    <span className="text-xl font-bold text-white">DETOUR</span>
+        {/* wrap all existing content in a relative div so it sits above the overlay */}
+        <div className="relative z-20 flex flex-col justify-between h-full">
+          <span className="flex items-center gap-2 text-xl font-bold text-white">
+            <FaCog aria-hidden="true" />
+            DETOUR
+          </span>
 
-    <div className="flex-1 flex items-center justify-center py-16">
-      {/* ...keep the existing svg exactly as it is... */}
-    </div>
+          <div className="flex-1 flex items-center justify-center py-16">
+            {/* ...keep the existing svg exactly as it is... */}
+          </div>
 
-    <div>
-      <h1 className="text-3xl lg:text-4xl font-bold text-white mb-3 leading-tight">
-        Every vehicle,
-        <br />
-        accounted for.
-      </h1>
-      <p className="text-gray-200 max-w-xs">
-        Live tracking, trip history, and fleet analytics in one place 
-        for owners, admins and drivers alike.
-      </p>
-    </div>
-  </div>
-</div>
+          <div>
+            <h1 className="text-3xl lg:text-4xl font-bold text-white mb-3 leading-tight">
+              Every vehicle,
+              <br />
+              accounted for.
+            </h1>
+            <p className="text-gray-200 max-w-xs">
+              Live tracking, trip history, and fleet analytics in one place
+              for owners, admins and drivers alike.
+            </p>
+          </div>
+        </div>
+      </BackgroundSlideshow>
 
       {/* RIGHT — Form panel */}
       <div className="lg:w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-sm">
-          <h2 className="text-2xl font-bold text-gray-900 mb-1">Sign in</h2>
+          <h2 className="text-5xl font-extrabold text-blue-400 mb-2">Sign in</h2>
           <p className="text-sm text-gray-500 mb-8">Enter your details to reach your dashboard.</p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
