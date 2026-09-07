@@ -13,3 +13,21 @@ export async function listAdmins(req, res) {
     return res.status(500).json({ error: "Failed to fetch admins" });
   }
 }
+
+// List Drivers under the requester's company (or all, for PLATFORM_ADMIN)
+export async function listDrivers(req, res) {
+  try {
+    const filter = { role: "DRIVER", ...tenantScope(req) };
+    const drivers = await User.find(filter).select("-passwordHash").sort({ createdAt: -1 });
+    return res.json(drivers);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to fetch drivers" });
+  }
+}
+
+
+
+
+
+

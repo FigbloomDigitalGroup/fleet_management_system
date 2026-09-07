@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { apiRequest } from "../../lib/api";
 import { CompanyRecord } from "../../types/auth";
 
@@ -66,7 +67,9 @@ export default function CompaniesPage() {
               ) : (
                 companies.map((c) => (
                   <tr key={c._id} className="border-t border-gray-100">
-                    <td className="px-5 py-3 font-medium text-gray-900">{c.name}</td>
+                    <td className="px-5 py-3 font-medium text-green-600 hover:underline">
+                      <Link href={`/platform/companies/${c._id}`}>{c.name}</Link>
+                    </td>
                     <td className="px-5 py-3">
                       <span className={`text-xs px-2 py-1 rounded-full border ${statusStyles[c.status]}`}>
                         {c.status}

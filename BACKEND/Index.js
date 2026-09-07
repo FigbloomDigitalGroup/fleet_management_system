@@ -4,6 +4,13 @@ import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import companyRoutes from "./routes/companyRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import vehicleRoutes from "./routes/vehicleRoutes.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
+import billingRoutes from "./routes/billingRoutes.js";
+import settingsRoutes from "./routes/settingsRoutes.js";
+import tripRoutes from "./routes/tripRoutes.js";
+import alertRoutes from "./routes/alertRoutes.js";
+
 import cors from "cors";
 
 const app = express();
@@ -30,6 +37,12 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/companies", companyRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/vehicles", vehicleRoutes);
+app.use("/api/analytics", analyticsRoutes);
+app.use("/api/billing", billingRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/trips", tripRoutes);
+app.use("/api/alerts", alertRoutes);
 
 
 app.use((req, res) => {

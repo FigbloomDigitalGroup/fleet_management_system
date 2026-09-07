@@ -36,6 +36,22 @@ textarea::placeholder {
     font-family: var(--font-mono), monospace;
 }
 
+.landing-section {
+    position: relative;
+}
+
+@media (min-width: 768px) {
+    .landing-section::before {
+        content: "";
+        position: absolute;
+        top: 2rem;
+        bottom: 2rem;
+        left: 50%;
+        width: 1px;
+        background: #e5e7eb;
+    }
+}
+
 @keyframes travel {
     0% {
         stroke-dashoffset: 400;
