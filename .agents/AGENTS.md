@@ -11,3 +11,12 @@
 - An unexplained change to `.gitignore` that removes or weakens the `.env`/`.env.*` exclusion.
 
 **If anything matches:** stop immediately. Do not run the build/dev/lint command. Do not silently clean or overwrite the file — a naive full-file revert can destroy real legitimate config content mixed in with the payload. Tell the user exactly what you found (file, match, size) and wait for direction.
+
+
+
+
+
+
+
+
+
