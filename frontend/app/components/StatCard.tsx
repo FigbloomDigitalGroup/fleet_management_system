@@ -60,7 +60,7 @@ export default function StatCard({
             <Icon />
           </span>
         </div>
-        <p className="text-2xl font-bold text-blue-950">{value}</p>
+        <p className="text-xl font-bold text-orange-500/60">{value}</p>
       </div>
     </div>
   );

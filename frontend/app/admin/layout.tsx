@@ -6,7 +6,7 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import DashboardShell from "../components/DashboardShell";
 
 const navItems = [
-  { label: "Dashboard", href: "/admin/dashboard", icon: FiHome },
+  { label: "Overview", href: "/admin/dashboard", icon: FiHome },
   { label: "Live Map", href: "/admin/live-map", icon: FiMapPin },
   { label: "Vehicles", href: "/admin/vehicles", icon: FiTruck },
   { label: "Drivers", href: "/admin/drivers", icon: FiUsers },

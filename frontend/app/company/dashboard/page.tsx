@@ -65,7 +65,7 @@ export default function CompanyDashboard() {
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  usePageHeader(company?.name ? `${company.name} overview` : "Dashboard", `Signed in as ${user?.email}`);
+  usePageHeader("Dashboard", `Signed in as ${user?.email}`);
 
   useEffect(() => {
     async function loadAll() {

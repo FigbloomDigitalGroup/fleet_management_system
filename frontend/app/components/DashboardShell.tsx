@@ -4,6 +4,8 @@ import { ReactNode, createContext, useContext, useEffect, useMemo, useState } fr
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
+import { apiRequest } from "../lib/api";
+import { CompanyRecord } from "../types/auth";
 import { IconType } from "react-icons";
 import { FiBell } from "react-icons/fi";
 import { FaCog } from "react-icons/fa";
@@ -49,10 +51,29 @@ export default function DashboardShell({
   title: string;
 }) {
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const alertsHref = navItems.find((item) => item.label === "Alerts")?.href;
   const [header, setHeader] = useState<PageHeaderValue | null>(null);
   const headerContextValue = useMemo(() => ({ header, setHeader }), [header]);
+
+  // Company name shown in the header on every page — fetched once here so
+  // company owners and admins don't have to re-fetch it per page.
+  const [companyName, setCompanyName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.role !== "COMPANY_OWNER" && user?.role !== "ADMIN") return;
+    let cancelled = false;
+    apiRequest<CompanyRecord>("/api/companies/me")
+      .then((company) => {
+        if (!cancelled) setCompanyName(company.name);
+      })
+      .catch(() => {
+        if (!cancelled) setCompanyName(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.role]);
 
   return (
     <div className="h-screen overflow-hidden bg-gray-100 flex">
@@ -93,6 +114,7 @@ export default function DashboardShell({
         {/* FLOATING HEADER — holds the current page's title, pinned above the scroll */}
         <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between bg-white px-6 py-4">
           <div>
+            {companyName && <p className="text-xs font-medium text-gray-400">{companyName}</p>}
             {header && <h1 className="text-lg font-bold text-blue-950">{header.title}</h1>}
           </div>
           <div className="flex items-center gap-2">

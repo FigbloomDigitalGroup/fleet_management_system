@@ -18,7 +18,7 @@ import DashboardShell from "../components/DashboardShell";
 
 
 const navItems = [
-  { label: "Dashboard", href: "/company/dashboard", icon: FiHome },
+  { label: "Overview", href: "/company/dashboard", icon: FiHome },
   { label: "Live Map", href: "/company/live-map", icon: FiMapPin },
   { label: "Vehicles", href: "/company/vehicles", icon: FiTruck },
    { label: "Trips", href: "/company/trips", icon: FiFileText },

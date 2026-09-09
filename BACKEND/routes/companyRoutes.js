@@ -13,7 +13,7 @@ const router = express.Router();
 router.use(authenticate);
 
 router.get("/", authorize("PLATFORM_ADMIN"), listCompanies);
-router.get("/me", authorize("COMPANY_OWNER", "PLATFORM_ADMIN"), getMyCompany);
+router.get("/me", authorize("COMPANY_OWNER", "ADMIN", "PLATFORM_ADMIN"), getMyCompany);
 router.get("/:id", authorize("PLATFORM_ADMIN"), getCompany);
 router.patch("/:id/status", authorize("PLATFORM_ADMIN"), updateCompanyStatus);
 router.patch("/me", authorize("COMPANY_OWNER"), updateMyCompany);
