@@ -31,7 +31,7 @@ app.use(
 app.use(express.json());
 
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", server: "running" });
+  res.json({ status: "ok", server: "running" })
 });
 
 app.use("/api/auth", authRoutes);
@@ -56,3 +56,4 @@ connectDB().then(() => {
     console.log(`Server running: http://localhost:${PORT}`);
   });
 });
+

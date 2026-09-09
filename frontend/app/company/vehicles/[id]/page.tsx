@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { FiArrowLeft } from "react-icons/fi";
 import { apiRequest } from "../../../lib/api";
+import FullPageLoading from "@/app/components/FullPageLoading";
 import { VehicleRecord } from "../../../types/auth";
 
 const statusStyles: Record<string, string> = {
@@ -28,19 +28,19 @@ export default function CompanyVehicleDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <p className="text-sm text-gray-500">Loading…</p>;
+  if (loading) return <FullPageLoading />;
   if (error) return <p className="text-sm text-red-600">{error}</p>;
   if (!vehicle) return null;
 
   return (
     <div>
-      <button onClick={() => router.back()} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-6">
-        <FiArrowLeft size={14} /> Back
+      <button onClick={() => router.back()} className="mb-6 rounded-md bg-gray-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-600">
+        Back
       </button>
 
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{vehicle.plateNumber}</h1>
+          <h1 className="text-2xl font-bold text-blue-950">{vehicle.plateNumber}</h1>
           <p className="text-sm text-gray-500 mt-1">
             {[vehicle.make, vehicle.model].filter(Boolean).join(" ") || "No make/model set"}
           </p>

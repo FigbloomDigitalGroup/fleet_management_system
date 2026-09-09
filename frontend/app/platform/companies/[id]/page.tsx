@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { apiRequest } from "../../../lib/api";
+import FullPageLoading from "@/app/components/FullPageLoading";
 import { CompanyRecord, AdminRecord } from "../../../types/auth";
-import { FiArrowLeft } from "react-icons/fi";
 
 const statusStyles: Record<string, string> = {
   active: "bg-green-50 text-green-600 border-green-200",
@@ -55,7 +55,7 @@ export default function CompanyDetailPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-gray-500">Loading…</p>;
+  if (loading) return <FullPageLoading />;
   if (error) return <p className="text-sm text-red-600">{error}</p>;
   if (!company) return null;
 
@@ -63,14 +63,14 @@ export default function CompanyDetailPage() {
     <div>
       <button
         onClick={() => router.push("/platform/companies")}
-        className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-6"
+        className="mb-6 rounded-md bg-gray-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-600"
       >
-        <FiArrowLeft size={14} /> Back to companies
+        Back to companies
       </button>
 
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{company.name}</h1>
+          <h1 className="text-2xl font-bold text-blue-950">{company.name}</h1>
           <p className="text-sm text-gray-500 mt-1">/{company.slug}</p>
         </div>
         <span className={`text-xs px-3 py-1.5 rounded-full border font-medium ${statusStyles[company.status]}`}>
@@ -101,7 +101,7 @@ export default function CompanyDetailPage() {
             </dl>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="bg-white rounded-lg overflow-hidden">
             <h3 className="text-sm font-medium text-gray-700 p-5 pb-0">Users</h3>
             <table className="w-full text-sm mt-3">
               <thead className="bg-gray-50 text-gray-500 text-xs uppercase">

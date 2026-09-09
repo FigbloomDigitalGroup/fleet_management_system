@@ -69,12 +69,12 @@ export default function VehiclesList() {
         {error && <p className="text-sm text-red-600 p-5">{error}</p>}
         {!loading && !error && (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+            <thead className="bg-gray-50 text-black text-xs uppercase">
               <tr>
-                <th className="text-left px-5 py-3 font-medium">Plate</th>
-                <th className="text-left px-5 py-3 font-medium">Make / Model</th>
-                <th className="text-left px-5 py-3 font-medium">Status</th>
-                <th className="text-left px-5 py-3 font-medium">Driver</th>
+                <th className="text-left px-5 py-3 font-bold">Plate</th>
+                <th className="text-left px-5 py-3 font-bold">Make / Model</th>
+                <th className="text-left px-5 py-3 font-bold">Status</th>
+                <th className="text-left px-5 py-3 font-bold">Driver</th>
               </tr>
             </thead>
             <tbody>
@@ -108,7 +108,7 @@ export default function VehiclesList() {
       </div>
 
 
-      <div className="bg-white border border-gray-200 rounded-lg p-5 h-fit">
+      <div className="bg-white rounded-lg p-5 h-fit">
         <h3 className="text-sm font-medium text-gray-700 mb-4">Add a vehicle</h3>
         <form onSubmit={handleAddVehicle} className="space-y-4">
           <div>
@@ -119,7 +119,7 @@ export default function VehiclesList() {
               value={plateNumber}
               onChange={(e) => setPlateNumber(e.target.value)}
               placeholder="KDA 123A"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
             />
           </div>
           <div>
@@ -129,7 +129,7 @@ export default function VehiclesList() {
               value={make}
               onChange={(e) => setMake(e.target.value)}
               placeholder="Toyota"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
             />
           </div>
           <div>
@@ -139,7 +139,7 @@ export default function VehiclesList() {
               value={model}
               onChange={(e) => setModel(e.target.value)}
               placeholder="Hiace"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
             />
           </div>
           <div>
@@ -151,7 +151,7 @@ export default function VehiclesList() {
               value={deviceId}
               onChange={(e) => setDeviceId(e.target.value)}
               placeholder="TRK-001"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
             />
           </div>
 
@@ -186,7 +186,13 @@ const statusStyles: Record<string, string> = {
   maintenance: "bg-red-50 text-red-600 border-red-200",
 };
 
-export default function VehiclesList({ basePath = "/admin/vehicles" }: { basePath?: string }) {
+export default function VehiclesList({
+  basePath = "/admin/vehicles",
+  canAssignDriver = true,
+}: {
+  basePath?: string;
+  canAssignDriver?: boolean;
+}) {
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -257,17 +263,17 @@ export default function VehiclesList({ basePath = "/admin/vehicles" }: { basePat
 
   return (
     <div className="grid lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="lg:col-span-2 bg-white rounded-lg overflow-hidden">
         {loading && <p className="text-sm text-gray-500 p-5">Loading…</p>}
         {error && <p className="text-sm text-red-600 p-5">{error}</p>}
         {!loading && !error && (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+            <thead className="bg-gray-50 text-black text-xs uppercase">
               <tr>
-                <th className="text-left px-5 py-3 font-medium">Plate</th>
-                <th className="text-left px-5 py-3 font-medium">Make / Model</th>
-                <th className="text-left px-5 py-3 font-medium">Status</th>
-                <th className="text-left px-5 py-3 font-medium">Driver</th>
+                <th className="text-left px-5 py-3 font-bold">Plate</th>
+                <th className="text-left px-5 py-3 font-bold">Make / Model</th>
+                <th className="text-left px-5 py-3 font-bold">Status</th>
+                <th className="text-left px-5 py-3 font-bold">Driver</th>
               </tr>
             </thead>
             <tbody>
@@ -280,10 +286,15 @@ export default function VehiclesList({ basePath = "/admin/vehicles" }: { basePat
               ) : (
                 vehicles.map((v) => (
                   <tr key={v._id} className="border-t border-gray-100">
-                    <td className="px-5 py-3 font-medium text-green-600 hover:underline">
-                      <Link href={`${basePath}/${v._id}`}>{v.plateNumber}</Link>
+                    <td className="px-5 py-3">
+                      <Link
+                        href={`${basePath}/${v._id}`}
+                        className="inline-block w-28 cursor-pointer rounded-md bg-blue-950 px-3 py-1.5 text-center text-sm font-medium text-white"
+                      >
+                        {v.plateNumber}
+                      </Link>
                     </td>
-                    <td className="px-5 py-3 text-gray-600">
+                    <td className="px-5 py-3 text-blue-950">
                       {[v.make, v.model].filter(Boolean).join(" ") || "-"}
                     </td>
                     <td className="px-5 py-3">
@@ -292,19 +303,28 @@ export default function VehiclesList({ basePath = "/admin/vehicles" }: { basePat
                       </span>
                     </td>
                     <td className="px-5 py-3">
-                      <select
-                        value={v.driverId?._id || ""}
-                        disabled={assigningId === v._id}
-                        onChange={(e) => handleAssignDriver(v._id, e.target.value)}
-                        className="text-sm border border-gray-300 rounded-md px-2 py-1 outline-none focus:border-green-400"
-                      >
-                        <option value="">Unassigned</option>
-                        {drivers.map((d) => (
-                          <option key={d._id} value={d._id}>
-                            {d.fullName}
-                          </option>
-                        ))}
-                      </select>
+                      {canAssignDriver ? (
+                        <select
+                          value={v.driverId?._id || ""}
+                          disabled={assigningId === v._id}
+                          onChange={(e) => handleAssignDriver(v._id, e.target.value)}
+                          className="text-sm border border-gray-300 rounded-md px-2 py-1 outline-none focus:border-green-600"
+                        >
+                          <option value="">Unassigned</option>
+                          {drivers.map((d) => (
+                            <option key={d._id} value={d._id}>
+                              {d.fullName}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span
+                          className="inline-block rounded-full bg-orange-500 px-3 py-1 text-xs font-medium"
+                          style={{ color: "#ffffff" }}
+                        >
+                          {v.driverId ? v.driverId.fullName : "Unassigned"}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -314,7 +334,7 @@ export default function VehiclesList({ basePath = "/admin/vehicles" }: { basePat
         )}
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-5 h-fit">
+      <div className="bg-white rounded-lg p-5 h-fit">
         <h3 className="text-sm font-medium text-gray-700 mb-4">Add a vehicle</h3>
         <form onSubmit={handleAddVehicle} className="space-y-4">
           <div>
@@ -325,7 +345,7 @@ export default function VehiclesList({ basePath = "/admin/vehicles" }: { basePat
               value={plateNumber}
               onChange={(e) => setPlateNumber(e.target.value)}
               placeholder="KDA 123A"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
             />
           </div>
           <div>
@@ -335,7 +355,7 @@ export default function VehiclesList({ basePath = "/admin/vehicles" }: { basePat
               value={make}
               onChange={(e) => setMake(e.target.value)}
               placeholder="Toyota"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
             />
           </div>
           <div>
@@ -345,7 +365,7 @@ export default function VehiclesList({ basePath = "/admin/vehicles" }: { basePat
               value={model}
               onChange={(e) => setModel(e.target.value)}
               placeholder="Hiace"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
             />
           </div>
           <div>
@@ -357,7 +377,7 @@ export default function VehiclesList({ basePath = "/admin/vehicles" }: { basePat
               value={deviceId}
               onChange={(e) => setDeviceId(e.target.value)}
               placeholder="TRK-001"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
             />
           </div>
 

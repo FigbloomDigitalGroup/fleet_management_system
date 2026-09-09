@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiRequest } from "../../lib/api";
+import FullPageLoading from "@/app/components/FullPageLoading";
 import { CompanyRecord } from "../../types/auth";
 
 const planStyles: Record<string, string> = {
@@ -23,24 +24,24 @@ export default function CompanyBillingPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p className="text-sm text-gray-500">Loading…</p>;
+  if (loading) return <FullPageLoading />;
   if (error) return <p className="text-sm text-red-600">{error}</p>;
   if (!company) return null;
 
   return (
     <div className="max-w-xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Billing</h1>
+        <h1 className="text-2xl font-bold text-blue-950">Billing</h1>
         <p className="text-sm text-gray-500 mt-1">Your subscription details</p>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-5">
+      <div className="bg-white rounded-lg p-6 space-y-5">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-500">Current plan</p>
             <p className="text-lg font-bold text-gray-900 mt-0.5 capitalize">{company.subscriptionPlan}</p>
           </div>
-          <span className={`text-xs px-3 py-1.5 rounded-full border font-medium ${planStyles[company.subscriptionPlan]}`}>
+          <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${planStyles[company.subscriptionPlan]}`}>
             {company.subscriptionPlan}
           </span>
         </div>

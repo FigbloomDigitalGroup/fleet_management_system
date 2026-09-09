@@ -7,6 +7,8 @@ import { useAuth } from "../../context/AuthContext";
 import StatCard from "../../components/StatCard";
 import CircleStat from "../../components/CircleStat";
 import BarChartCard from "../../components/BarChartCard";
+import FullPageLoading from "@/app/components/FullPageLoading";
+import { usePageHeader } from "../../components/DashboardShell";
 import { CompanyRecord } from "../../types/auth";
 
 interface AnalyticsData {
@@ -35,6 +37,8 @@ export default function PlatformDashboard() {
   const [companies, setCompanies] = useState<CompanyRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
+  usePageHeader("Platform overview", `Signed in as ${user?.email}`);
+
   useEffect(() => {
     async function loadAll() {
       try {
@@ -53,7 +57,7 @@ export default function PlatformDashboard() {
     loadAll();
   }, []);
 
-  if (loading) return <p className="text-sm text-gray-500">Loading dashboard…</p>;
+  if (loading) return <FullPageLoading label="Loading dashboard" />;
   if (!analytics) return null;
 
   const { totals, vehiclesPerCompany, growth } = analytics;
@@ -72,15 +76,9 @@ export default function PlatformDashboard() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Platform overview</h1>
-        <p className="text-sm text-gray-500 mt-1">Signed in as {user?.email}</p>
-      </div>
-
       {/* Top stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Total companies" value={totals.totalCompanies} accent="green" />
+        <StatCard label="Total companies" value={totals.totalCompanies} accent="blue" />
         <StatCard label="Total vehicles" value={totals.totalVehicles} accent="green" />
         <StatCard label="Total users" value={totals.totalUsers} accent="green" />
         <StatCard label="Pending approval" value={totals.pendingCompanies} accent="orange" />
@@ -93,18 +91,18 @@ export default function PlatformDashboard() {
             title="Vehicles per company"
             data={vehiclesPerCompany.map((v) => ({ name: v.name, vehicles: v.count }))}
             dataKey="vehicles"
-            color="#fb923c"
+            color="#ea580c"
           />
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <CircleStat percentage={activeCompanyPct} label="Companies active" color="#4ade80" />
-          <CircleStat percentage={activeVehiclePct} label="Vehicles active" color="#4ade80" />
+          <CircleStat percentage={activeCompanyPct} label="Companies active" color="#16a34a" />
+          <CircleStat percentage={activeVehiclePct} label="Vehicles active" color="#16a34a" />
         </div>
       </div>
 
       {/* Growth chart */}
       <div className="mb-6">
-        <BarChartCard title="New companies — last 6 months" data={growth} dataKey="companies" color="#4ade80" />
+        <BarChartCard title="New companies — last 6 months" data={growth} dataKey="companies" color="#16a34a" />
       </div>
 
       {/* Pending approvals — needs attention */}
@@ -112,17 +110,20 @@ export default function PlatformDashboard() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-semibold text-gray-900">Needs approval</h2>
-            <Link href="/platform/companies" className="text-sm text-green-600 hover:underline">
-              View all →
+            <Link href="/platform/companies" className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700">
+              View all
             </Link>
           </div>
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="bg-white rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <tbody>
                 {pendingCompanies.map((c) => (
                   <tr key={c._id} className="border-t border-gray-100 first:border-t-0">
-                    <td className="px-5 py-3 font-medium text-gray-900">
-                      <Link href={`/platform/companies/${c._id}`} className="hover:underline">
+                    <td className="px-5 py-3">
+                      <Link
+                        href={`/platform/companies/${c._id}`}
+                        className="inline-block cursor-pointer rounded-md bg-blue-950 px-3 py-1.5 text-sm font-medium text-white"
+                      >
                         {c.name}
                       </Link>
                     </td>
@@ -146,11 +147,11 @@ export default function PlatformDashboard() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-gray-900">Recently registered</h2>
-          <Link href="/platform/companies" className="text-sm text-green-600 hover:underline">
-            View all →
+          <Link href="/platform/companies" className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700">
+            View all
           </Link>
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white rounded-lg overflow-hidden">
           {recentCompanies.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">No companies registered yet.</p>
           ) : (
@@ -158,8 +159,11 @@ export default function PlatformDashboard() {
               <tbody>
                 {recentCompanies.map((c) => (
                   <tr key={c._id} className="border-t border-gray-100 first:border-t-0">
-                    <td className="px-5 py-3 font-medium text-gray-900">
-                      <Link href={`/platform/companies/${c._id}`} className="hover:underline">
+                    <td className="px-5 py-3">
+                      <Link
+                        href={`/platform/companies/${c._id}`}
+                        className="inline-block cursor-pointer rounded-md bg-blue-950 px-3 py-1.5 text-sm font-medium text-white"
+                      >
                         {c.name}
                       </Link>
                     </td>

@@ -33,7 +33,7 @@ export default function CompaniesPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Companies</h1>
+        <h1 className="text-2xl font-bold text-blue-950">Companies</h1>
         <p className="text-sm text-gray-500 mt-1">Every vehicle company registered on the platform</p>
       </div>
 
@@ -46,7 +46,7 @@ export default function CompaniesPage() {
       )}
 
       {!loading && !error && (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
               <tr>
@@ -67,8 +67,13 @@ export default function CompaniesPage() {
               ) : (
                 companies.map((c) => (
                   <tr key={c._id} className="border-t border-gray-100">
-                    <td className="px-5 py-3 font-medium text-green-600 hover:underline">
-                      <Link href={`/platform/companies/${c._id}`}>{c.name}</Link>
+                    <td className="px-5 py-3">
+                      <Link
+                        href={`/platform/companies/${c._id}`}
+                        className="inline-block cursor-pointer rounded-md bg-blue-950 px-3 py-1.5 text-sm font-medium text-white"
+                      >
+                        {c.name}
+                      </Link>
                     </td>
                     <td className="px-5 py-3">
                       <span className={`text-xs px-2 py-1 rounded-full border ${statusStyles[c.status]}`}>

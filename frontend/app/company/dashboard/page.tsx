@@ -7,6 +7,9 @@ import { apiRequest } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import StatCard from "../../components/StatCard";
 import BarChartCard from "../../components/BarChartCard";
+import DonutChartCard from "../../components/DonutChartCard";
+import FullPageLoading from "@/app/components/FullPageLoading";
+import { usePageHeader } from "../../components/DashboardShell";
 import {
   CompanyRecord,
   VehicleRecord,
@@ -15,33 +18,34 @@ import {
   TripRecord,
   AlertRecord,
 } from "../../types/auth";
+import StatusDetailsCard from "@/app/components/StatusDetailsCard";
 
-const FleetMap = dynamic(() => import("../../components/FleetMap"), { ssr: false });
+const FleetMap = dynamic<{ compact?: boolean }>(() => import("../../components/FleetMap"), { ssr: false });
 
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function CircleStat({ percentage, label, color }: { percentage: number; label: string; color: string }) {
-  const radius = 34;
+  const radius = 28;
   const circumference = 2 * Math.PI * radius;
   const progress = (Math.max(0, Math.min(100, percentage)) / 100) * circumference;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 flex flex-col items-center justify-center">
-      <div className="relative w-24 h-24">
-        <svg className="w-24 h-24 -rotate-90" viewBox="0 0 80 80" aria-label={`${percentage}% ${label}`}>
-          <circle cx="40" cy="40" r={radius} fill="none" stroke="#e5e7eb" strokeWidth="8" />
+    <div className="bg-white rounded-lg p-4 h-full flex flex-col items-center justify-center">
+      <div className="relative w-40 h-40">
+        <svg className="w-40 h-40 -rotate-90" viewBox="0 0 80 80" aria-label={`${percentage}% ${label}`}>
+          <circle cx="40" cy="40" r={radius} fill="none" stroke="#e5e7eb" strokeWidth="14" />
           <circle
             cx="40"
             cy="40"
             r={radius}
             fill="none"
             stroke={color}
-            strokeWidth="8"
+            strokeWidth="14"
             strokeLinecap="round"
             strokeDasharray={`${progress} ${circumference}`}
           />
         </svg>
-        <span className="absolute inset-0 flex items-center justify-center text-lg font-semibold text-gray-900">
+        <span className="absolute inset-0 flex items-center justify-center text-2xl font-semibold text-gray-900">
           {percentage}%
         </span>
       </div>
@@ -60,6 +64,8 @@ export default function CompanyDashboard() {
   const [trips, setTrips] = useState<TripRecord[]>([]);
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [loading, setLoading] = useState(true);
+
+  usePageHeader(company?.name ? `${company.name} overview` : "Dashboard", `Signed in as ${user?.email}`);
 
   useEffect(() => {
     async function loadAll() {
@@ -87,14 +93,15 @@ export default function CompanyDashboard() {
     loadAll();
   }, []);
 
-  if (loading) return <p className="text-sm text-gray-500">Loading dashboard…</p>;
+  if (loading) return <FullPageLoading />;
 
-  const vehicleCounts = {
-    total: vehicles.length,
-    active: vehicles.filter((v) => v.status === "active").length,
-    idle: vehicles.filter((v) => v.status === "idle").length,
-    offline: vehicles.filter((v) => v.status === "offline").length,
-  };
+const vehicleCounts = {
+  total: vehicles.length,
+  active: vehicles.filter((v) => v.status === "active").length,
+  idle: vehicles.filter((v) => v.status === "idle").length,
+  offline: vehicles.filter((v) => v.status === "offline").length,
+  maintenance: vehicles.filter((v) => v.status === "maintenance").length,
+};
 
   const activePct = vehicleCounts.total ? Math.round((vehicleCounts.active / vehicleCounts.total) * 100) : 0;
   const unresolvedAlerts = alerts.filter((a) => !a.resolved);
@@ -115,17 +122,9 @@ export default function CompanyDashboard() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">
-          {company?.name ? `${company.name} overview` : "Dashboard"}
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">Signed in as {user?.email}</p>
-      </div>
-
       {/* Top stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Total vehicles" value={vehicleCounts.total} accent="green" />
+        <StatCard label="Total vehicles" value={vehicleCounts.total} accent="blue" />
         <StatCard label="Drivers" value={drivers.length} accent="green" />
         <StatCard label="Admins" value={admins.length} accent="green" />
         <StatCard label="Unresolved alerts" value={unresolvedAlerts.length} accent="orange" />
@@ -134,10 +133,10 @@ export default function CompanyDashboard() {
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         <div className="lg:col-span-2">
-          <BarChartCard title="Trips — last 7 days" data={tripsPerDay} dataKey="trips" color="#fb923c" />
+          <BarChartCard title="Trips — last 7 days" data={tripsPerDay} dataKey="trips" color="#ea580c" size="lg" />
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <CircleStat percentage={activePct} label="Fleet active" color="#4ade80" />
+          <CircleStat percentage={activePct} label="Fleet active" color="#16a34a" />
           <CircleStat
             percentage={vehicleCounts.total ? Math.round((vehicleCounts.offline / vehicleCounts.total) * 100) : 0}
             label="Offline"
@@ -146,30 +145,38 @@ export default function CompanyDashboard() {
         </div>
       </div>
 
-      {/* Live map section */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-gray-900">Live Map</h2>
-          <Link href="/company/live-map" className="text-sm text-green-600 hover:underline">
-            View full map →
-          </Link>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <div className="h-[350px]">
-            <FleetMap />
-          </div>
-        </div>
-      </div>
+   {/* Fleet status breakdown */}
+<div className="mb-6 flex flex-col lg:flex-row gap-4">
+  <div className="flex-1">
+    <DonutChartCard
+      title="Fleet status breakdown"
+      data={[
+        { name: "Active", value: vehicleCounts.active, color: "#4ade80" },
+        { name: "Idle", value: vehicleCounts.idle, color: "#fb923c" },
+        { name: "Offline", value: vehicleCounts.offline, color: "#9ca3af" },
+        { name: "Maintenance", value: vehicleCounts.maintenance, color: "#f87171" },
+      ]}
+    />
+  </div>
+  <StatusDetailsCard
+    items={[
+      { label: "Active", value: vehicleCounts.active, color: "#4ade80", description: "Currently moving, sending live GPS updates" },
+      { label: "Idle", value: vehicleCounts.idle, color: "#fb923c", description: "Engine on or stationary, not actively driving" },
+      { label: "Offline", value: vehicleCounts.offline, color: "#9ca3af", description: "No signal received recently from this vehicle" },
+      { label: "Maintenance", value: vehicleCounts.maintenance, color: "#f87171", description: "Taken out of service for repair or servicing" },
+    ]}
+  />
+</div>
 
       {/* Recent alerts */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-gray-900">Recent alerts</h2>
-          <Link href="/company/alerts" className="text-sm text-green-600 hover:underline">
-            View all →
+          <Link href="/company/alerts" className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700">
+            View all
           </Link>
         </div>
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white rounded-lg overflow-hidden">
           {alerts.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">No alerts yet.</p>
           ) : (
@@ -184,11 +191,10 @@ export default function CompanyDashboard() {
                     <td className="px-5 py-3 text-gray-500">{new Date(a.createdAt).toLocaleString()}</td>
                     <td className="px-5 py-3">
                       <span
-                        className={`text-xs px-2 py-1 rounded-full border ${
-                          a.resolved
+                        className={`text-xs px-2 py-1 rounded-full border ${a.resolved
                             ? "bg-gray-100 text-gray-500 border-gray-200"
                             : "bg-orange-50 text-orange-600 border-orange-200"
-                        }`}
+                          }`}
                       >
                         {a.resolved ? "resolved" : "open"}
                       </span>

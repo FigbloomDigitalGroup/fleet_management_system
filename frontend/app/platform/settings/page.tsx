@@ -3,6 +3,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { apiRequest } from "../../lib/api";
 import Toggle from "../../components/Toggle";
+import FullPageLoading from "@/app/components/FullPageLoading";
 
 interface Settings {
   requireManualApproval: boolean;
@@ -48,13 +49,13 @@ export default function PlatformSettingsPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-gray-500">Loading…</p>;
+  if (loading) return <FullPageLoading />;
   if (!settings) return null;
 
   return (
     <div className="max-w-2xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Platform Settings</h1>
+        <h1 className="text-2xl font-bold text-blue-950">Platform Settings</h1>
         <p className="text-sm text-gray-500 mt-1">Policies applied to every company on the platform</p>
       </div>
 
@@ -74,7 +75,7 @@ export default function PlatformSettingsPage() {
           <select
             value={settings.defaultPlan}
             onChange={(e) => setSettings({ ...settings, defaultPlan: e.target.value })}
-            className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+            className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
           >
             <option value="trial">Trial</option>
             <option value="basic">Basic</option>
@@ -91,7 +92,7 @@ export default function PlatformSettingsPage() {
             min={1}
             value={settings.trialDays}
             onChange={(e) => setSettings({ ...settings, trialDays: Number(e.target.value) })}
-            className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+            className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
           />
         </div>
 
@@ -114,7 +115,7 @@ export default function PlatformSettingsPage() {
                       vehicleLimits: { ...settings.vehicleLimits, [plan]: Number(e.target.value) },
                     })
                   }
-                  className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                  className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
                 />
               </div>
             ))}
@@ -130,7 +131,7 @@ export default function PlatformSettingsPage() {
             type="email"
             value={settings.supportEmail}
             onChange={(e) => setSettings({ ...settings, supportEmail: e.target.value })}
-            className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+            className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
           />
         </div>
 

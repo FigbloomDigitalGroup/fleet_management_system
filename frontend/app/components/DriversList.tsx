@@ -103,7 +103,7 @@ export default function DriversList({ canAdd = false }: { canAdd?: boolean }) {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
               />
             </div>
             <div>
@@ -113,7 +113,7 @@ export default function DriversList({ canAdd = false }: { canAdd?: boolean }) {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
               />
             </div>
             <div>
@@ -123,7 +123,7 @@ export default function DriversList({ canAdd = false }: { canAdd?: boolean }) {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
               />
             </div>
 
@@ -236,16 +236,16 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
 
   return (
     <div className={canAdd ? "grid lg:grid-cols-3 gap-6" : ""}>
-      <div className={`${canAdd ? "lg:col-span-2" : ""} bg-white border border-gray-200 rounded-lg overflow-hidden`}>
+      <div className={`${canAdd ? "lg:col-span-2" : ""} bg-white rounded-lg overflow-hidden`}>
         {loading && <p className="text-sm text-gray-500 p-5">Loading…</p>}
         {error && <p className="text-sm text-red-600 p-5">{error}</p>}
         {!loading && !error && (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+            <thead className="bg-gray-50 text-black text-xs uppercase">
               <tr>
-                <th className="text-left px-5 py-3 font-medium">Name</th>
-                <th className="text-left px-5 py-3 font-medium">Email</th>
-                <th className="text-left px-5 py-3 font-medium">Vehicle</th>
+                <th className="text-left px-5 py-3 font-bold">Name</th>
+                <th className="text-left px-5 py-3 font-bold">Email</th>
+                <th className="text-left px-5 py-3 font-bold">Vehicle</th>
               </tr>
             </thead>
             <tbody>
@@ -260,15 +260,15 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                   const assigned = vehicleForDriver(d._id);
                   return (
                     <tr key={d._id} className="border-t border-gray-100">
-                      <td className="px-5 py-3 font-medium text-gray-900">{d.fullName}</td>
-                      <td className="px-5 py-3 text-gray-600">{d.email}</td>
+                      <td className="px-5 py-3 font-medium text-blue-950">{d.fullName}</td>
+                      <td className="px-5 py-3 text-blue-950">{d.email}</td>
                       <td className="px-5 py-3">
                         {canAssignVehicle ? (
                           <select
                             value={assigned?._id || ""}
                             disabled={assigningId === d._id}
                             onChange={(e) => handleAssignVehicle(d._id, e.target.value)}
-                            className="text-sm border border-gray-300 rounded-md px-2 py-1 outline-none focus:border-green-400"
+                            className="text-sm border border-gray-300 rounded-md px-2 py-1 outline-none focus:border-green-600"
                           >
                             <option value="">No vehicle</option>
                             {vehicles.map((v) => (
@@ -278,7 +278,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                             ))}
                           </select>
                         ) : (
-                          <span className="text-gray-600">
+                          <span className="text-blue-950">
                             {assigned ? assigned.plateNumber : "No vehicle"}
                           </span>
                         )}
@@ -293,7 +293,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
       </div>
 
       {canAdd && (
-        <div className="bg-white border border-gray-200 rounded-lg p-5 h-fit">
+        <div className="bg-white rounded-lg p-5 h-fit">
           <h3 className="text-sm font-medium text-gray-700 mb-4">Add a driver</h3>
           <form onSubmit={handleAddDriver} className="space-y-4">
             <div>
@@ -303,7 +303,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
               />
             </div>
             <div>
@@ -313,7 +313,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
               />
             </div>
             <div>
@@ -323,7 +323,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
               />
             </div>
 
@@ -342,3 +342,16 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+

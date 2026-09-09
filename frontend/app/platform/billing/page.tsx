@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "../../lib/api";
 import StatCard from "../../components/StatCard";
+import FullPageLoading from "@/app/components/FullPageLoading";
 
 interface BillingCompany {
   _id: string;
@@ -61,13 +62,13 @@ export default function BillingPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-gray-500">Loading…</p>;
+  if (loading) return <FullPageLoading />;
   if (error) return <p className="text-sm text-red-600">{error}</p>;
 
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Billing</h1>
+        <h1 className="text-2xl font-bold text-blue-950">Billing</h1>
         <p className="text-sm text-gray-500 mt-1">Subscription plans across all companies</p>
       </div>
 
@@ -82,7 +83,7 @@ export default function BillingPage() {
         ))}
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="bg-white rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
             <tr>
@@ -107,7 +108,7 @@ export default function BillingPage() {
                     value={c.subscriptionPlan}
                     disabled={updatingId === c._id}
                     onChange={(e) => changePlan(c._id, e.target.value)}
-                    className="text-sm border border-gray-300 rounded-md px-2 py-1 outline-none focus:border-green-400"
+                    className="text-sm border border-gray-300 rounded-md px-2 py-1 outline-none focus:border-green-600"
                   >
                     {PLAN_OPTIONS.map((p) => (
                       <option key={p} value={p}>

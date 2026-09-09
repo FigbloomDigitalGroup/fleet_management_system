@@ -2,6 +2,7 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { apiRequest } from "../../lib/api";
+import FullPageLoading from "@/app/components/FullPageLoading";
 import { CompanyRecord } from "../../types/auth";
 
 export default function CompanySettingsPage() {
@@ -43,17 +44,17 @@ export default function CompanySettingsPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-gray-500">Loading…</p>;
+  if (loading) return <FullPageLoading />;
   if (!company) return null;
 
   return (
     <div className="max-w-xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <h1 className="text-2xl font-bold text-blue-950">Settings</h1>
         <p className="text-sm text-gray-500 mt-1">Manage your company profile</p>
       </div>
 
-      <form onSubmit={handleSave} className="bg-white border border-gray-200 rounded-lg p-6 space-y-5">
+      <form onSubmit={handleSave} className="bg-white rounded-lg p-6 space-y-5">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Company name</label>
           <input
@@ -61,7 +62,7 @@ export default function CompanySettingsPage() {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+            className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
           />
         </div>
 

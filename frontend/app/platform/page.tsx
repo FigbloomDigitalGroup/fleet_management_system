@@ -48,7 +48,7 @@ export default function CompaniesPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Companies</h1>
+        <h1 className="text-2xl font-bold text-blue-950">Companies</h1>
         <p className="text-sm text-gray-500 mt-1">Every vehicle company registered on the platform</p>
       </div>
 
@@ -61,7 +61,7 @@ export default function CompaniesPage() {
       )}
 
       {!loading && !error && (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
               <tr>

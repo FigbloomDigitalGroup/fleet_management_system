@@ -131,7 +131,7 @@ export default function RegisterPage() {
 
                     <p className="text-sm text-gray-200">
                         Already have an account?{" "}
-                        <a href="/login" className="text-green-400 font-medium hover:underline">
+                        <a href="/login" className="text-green-600 font-medium hover:underline">
                             Sign in
                         </a>
                     </p>
@@ -142,7 +142,7 @@ export default function RegisterPage() {
             {/* RIGHT — Form panel */}
             <div className="lg:w-1/2 flex items-center justify-center p-8">
                 <div className="w-full max-w-sm">
-                    <h2 className="text-5xl font-extrabold text-blue-400 mb-2">Create your account</h2>
+                    <h2 className="text-5xl font-extrabold text-blue-950 mb-2">Create your account</h2>
                     <p className="text-sm text-gray-500 mb-6">Tell us who you are.</p>
 
                     {/* Role cubes */}
@@ -155,7 +155,7 @@ export default function RegisterPage() {
                                     type="button"
                                     onClick={() => selectType(t.value)}
                                     className={`flex-1 flex flex-col items-center justify-center gap-2 py-4 rounded-lg text-xs font-medium border transition-colors ${active
-                                        ? "border-green-400 bg-green-50 text-green-500"
+                                        ? "border-green-600 bg-green-50 text-green-500"
                                         : "border-gray-200 text-gray-500 hover:border-gray-300"
                                         }`}
                                 >
@@ -179,7 +179,7 @@ export default function RegisterPage() {
                                     value={companyName}
                                     onChange={(e) => setCompanyName(e.target.value)}
                                     placeholder="Acme Logistics"
-                                    className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                                    className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
                                 />
                             </div>
                         )}
@@ -195,7 +195,7 @@ export default function RegisterPage() {
                                 value={fullName}
                                 onChange={(e) => setFullName(e.target.value)}
                                 placeholder="Jane Doe"
-                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
                             />
                         </div>
 
@@ -211,7 +211,7 @@ export default function RegisterPage() {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="jane@acme.com"
-                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
                             />
                         </div>
 
@@ -229,7 +229,7 @@ export default function RegisterPage() {
                                     value={inviteCode}
                                     onChange={(e) => setInviteCode(e.target.value)}
                                     placeholder="Acme Logistics"
-                                    className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                                    className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
                                 />
                             </div>
                         )}
@@ -246,7 +246,7 @@ export default function RegisterPage() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="At least 8 characters"
-                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
                             />
                         </div>
 

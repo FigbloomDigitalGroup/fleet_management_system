@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiRequest } from "../lib/api";
+import FullPageLoading from "@/app/components/FullPageLoading";
 import { TripRecord } from "../types/auth";
 
 export default function TripsList() {
@@ -16,18 +17,18 @@ export default function TripsList() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p className="text-sm text-gray-500">Loading…</p>;
+  if (loading) return <FullPageLoading />;
   if (error) return <p className="text-sm text-red-600">{error}</p>;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+    <div className="bg-white rounded-lg overflow-hidden">
       <table className="w-full text-sm">
-        <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+        <thead className="bg-gray-50 text-black text-xs uppercase">
           <tr>
-            <th className="text-left px-5 py-3 font-medium">Vehicle</th>
-            <th className="text-left px-5 py-3 font-medium">Driver</th>
-            <th className="text-left px-5 py-3 font-medium">Start</th>
-            <th className="text-left px-5 py-3 font-medium">Distance</th>
+            <th className="text-left px-5 py-3 font-bold">Vehicle</th>
+            <th className="text-left px-5 py-3 font-bold">Driver</th>
+            <th className="text-left px-5 py-3 font-bold">Start</th>
+            <th className="text-left px-5 py-3 font-bold">Distance</th>
           </tr>
         </thead>
         <tbody>
@@ -40,12 +41,12 @@ export default function TripsList() {
           ) : (
             trips.map((t) => (
               <tr key={t._id} className="border-t border-gray-100">
-                <td className="px-5 py-3 font-medium text-gray-900">
+                <td className="px-5 py-3 font-medium text-blue-950">
                   {t.vehicleId?.plateNumber || "—"}
                 </td>
-                <td className="px-5 py-3 text-gray-600">{t.driverId?.fullName || "Unassigned"}</td>
-                <td className="px-5 py-3 text-gray-600">{new Date(t.startTime).toLocaleString()}</td>
-                <td className="px-5 py-3 text-gray-600">
+                <td className="px-5 py-3 text-blue-950">{t.driverId?.fullName || "Unassigned"}</td>
+                <td className="px-5 py-3 text-blue-950">{new Date(t.startTime).toLocaleString()}</td>
+                <td className="px-5 py-3 text-blue-950">
                   {t.distanceKm ? `${t.distanceKm.toFixed(1)} km` : "—"}
                 </td>
               </tr>

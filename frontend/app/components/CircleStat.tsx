@@ -1,27 +1,27 @@
 export default function CircleStat({
   percentage,
   label,
-  color = "#4ade80",
+  color = "#16a34a",
 }: {
   percentage: number;
   label: string;
   color?: string;
 }) {
-  const radius = 40;
+  const radius = 34;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (percentage / 100) * circumference;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-5 flex flex-col items-center">
-      <svg width="100" height="100" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r={radius} fill="none" stroke="#e5e7eb" strokeWidth="10" />
+    <div className="bg-white rounded-lg p-5 h-full flex flex-col items-center justify-center">
+      <svg width="160" height="160" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r={radius} fill="none" stroke="#e5e7eb" strokeWidth="16" />
         <circle
           cx="50"
           cy="50"
           r={radius}
           fill="none"
           stroke={color}
-          strokeWidth="10"
+          strokeWidth="16"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"

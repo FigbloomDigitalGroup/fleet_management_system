@@ -19,14 +19,15 @@ import DashboardShell from "../components/DashboardShell";
 
 const navItems = [
   { label: "Dashboard", href: "/company/dashboard", icon: FiHome },
-  { label: "Admins", href: "/company/admins", icon: FiUserPlus },
   { label: "Live Map", href: "/company/live-map", icon: FiMapPin },
   { label: "Vehicles", href: "/company/vehicles", icon: FiTruck },
+   { label: "Trips", href: "/company/trips", icon: FiFileText },
   { label: "Drivers", href: "/company/drivers", icon: FiUsers },
-  { label: "Trips", href: "/company/trips", icon: FiFileText },
   { label: "Alerts", href: "/company/alerts", icon: FiAlertTriangle },
   { label: "Billing", href: "/company/billing", icon: FiCreditCard },
+   { label: "Admins", href: "/company/admins", icon: FiUserPlus },
   { label: "Settings", href: "/company/settings", icon: FiSettings },
+
 ];
 
 export default function CompanyLayout({ children }: { children: ReactNode }) {

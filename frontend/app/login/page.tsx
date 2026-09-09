@@ -69,7 +69,7 @@ export default function LoginPage() {
       {/* RIGHT — Form panel */}
       <div className="lg:w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-sm">
-          <h2 className="text-5xl font-extrabold text-blue-400 mb-2">Sign in</h2>
+          <h2 className="text-5xl font-extrabold text-blue-950 mb-2">Sign in</h2>
           <p className="text-sm text-gray-500 mb-8">Enter your details to reach your dashboard.</p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -85,7 +85,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
-                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
               />
             </div>
 
@@ -102,7 +102,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-3.5 py-2.5 pr-16 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                  className="w-full px-3.5 py-2.5 pr-16 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
                 />
                 <button
                   type="button"
