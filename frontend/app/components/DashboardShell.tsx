@@ -76,7 +76,7 @@ export default function DashboardShell({
   }, [user?.role]);
 
   return (
-    <div className="h-screen overflow-hidden bg-gray-100 flex">
+    <div className="h-screen overflow-hidden bg-blue-50 flex">
       {/* SIDEBAR */}
       <aside className="h-screen w-60 shrink-0 overflow-y-auto bg-blue-950 border-r border-blue-950 flex flex-col text-white">
         <div className="px-5 py-5 border-b border-blue-950">
