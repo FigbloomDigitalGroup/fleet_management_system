@@ -79,7 +79,7 @@ export default function AdminDashboard() {
   return (
     <div>
       {/* Top stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <StatCard label="Total vehicles" value={vehicleCounts.total} accent="blue" />
         <StatCard label="Drivers" value={drivers.length} accent="green" />
         <StatCard label="Active now" value={vehicleCounts.active} accent="green" />
@@ -87,18 +87,18 @@ export default function AdminDashboard() {
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
         <div className="lg:col-span-2">
           <BarChartCard title="Trips — last 7 days" data={tripsPerDay} dataKey="trips" color="#ea580c" size="lg" />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <CircleStat percentage={activePct} label="Fleet active" color="#16a34a" />
           <CircleStat percentage={assignedPct} label="Drivers assigned" color="#16a34a" />
         </div>
       </div>
     
       {/* Fleet status breakdown */}
-<div className="mb-6 flex flex-col lg:flex-row gap-4">
+<div className="mb-4 flex flex-col lg:flex-row gap-3">
   <div className="flex-1">
     <DonutChartCard
       title="Fleet status breakdown"
@@ -121,7 +121,7 @@ export default function AdminDashboard() {
 </div>
 
       {/* Recent alerts */}
-      <div className="mb-6">
+      <div className="mb-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-gray-900">Recent alerts</h2>
           <Link href="/admin/alerts" className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700">

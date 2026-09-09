@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from "@react-google-maps/api";
 import { apiRequest } from "../lib/api";
 import StatCard from "./StatCard";
+import Skeleton from "./Skeleton";
 
 interface LiveVehicle {
   vehicleId: string;
@@ -61,7 +62,8 @@ export default function FleetMap({ compact = false }: { compact?: boolean }) {
     offline: vehicles.filter((v) => v.status === "offline").length,
   };
 
-  if (loading || !isLoaded) return <p className="text-sm text-gray-500">Loading map…</p>;
+  if (loading || !isLoaded)
+    return <Skeleton rows={1} rowClassName="h-full min-h-[240px]" className="h-full" />;
 
   const map = (
     <div className="relative h-full w-full">
@@ -110,7 +112,7 @@ export default function FleetMap({ compact = false }: { compact?: boolean }) {
   if (compact) {
     return (
       <div className="flex h-full flex-col">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4 shrink-0">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 shrink-0">
           <StatCard label="Total vehicles" value={counts.total} accent="blue" />
           <StatCard label="Active" value={counts.active} accent="green" />
           <StatCard label="Idle" value={counts.idle} accent="orange" />
@@ -123,7 +125,7 @@ export default function FleetMap({ compact = false }: { compact?: boolean }) {
 
   return (
     <div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <StatCard label="Total vehicles" value={counts.total} accent="blue" />
         <StatCard label="Active" value={counts.active} accent="green" />
         <StatCard label="Idle" value={counts.idle} accent="orange" />

@@ -3,7 +3,7 @@ import DriversList from "../../components/DriversList";
 export default function CompanyDriversPage() {
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-4">
         <h1 className="text-2xl font-bold text-blue-950">Drivers</h1>
         <p className="text-sm text-gray-500 mt-1">Drivers registered under your fleet and their vehicles</p>
       </div>

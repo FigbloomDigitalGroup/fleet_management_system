@@ -26,9 +26,9 @@ export default function DonutChartCard({
   const total = data.reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <div className="bg-white rounded-lg p-5">
+    <div className="flex h-full flex-col bg-white rounded-lg p-5">
       <h3 className={`${titleSizes[size]} font-bold text-blue-950 mb-4`}>{title}</h3>
-      <div className="relative">
+      <div className="relative flex-1">
         <ResponsiveContainer width="100%" height={220}>
           <PieChart>
             <Pie

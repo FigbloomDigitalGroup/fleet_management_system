@@ -62,7 +62,7 @@ export default function VehiclesList() {
   }
 
   return (
-    <div className="grid lg:grid-cols-3 gap-6">
+    <div className="grid lg:grid-cols-3 gap-4">
   
       <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg overflow-hidden">
         {loading && <p className="text-sm text-gray-500 p-5">Loading…</p>}
@@ -178,6 +178,7 @@ import { useEffect, useState, FormEvent } from "react";
 import Link from "next/link";
 import { apiRequest } from "../lib/api";
 import { VehicleRecord, DriverRecord } from "../types/auth";
+import Skeleton from "./Skeleton";
 
 const statusStyles: Record<string, string> = {
   active: "bg-green-50 text-green-600 border-green-200",
@@ -262,9 +263,9 @@ export default function VehiclesList({
   }
 
   return (
-    <div className="grid lg:grid-cols-3 gap-6">
+    <div className="grid lg:grid-cols-3 gap-4">
       <div className="lg:col-span-2 bg-white rounded-lg overflow-hidden">
-        {loading && <p className="text-sm text-gray-500 p-5">Loading…</p>}
+        {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
         {error && <p className="text-sm text-red-600 p-5">{error}</p>}
         {!loading && !error && (
           <table className="w-full text-sm">

@@ -87,7 +87,7 @@ export default function AlertsList() {
   if (error) return <p className="text-sm text-red-600">{error}</p>;
 
   return (
-    <div className="grid lg:grid-cols-3 gap-6">
+    <div className="grid lg:grid-cols-3 gap-4">
       {/* Alerts list */}
       <div className="lg:col-span-2 bg-white rounded-lg overflow-hidden">
         <table className="w-full text-sm">

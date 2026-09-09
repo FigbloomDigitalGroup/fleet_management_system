@@ -63,12 +63,12 @@ export default function CompanyDetailPage() {
     <div>
       <button
         onClick={() => router.push("/platform/companies")}
-        className="mb-6 rounded-md bg-gray-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-600"
+        className="mb-4 rounded-md bg-gray-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-600"
       >
         Back to companies
       </button>
 
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-blue-950">{company.name}</h1>
           <p className="text-sm text-gray-500 mt-1">/{company.slug}</p>
@@ -78,12 +78,12 @@ export default function CompanyDetailPage() {
         </span>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-3 gap-4">
         {/* Details + users */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white border border-gray-200 rounded-lg p-5">
             <h3 className="text-sm font-medium text-gray-700 mb-3">Company details</h3>
-            <dl className="grid grid-cols-2 gap-4 text-sm">
+            <dl className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <dt className="text-gray-500">Subscription plan</dt>
                 <dd className="text-gray-900 font-medium mt-0.5">{company.subscriptionPlan}</dd>

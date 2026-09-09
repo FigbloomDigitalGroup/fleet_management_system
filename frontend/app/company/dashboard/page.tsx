@@ -123,7 +123,7 @@ const vehicleCounts = {
   return (
     <div>
       {/* Top stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <StatCard label="Total vehicles" value={vehicleCounts.total} accent="blue" />
         <StatCard label="Drivers" value={drivers.length} accent="green" />
         <StatCard label="Admins" value={admins.length} accent="green" />
@@ -131,11 +131,11 @@ const vehicleCounts = {
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
         <div className="lg:col-span-2">
           <BarChartCard title="Trips — last 7 days" data={tripsPerDay} dataKey="trips" color="#ea580c" size="lg" />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <CircleStat percentage={activePct} label="Fleet active" color="#16a34a" />
           <CircleStat
             percentage={vehicleCounts.total ? Math.round((vehicleCounts.offline / vehicleCounts.total) * 100) : 0}
@@ -146,7 +146,7 @@ const vehicleCounts = {
       </div>
 
    {/* Fleet status breakdown */}
-<div className="mb-6 flex flex-col lg:flex-row gap-4">
+<div className="mb-4 flex flex-col lg:flex-row gap-3">
   <div className="flex-1">
     <DonutChartCard
       title="Fleet status breakdown"

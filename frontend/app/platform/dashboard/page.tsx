@@ -77,7 +77,7 @@ export default function PlatformDashboard() {
   return (
     <div>
       {/* Top stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <StatCard label="Total companies" value={totals.totalCompanies} accent="blue" />
         <StatCard label="Total vehicles" value={totals.totalVehicles} accent="green" />
         <StatCard label="Total users" value={totals.totalUsers} accent="green" />
@@ -85,7 +85,7 @@ export default function PlatformDashboard() {
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
         <div className="lg:col-span-2">
           <BarChartCard
             title="Vehicles per company"
@@ -94,20 +94,20 @@ export default function PlatformDashboard() {
             color="#ea580c"
           />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <CircleStat percentage={activeCompanyPct} label="Companies active" color="#16a34a" />
           <CircleStat percentage={activeVehiclePct} label="Vehicles active" color="#16a34a" />
         </div>
       </div>
 
       {/* Growth chart */}
-      <div className="mb-6">
+      <div className="mb-4">
         <BarChartCard title="New companies — last 6 months" data={growth} dataKey="companies" color="#16a34a" />
       </div>
 
       {/* Pending approvals — needs attention */}
       {pendingCompanies.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-semibold text-gray-900">Needs approval</h2>
             <Link href="/platform/companies" className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700">

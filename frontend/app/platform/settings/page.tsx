@@ -54,7 +54,7 @@ export default function PlatformSettingsPage() {
 
   return (
     <div className="max-w-2xl">
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-blue-950">Platform Settings</h1>
         <p className="text-sm text-gray-500 mt-1">Policies applied to every company on the platform</p>
       </div>
@@ -101,7 +101,7 @@ export default function PlatformSettingsPage() {
         {/* Vehicle limits per plan */}
         <div>
           <p className="text-sm font-medium text-gray-700 mb-3">Vehicle limits per plan</p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             {(["trial", "basic", "pro", "enterprise"] as const).map((plan) => (
               <div key={plan}>
                 <label className="block text-xs text-gray-500 mb-1 capitalize">{plan}</label>

@@ -110,13 +110,13 @@ export default function AnalyticsPage() {
 
     return (
         <div>
-            <div className="mb-8">
+            <div className="mb-6">
                 <h1 className="text-2xl font-bold text-blue-950">Analytics</h1>
                 <p className="text-sm text-gray-500 mt-1">Platform-wide usage across all companies</p>
             </div>
 
             {/* Core totals */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                 <StatCard label="Total companies" value={data.totals.totalCompanies} accent="blue" />
                 <StatCard label="Total vehicles" value={data.totals.totalVehicles} accent="green" />
                 <StatCard label="Total users" value={data.totals.totalUsers} accent="green" />
@@ -127,7 +127,7 @@ export default function AnalyticsPage() {
           
 
 {/* Billing plan breakdown */}
-<div className="mb-6">
+<div className="mb-4">
   <StatusDetailsCard
     items={[
       {
@@ -160,7 +160,7 @@ export default function AnalyticsPage() {
 
 
             {/* Vehicles per company + active % */}
-            <div className="grid lg:grid-cols-3 gap-4 mb-6">
+            <div className="grid lg:grid-cols-3 gap-3 mb-4">
                 <div className="lg:col-span-2">
                   <BarChartCard
                             title="Vehicles per company"
@@ -170,7 +170,7 @@ export default function AnalyticsPage() {
                           />
 
                 </div>
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-1 gap-3">
                     <StatCard label="Companies active" value={`${activeCompanyPct}%`} accent="green" />
                     <StatCard label="Vehicles active" value={`${activeVehiclePct}%`} accent="green" />
                 </div>

@@ -67,12 +67,12 @@ export default function BillingPage() {
 
   return (
     <div>
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-blue-950">Billing</h1>
         <p className="text-sm text-gray-500 mt-1">Subscription plans across all companies</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         {PLAN_OPTIONS.map((plan) => (
           <StatCard
             key={plan}

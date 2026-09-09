@@ -3,6 +3,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { apiRequest } from "../../lib/api";
 import { AdminRecord } from "../../types/auth";
+import Skeleton from "../../components/Skeleton";
 
 export default function AdminsPage() {
   const [admins, setAdmins] = useState<AdminRecord[]>([]);
@@ -53,15 +54,15 @@ export default function AdminsPage() {
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-4">
         <h1 className="text-2xl font-bold text-blue-950">Admins</h1>
         <p className="text-sm text-gray-500 mt-1">People who manage your fleet's day-to-day tracking</p>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-3 gap-4">
         {/* Admins list */}
         <div className="lg:col-span-2 bg-white rounded-lg overflow-hidden">
-          {loading && <p className="text-sm text-gray-500 p-5">Loading…</p>}
+          {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
           {error && <p className="text-sm text-red-600 p-5">{error}</p>}
           {!loading && !error && (
             <table className="w-full text-sm">

@@ -52,7 +52,7 @@ export default function DriversList({ canAdd = false }: { canAdd?: boolean }) {
   }
 
   return (
-    <div className={canAdd ? "grid lg:grid-cols-3 gap-6" : ""}>
+    <div className={canAdd ? "grid lg:grid-cols-3 gap-4" : ""}>
 
       <div className={`${canAdd ? "lg:col-span-2" : ""} bg-white border border-gray-200 rounded-lg overflow-hidden`}>
         {loading && <p className="text-sm text-gray-500 p-5">Loading…</p>}
@@ -150,6 +150,7 @@ export default function DriversList({ canAdd = false }: { canAdd?: boolean }) {
 import { useEffect, useState, FormEvent } from "react";
 import { apiRequest } from "../lib/api";
 import { DriverRecord, VehicleRecord } from "../types/auth";
+import Skeleton from "./Skeleton";
 
 export default function DriversList({ canAdd = false, canAssignVehicle = false }: { canAdd?: boolean; canAssignVehicle?: boolean }) {
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
@@ -235,9 +236,9 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
   }
 
   return (
-    <div className={canAdd ? "grid lg:grid-cols-3 gap-6" : ""}>
+    <div className={canAdd ? "grid lg:grid-cols-3 gap-4" : ""}>
       <div className={`${canAdd ? "lg:col-span-2" : ""} bg-white rounded-lg overflow-hidden`}>
-        {loading && <p className="text-sm text-gray-500 p-5">Loading…</p>}
+        {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
         {error && <p className="text-sm text-red-600 p-5">{error}</p>}
         {!loading && !error && (
           <table className="w-full text-sm">

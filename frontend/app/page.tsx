@@ -28,7 +28,7 @@ export default function LandingPage() {
                 </h1>
                 <p className="text-gray-200 text-lg mb-8">
                   DETOUR is a fleet tracking platform built for vehicle-owning businesses.
-                  Live GPS tracking, driver management, and instant alerts, all in one dashboard.
+                  Live GPS tracking, driver management and instant alerts, all in one dashboard.
                 </p>
                 <div className="flex items-center gap-4">
                   <a href="/register" className="px-6 py-3 font-medium text-white bg-orange-500 hover:bg-orange-600">
@@ -207,7 +207,7 @@ export default function LandingPage() {
             </p>
             <p className="flex items-center gap-1.5 text-xs text-gray-400">
               <img src="/movec logo 1.png" className="h-10 w-10" alt="" />
-              Powered by Movec Systems
+              Movec Systems
             </p>
           </div>
         </div>

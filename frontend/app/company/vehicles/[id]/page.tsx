@@ -34,11 +34,11 @@ export default function CompanyVehicleDetailPage() {
 
   return (
     <div>
-      <button onClick={() => router.back()} className="mb-6 rounded-md bg-gray-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-600">
+      <button onClick={() => router.back()} className="mb-4 rounded-md bg-gray-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-600">
         Back
       </button>
 
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-blue-950">{vehicle.plateNumber}</h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -52,7 +52,7 @@ export default function CompanyVehicleDetailPage() {
 
       <div className="bg-white border border-gray-200 rounded-lg p-5 max-w-xl">
         <h3 className="text-sm font-medium text-gray-700 mb-3">Vehicle details</h3>
-        <dl className="grid grid-cols-2 gap-4 text-sm">
+        <dl className="grid grid-cols-2 gap-3 text-sm">
           <div>
             <dt className="text-gray-500">Device ID</dt>
             <dd className="text-gray-900 font-medium mt-0.5">{vehicle.deviceId || "Not set"}</dd>

@@ -91,16 +91,16 @@ export default function DashboardShell({
       {/* MAIN CONTENT */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* FLOATING HEADER — holds the current page's title, pinned above the scroll */}
-        <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between bg-blue-950 px-8 py-4">
+        <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between bg-white px-6 py-4">
           <div>
-            {header && <h1 className="text-lg font-bold text-white">{header.title}</h1>}
+            {header && <h1 className="text-lg font-bold text-blue-950">{header.title}</h1>}
           </div>
           <div className="flex items-center gap-2">
             {alertsHref && (
               <Link
                 href={alertsHref}
                 aria-label="Alerts"
-                className="rounded-full p-2 text-white transition-colors hover:bg-white/10"
+                className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
               >
                 <FiBell size={20} />
               </Link>
@@ -114,7 +114,7 @@ export default function DashboardShell({
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 overflow-y-auto p-8">
+        <main className="min-w-0 flex-1 overflow-y-auto p-6">
           <PageHeaderContext.Provider value={headerContextValue}>{children}</PageHeaderContext.Provider>
         </main>
       </div>

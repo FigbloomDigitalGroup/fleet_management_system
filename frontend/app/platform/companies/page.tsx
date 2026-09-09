@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiRequest } from "../../lib/api";
 import { CompanyRecord } from "../../types/auth";
+import Skeleton from "../../components/Skeleton";
 
 const statusStyles: Record<string, string> = {
   active: "bg-green-50 text-green-600 border-green-200",
@@ -32,12 +33,12 @@ export default function CompaniesPage() {
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-4">
         <h1 className="text-2xl font-bold text-blue-950">Companies</h1>
         <p className="text-sm text-gray-500 mt-1">Every vehicle company registered on the platform</p>
       </div>
 
-      {loading && <p className="text-sm text-gray-500">Loading…</p>}
+      {loading && <Skeleton rows={5} rowClassName="h-12" />}
 
       {error && (
         <div className="text-sm px-3.5 py-2.5 rounded-md bg-red-50 text-red-600 border border-red-200 mb-4">
