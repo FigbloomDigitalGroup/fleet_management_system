@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/api";
-import { CompanyRecord } from "../types/auth";
+import { CompanyRecord, AlertRecord } from "../types/auth";
 import { IconType } from "react-icons";
 import { FiBell } from "react-icons/fi";
 import { FaCog } from "react-icons/fa";
@@ -75,6 +75,30 @@ export default function DashboardShell({
     };
   }, [user?.role]);
 
+  // Unresolved alert count — shown as a badge on the bell icon, on every page.
+  const [alertCount, setAlertCount] = useState(0);
+
+  useEffect(() => {
+    if (!alertsHref) return;
+    let cancelled = false;
+
+    async function loadAlertCount() {
+      try {
+        const alerts = await apiRequest<AlertRecord[]>("/api/alerts");
+        if (!cancelled) setAlertCount(alerts.filter((a) => !a.resolved).length);
+      } catch {
+        if (!cancelled) setAlertCount(0);
+      }
+    }
+
+    loadAlertCount();
+    const interval = setInterval(loadAlertCount, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [alertsHref]);
+
   return (
     <div className="h-screen overflow-hidden bg-blue-50 flex">
       {/* SIDEBAR */}
@@ -82,7 +106,7 @@ export default function DashboardShell({
         <div className="px-5 py-5 border-b border-blue-950">
           <span className="flex items-center gap-2 text-lg font-bold text-white">
             <FaCog aria-hidden="true" />
-            DETOUR
+            MOVEC FLEET
           </span>
           <p className="text-xs text-white mt-0.5">{title}</p>
         </div>
@@ -122,9 +146,14 @@ export default function DashboardShell({
               <Link
                 href={alertsHref}
                 aria-label="Alerts"
-                className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                className="relative rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
               >
                 <FiBell size={20} />
+                {alertCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-medium text-white">
+                    {alertCount > 99 ? "99+" : alertCount}
+                  </span>
+                )}
               </Link>
             )}
             <button

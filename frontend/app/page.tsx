@@ -10,7 +10,7 @@ export default function LandingPage() {
         <nav className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
           <span className="flex items-center gap-2 text-xl font-bold text-blue-950">
             <FaCog aria-hidden="true" />
-            DETOUR
+            MOVEC FLEET
           </span>
           <a href="/login" className="text-sm text-gray-700 hover:text-green-500">
             Sign in
@@ -27,7 +27,7 @@ export default function LandingPage() {
                   Know where your fleet is at every moment.
                 </h1>
                 <p className="text-gray-200 text-lg mb-8">
-                  DETOUR is a fleet tracking platform built for vehicle-owning businesses.
+                  MOVEC FLEET is a fleet tracking platform built for vehicle-owning businesses.
                   Live GPS tracking, driver management and instant alerts, all in one dashboard.
                 </p>
                 <div className="flex items-center gap-4">
@@ -79,7 +79,7 @@ export default function LandingPage() {
             Know where your fleet is without chasing it.
           </h2>
           <p className="text-gray-600 mb-6">
-            DETOUR gives vehicle-owning businesses one place to see every truck, van or car in
+            MOVEC FLEET gives vehicle-owning businesses one place to see every truck, van or car in
             real time. Register your company, add your vehicles and start tracking with no
             hardware headaches and no spreadsheets.
           </p>
@@ -122,7 +122,7 @@ export default function LandingPage() {
             Your trips and your record, in your pocket.
           </h2>
           <p className="text-gray-600">
-            Soon, the DETOUR mobile app will let you check in on your assigned vehicle, log
+            Soon, the MOVEC FLEET mobile app will let you check in on your assigned vehicle, log
             trips as you drive and send an SOS alert the moment something goes wrong. Built
             for the road, not a desk.
           </p>
@@ -153,7 +153,7 @@ export default function LandingPage() {
             <div>
               <span className="flex items-center gap-2 text-lg font-bold text-blue-950 mb-3">
                 <FaCog aria-hidden="true" />
-                DETOUR
+                MOVEC FLEET
               </span>
               <p className="text-sm text-gray-500 mb-4">
                 Real-time vehicle tracking and fleet analytics for growing businesses.
@@ -203,7 +203,7 @@ export default function LandingPage() {
 
           <div className="mt-12 pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs text-gray-400">
-              &copy; {new Date().getFullYear()} DETOUR. All rights reserved.
+              &copy; {new Date().getFullYear()} MOVEC FLEET. All rights reserved.
             </p>
             <p className="flex items-center gap-1.5 text-xs text-gray-400">
               <img src="/movec logo 1.png" className="h-10 w-10" alt="" />

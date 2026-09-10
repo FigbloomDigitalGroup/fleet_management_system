@@ -10,6 +10,7 @@ import billingRoutes from "./routes/billingRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
 import tripRoutes from "./routes/tripRoutes.js";
 import alertRoutes from "./routes/alertRoutes.js";
+import  trackingRoutes from "./routes/trackingRoutes.js";
 
 import cors from "cors";
 
@@ -43,6 +44,7 @@ app.use("/api/billing", billingRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/alerts", alertRoutes);
+app.use("/api/tracking", trackingRoutes);
 
 
 app.use((req, res) => {

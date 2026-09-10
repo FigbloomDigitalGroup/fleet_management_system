@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
 import { apiRequest } from "../lib/api";
-import FullPageLoading from "@/app/components/FullPageLoading";
 import { AlertRecord, VehicleRecord } from "../types/auth";
+import FullPageLoading from "./FullPageLoading";
 
 const ALERT_TYPES = [
   { value: "speeding", label: "Speeding" },
@@ -83,21 +84,21 @@ export default function AlertsList() {
     }
   }
 
-  if (loading) return <FullPageLoading />;
+  if (loading) return <FullPageLoading label="Loading alerts" />;
   if (error) return <p className="text-sm text-red-600">{error}</p>;
 
   return (
-    <div className="grid lg:grid-cols-3 gap-4">
+    <div className="grid lg:grid-cols-3 gap-6">
       {/* Alerts list */}
-      <div className="lg:col-span-2 bg-white rounded-lg overflow-hidden">
+      <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-black text-xs uppercase">
+          <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
             <tr>
-              <th className="text-left px-5 py-3 font-bold">Vehicle</th>
-              <th className="text-left px-5 py-3 font-bold">Type</th>
-              <th className="text-left px-5 py-3 font-bold">Message</th>
-              <th className="text-left px-5 py-3 font-bold">Status</th>
-              <th className="text-left px-5 py-3 font-bold"></th>
+              <th className="text-left px-5 py-3 font-medium">Vehicle</th>
+              <th className="text-left px-5 py-3 font-medium">Type</th>
+              <th className="text-left px-5 py-3 font-medium">Message</th>
+              <th className="text-left px-5 py-3 font-medium">Status</th>
+              <th className="text-left px-5 py-3 font-medium"></th>
             </tr>
           </thead>
           <tbody>
@@ -110,11 +111,11 @@ export default function AlertsList() {
             ) : (
               alerts.map((a) => (
                 <tr key={a._id} className="border-t border-gray-100">
-                  <td className="px-5 py-3 font-medium text-blue-950">
+                  <td className="px-5 py-3 font-medium text-gray-900">
                     {a.vehicleId?.plateNumber || "—"}
                   </td>
-                  <td className="px-5 py-3 text-blue-950">{a.type.replace(/_/g, " ")}</td>
-                  <td className="px-5 py-3 text-blue-950">{a.message}</td>
+                  <td className="px-5 py-3 text-gray-600">{a.type.replace(/_/g, " ")}</td>
+                  <td className="px-5 py-3 text-gray-600">{a.message}</td>
                   <td className="px-5 py-3">
                     <span
                       className={`text-xs px-2 py-1 rounded-full border ${
@@ -145,7 +146,7 @@ export default function AlertsList() {
       </div>
 
       {/* Send alert form */}
-      <div className="bg-white rounded-lg p-5 h-fit">
+      <div className="bg-white border border-gray-200 rounded-lg p-5 h-fit">
         <h3 className="text-sm font-medium text-gray-700 mb-4">Send an alert</h3>
         <form onSubmit={handleSendAlert} className="space-y-4">
           <div>
@@ -153,7 +154,7 @@ export default function AlertsList() {
             <select
               value={vehicleId}
               onChange={(e) => setVehicleId(e.target.value)}
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
             >
               {vehicles.length === 0 && <option value="">No vehicles yet</option>}
               {vehicles.map((v) => (
@@ -169,7 +170,7 @@ export default function AlertsList() {
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
             >
               {ALERT_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
@@ -187,7 +188,7 @@ export default function AlertsList() {
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Describe what's happening…"
               rows={3}
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
             />
           </div>
 
@@ -205,6 +206,3 @@ export default function AlertsList() {
     </div>
   );
 }
-
-
-

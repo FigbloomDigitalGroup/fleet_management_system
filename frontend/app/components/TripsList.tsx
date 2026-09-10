@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { apiRequest } from "../lib/api";
-import FullPageLoading from "@/app/components/FullPageLoading";
 import { TripRecord } from "../types/auth";
+import FullPageLoading from "./FullPageLoading";
 
-export default function TripsList() {
+export default function TripsList({ basePath = "/admin/trips" }: { basePath?: string }) {
   const [trips, setTrips] = useState<TripRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,36 +18,48 @@ export default function TripsList() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <FullPageLoading />;
+  if (loading) return <FullPageLoading label="Loading trips" />;
   if (error) return <p className="text-sm text-red-600">{error}</p>;
 
   return (
-    <div className="bg-white rounded-lg overflow-hidden">
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
       <table className="w-full text-sm">
-        <thead className="bg-gray-50 text-black text-xs uppercase">
+        <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
           <tr>
-            <th className="text-left px-5 py-3 font-bold">Vehicle</th>
-            <th className="text-left px-5 py-3 font-bold">Driver</th>
-            <th className="text-left px-5 py-3 font-bold">Start</th>
-            <th className="text-left px-5 py-3 font-bold">Distance</th>
+            <th className="text-left px-5 py-3 font-medium">Vehicle</th>
+            <th className="text-left px-5 py-3 font-medium">Driver</th>
+            <th className="text-left px-5 py-3 font-medium">Start</th>
+            <th className="text-left px-5 py-3 font-medium">Status</th>
+            <th className="text-left px-5 py-3 font-medium">Distance</th>
           </tr>
         </thead>
         <tbody>
           {trips.length === 0 ? (
             <tr>
-              <td colSpan={4} className="px-5 py-8 text-center text-gray-400">
+              <td colSpan={5} className="px-5 py-8 text-center text-gray-400">
                 No trips recorded yet.
               </td>
             </tr>
           ) : (
             trips.map((t) => (
               <tr key={t._id} className="border-t border-gray-100">
-                <td className="px-5 py-3 font-medium text-blue-950">
-                  {t.vehicleId?.plateNumber || "—"}
+                <td className="px-5 py-3 font-medium text-green-600 hover:underline">
+                  <Link href={`${basePath}/${t._id}`}>{t.vehicleId?.plateNumber || "View trip"}</Link>
                 </td>
-                <td className="px-5 py-3 text-blue-950">{t.driverId?.fullName || "Unassigned"}</td>
-                <td className="px-5 py-3 text-blue-950">{new Date(t.startTime).toLocaleString()}</td>
-                <td className="px-5 py-3 text-blue-950">
+                <td className="px-5 py-3 text-gray-600">{t.driverId?.fullName || "Unassigned"}</td>
+                <td className="px-5 py-3 text-gray-600">{new Date(t.startTime).toLocaleString()}</td>
+                <td className="px-5 py-3">
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full border ${
+                      t.endTime
+                        ? "bg-gray-100 text-gray-500 border-gray-200"
+                        : "bg-green-50 text-green-600 border-green-200"
+                    }`}
+                  >
+                    {t.endTime ? "completed" : "in progress"}
+                  </span>
+                </td>
+                <td className="px-5 py-3 text-gray-600">
                   {t.distanceKm ? `${t.distanceKm.toFixed(1)} km` : "—"}
                 </td>
               </tr>

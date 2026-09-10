@@ -22,7 +22,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DETOUR",
+  title: "MOVEC FLEET",
   description: "Vehicle Tracking & Fleet Analytics Platform",
 };
 
