@@ -133,6 +133,105 @@ export default function LandingPage() {
         </div>
       </section>
 
+
+
+      {/* PRICING */}
+      <section className="max-w-6xl mx-auto px-6 py-20">
+        <div className="text-center mb-12">
+          <span className="text-sm uppercase tracking-wide text-blue-950 font-bold mb-3 block">
+            Pricing
+          </span>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Plans that grow with your fleet</h2>
+          <p className="text-sm text-gray-600 max-w-xl mx-auto">
+            Start free, upgrade as your fleet grows. No hidden fees, cancel anytime.
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Trial */}
+          <div className="border border-gray-200 rounded-lg p-6 flex flex-col">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Trial</h3>
+            <p className="text-3xl font-bold text-gray-900 mb-1">Free</p>
+            <p className="text-xs text-gray-400 mb-6">14 days</p>
+            <ul className="text-sm text-gray-600 space-y-2 mb-8 flex-1">
+              <li>Up to 3 vehicles</li>
+              <li>Live GPS tracking</li>
+              <li>Basic trip history</li>
+              <li>Email support</li>
+            </ul>
+            <a
+              href="/register"
+              className="text-center px-4 py-2.5 font-medium text-gray-700 border border-gray-300 hover:border-gray-400"
+            >
+              Start free trial
+            </a>
+          </div>
+
+        {/* Basic */}
+        <div className="border border-gray-200 rounded-lg p-6 flex flex-col">
+          <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Basic</h3>
+          <p className="text-3xl font-bold text-gray-900 mb-1">$29</p>
+          <p className="text-xs text-gray-400 mb-6">per vehicle / month</p>
+          <ul className="text-sm text-gray-600 space-y-2 mb-8 flex-1">
+            <li>Up to 15 vehicles</li>
+            <li>Live GPS tracking</li>
+            <li>Trip history & reports</li>
+            <li>Speeding & idle alerts</li>
+            <li>Email support</li>
+          </ul>
+          <a
+            href="/register"
+            className="text-center px-4 py-2.5 font-medium text-gray-700 border border-gray-300 hover:border-gray-400"
+          >
+            Get started
+          </a>
+        </div>
+
+        {/* Pro — highlighted */}
+        <div className="border-2 border-orange-500 rounded-lg p-6 flex flex-col relative">
+          <span className="absolute -top-3 left-6 bg-orange-500 text-white text-xs font-medium px-3 py-1 rounded-full">
+            Most popular
+          </span>
+          <h3 className="text-sm font-semibold text-orange-500 uppercase mb-2">Pro</h3>
+          <p className="text-3xl font-bold text-gray-900 mb-1">$49</p>
+          <p className="text-xs text-gray-400 mb-6">per vehicle / month</p>
+          <ul className="text-sm text-gray-600 space-y-2 mb-8 flex-1">
+            <li>Up to 50 vehicles</li>
+            <li>Everything in Basic</li>
+            <li>Route deviation alerts</li>
+            <li>Fuel anomaly detection</li>
+            <li>Priority support</li>
+          </ul>
+          <a
+            href="/register"
+            className="text-center px-4 py-2.5 font-medium text-white bg-orange-500 hover:bg-orange-600"
+          >
+            Get started
+          </a>
+        </div>
+
+        {/* Enterprise */}
+        <div className="border border-gray-200 rounded-lg p-6 flex flex-col">
+          <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Enterprise</h3>
+          <p className="text-3xl font-bold text-gray-900 mb-1">Custom</p>
+          <p className="text-xs text-gray-400 mb-6">contact us</p>
+          <ul className="text-sm text-gray-600 space-y-2 mb-8 flex-1">
+            <li>Unlimited vehicles</li>
+            <li>Everything in Pro</li>
+            <li>Dedicated account manager</li>
+            <li>Custom integrations</li>
+            <li>SLA-backed support</li>
+          </ul>
+          <a
+            href="#"
+            className="text-center px-4 py-2.5 font-medium text-gray-700 border border-gray-300 hover:border-gray-400"
+          >
+            Contact sales
+          </a>
+        </div>
+    </div>
+</section >
+
       <section className="bg-gray-900 py-16">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
@@ -212,6 +311,6 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
-    </div>
+    </div >
   );
 }

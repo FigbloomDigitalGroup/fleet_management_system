@@ -18,3 +18,12 @@ const platformSettingsSchema = new mongoose.Schema(
 );
 
 export default mongoose.model("PlatformSettings", platformSettingsSchema);
+
+
+
+
+
+
+
+
+
