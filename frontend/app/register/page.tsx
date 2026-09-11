@@ -114,7 +114,7 @@ export default function RegisterPage() {
                 <div className="relative z-20 flex flex-col justify-between h-full">
                     <span className="flex items-center gap-2 text-xl font-bold text-white">
                         <FaCog aria-hidden="true" />
-                        MOVEC FLEET
+                        FIGBLOOM FLEET
                     </span>
 
                     <div>

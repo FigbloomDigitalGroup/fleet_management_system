@@ -10,7 +10,7 @@ export default function LandingPage() {
         <nav className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
           <span className="flex items-center gap-2 text-xl font-bold text-blue-950">
             <FaCog aria-hidden="true" />
-            MOVEC FLEET
+            FIGBLOOM FLEET
           </span>
           <a href="/login" className="text-sm text-gray-700 hover:text-green-500">
             Sign in
@@ -26,8 +26,8 @@ export default function LandingPage() {
                 <h1 className="text-4xl md:text-5xl font-bold text-white mb-5 leading-tight">
                   Know where your fleet is at every moment.
                 </h1>
-                <p className="text-gray-200 text-lg mb-8">
-                  MOVEC FLEET is a fleet tracking platform built for vehicle-owning businesses.
+                <p className="text-gray-200 text-base mb-8">
+                  FIGBLOOM FLEET is a fleet tracking platform built for vehicle-owning businesses.
                   Live GPS tracking, driver management and instant alerts, all in one dashboard.
                 </p>
                 <div className="flex items-center gap-4">
@@ -50,21 +50,21 @@ export default function LandingPage() {
             <div className="w-12 h-12 rounded-full text-black flex items-center justify-center mx-auto mb-4">
               <FaMapMarkerAlt size={30} />
             </div>
-            <h3 className="font-semibold text-gray-900 mb-2">Live tracking</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Live tracking</h3>
             <p className="text-sm text-gray-500">See every vehicle location update in real time on one map.</p>
           </div>
           <div className="text-center">
             <div className="w-12 h-12 rounded-full text-black flex items-center justify-center mx-auto mb-4">
               <FaBell size={30} />
             </div>
-            <h3 className="font-semibold text-gray-900 mb-2">Instant alerts</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Instant alerts</h3>
             <p className="text-sm text-gray-500">Get notified the moment a vehicle speeds, idles, or leaves its route.</p>
           </div>
           <div className="text-center">
             <div className="w-12 h-12 rounded-full text-black flex items-center justify-center mx-auto mb-4">
               <FaChartLine size={30} />
             </div>
-            <h3 className="font-semibold text-gray-900 mb-2">Fleet analytics</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Fleet analytics</h3>
             <p className="text-sm text-gray-500">Track trips, mileage, and driver activity with clear reports.</p>
           </div>
         </div>
@@ -78,8 +78,8 @@ export default function LandingPage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
             Know where your fleet is without chasing it.
           </h2>
-          <p className="text-gray-600 mb-6">
-            MOVEC FLEET gives vehicle-owning businesses one place to see every truck, van or car in
+          <p className="text-sm text-gray-600 mb-6">
+            FIGBLOOM FLEET gives vehicle-owning businesses one place to see every truck, van or car in
             real time. Register your company, add your vehicles and start tracking with no
             hardware headaches and no spreadsheets.
           </p>
@@ -105,7 +105,7 @@ export default function LandingPage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
             Run the fleet from one screen.
           </h2>
-          <p className="text-gray-600">
+          <p className="text-sm text-gray-600">
             Add vehicles, assign drivers and watch every trip unfold live on the map. When
             something needs your attention such as a vehicle idling too long or straying off
             route, you will know before it becomes a problem.
@@ -121,8 +121,8 @@ export default function LandingPage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
             Your trips and your record, in your pocket.
           </h2>
-          <p className="text-gray-600">
-            Soon, the MOVEC FLEET mobile app will let you check in on your assigned vehicle, log
+          <p className="text-sm text-gray-600">
+            Soon, the FIGBLOOM FLEET mobile app will let you check in on your assigned vehicle, log
             trips as you drive and send an SOS alert the moment something goes wrong. Built
             for the road, not a desk.
           </p>
@@ -138,7 +138,7 @@ export default function LandingPage() {
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
             Ready to see your fleet in real time?
           </h2>
-          <p className="text-gray-300 mb-8">
+          <p className="text-sm text-gray-300 mb-8">
             Set up your company in minutes and start tracking your first vehicle today.
           </p>
           <a href="/register" className="inline-block px-6 py-3 font-medium text-white bg-orange-500 hover:bg-orange-600">
@@ -153,7 +153,7 @@ export default function LandingPage() {
             <div>
               <span className="flex items-center gap-2 text-lg font-bold text-blue-950 mb-3">
                 <FaCog aria-hidden="true" />
-                MOVEC FLEET
+                FIGBLOOM FLEET
               </span>
               <p className="text-sm text-gray-500 mb-4">
                 Real-time vehicle tracking and fleet analytics for growing businesses.
@@ -172,7 +172,7 @@ export default function LandingPage() {
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Product</h3>
+              <h3 className="text-base font-semibold text-gray-900 mb-3">Product</h3>
               <ul className="space-y-2 text-sm text-gray-500">
                 <li><a href="#" className="hover:text-gray-800">Live tracking</a></li>
                 <li><a href="#" className="hover:text-gray-800">Alerts</a></li>
@@ -182,7 +182,7 @@ export default function LandingPage() {
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Company</h3>
+              <h3 className="text-base font-semibold text-gray-900 mb-3">Company</h3>
               <ul className="space-y-2 text-sm text-gray-500">
                 <li><a href="#" className="hover:text-gray-800">About</a></li>
                 <li><a href="#" className="hover:text-gray-800">Careers</a></li>
@@ -192,7 +192,7 @@ export default function LandingPage() {
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Legal</h3>
+              <h3 className="text-base font-semibold text-gray-900 mb-3">Legal</h3>
               <ul className="space-y-2 text-sm text-gray-500">
                 <li><a href="#" className="hover:text-gray-800">Privacy policy</a></li>
                 <li><a href="#" className="hover:text-gray-800">Terms of service</a></li>
@@ -203,7 +203,7 @@ export default function LandingPage() {
 
           <div className="mt-12 pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs text-gray-400">
-              &copy; {new Date().getFullYear()} MOVEC FLEET. All rights reserved.
+              &copy; {new Date().getFullYear()} FIGBLOOM FLEET. All rights reserved.
             </p>
             <p className="flex items-center gap-1.5 text-xs text-gray-400">
               <img src="/movec logo 1.png" className="h-10 w-10" alt="" />

@@ -11,6 +11,7 @@ import settingsRoutes from "./routes/settingsRoutes.js";
 import tripRoutes from "./routes/tripRoutes.js";
 import alertRoutes from "./routes/alertRoutes.js";
 import  trackingRoutes from "./routes/trackingRoutes.js";
+import routeRoutes from "./routes/routeRoutes.js";
 
 import cors from "cors";
 
@@ -45,7 +46,7 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/alerts", alertRoutes);
 app.use("/api/tracking", trackingRoutes);
-
+app.use("/api/routes", routeRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });

@@ -1,12 +1,13 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
-import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from "@react-google-maps/api";
+import { useRouter } from "next/navigation";
+import { GoogleMap, OverlayView, useJsApiLoader } from "@react-google-maps/api";
+import { FaTruck } from "react-icons/fa";
 import { apiRequest } from "../lib/api";
 import StatCard from "./StatCard";
-import FullPageLoading from "./FullPageLoading";
 import CircleStat from "./CircleStat";
+import FullPageLoading from "./FullPageLoading";
 
 interface LiveVehicle {
   vehicleId: string;
@@ -41,14 +42,49 @@ function timeAgo(dateStr: string) {
   return `${hours}h ago`;
 }
 
-export default function FleetMap() {
+function VehicleMarker({ vehicle, onClick }: { vehicle: LiveVehicle; onClick: () => void }) {
+  const color = statusColor[vehicle.status] || "#9ca3af";
+
+  return (
+    <div
+      className="flex flex-col items-center cursor-pointer"
+      style={{ transform: "translate(-50%, -100%)" }}
+      onClick={onClick}
+    >
+      <div
+        className="mb-1 px-2 py-1 rounded-md shadow-sm bg-white border text-xs whitespace-nowrap"
+        style={{ borderColor: color }}
+      >
+        <span className="font-semibold text-gray-900">{vehicle.plateNumber}</span>
+        <span className="text-gray-400"> · </span>
+        <span style={{ color }}>{vehicle.status}</span>
+        {vehicle.lastLocation && (
+          <>
+            <span className="text-gray-400"> · </span>
+            <span className="text-gray-500">{timeAgo(vehicle.lastLocation.recordedAt)}</span>
+          </>
+        )}
+      </div>
+
+      <div
+        className="w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow hover:scale-110 transition-transform"
+        style={{ background: color }}
+      >
+        <FaTruck size={14} color="white" />
+      </div>
+    </div>
+  );
+}
+
+export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: string }) {
+  const router = useRouter();
+
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
   });
 
   const [vehicles, setVehicles] = useState<LiveVehicle[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<LiveVehicle | null>(null);
 
   async function load() {
     try {
@@ -80,10 +116,8 @@ export default function FleetMap() {
     offline: vehicles.filter((v) => v.status === "offline").length,
   };
 
-  // Average speed-derived metric: how many vehicles are actually reporting a location at all
   const reportingPct = counts.total ? Math.round((withLocation.length / counts.total) * 100) : 0;
 
-  // Most recently updated vehicle — a quick "freshness" indicator
   const mostRecent = withLocation.length
     ? withLocation.reduce((latest, v) =>
         new Date(v.lastLocation!.recordedAt) > new Date(latest.lastLocation!.recordedAt) ? v : latest
@@ -92,87 +126,60 @@ export default function FleetMap() {
 
   if (loading || !isLoaded) return <FullPageLoading label="Loading map" />;
 
-return (
-  <div>
-    {/* Top stat cards */}
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <StatCard label="Total vehicles" value={counts.total} accent="green" />
-      <StatCard label="Active" value={counts.active} accent="green" />
-      <StatCard label="Idle" value={counts.idle} accent="orange" />
-      <StatCard label="Offline" value={counts.offline} accent="orange" />
-    </div>
+  return (
+    <div>
+      {/* Top stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatCard label="Total vehicles" value={counts.total} accent="green" />
+        <StatCard label="Active" value={counts.active} accent="green" />
+        <StatCard label="Idle" value={counts.idle} accent="orange" />
+        <StatCard label="Offline" value={counts.offline} accent="orange" />
+      </div>
 
-    {/* Map */}
-    <div className="bg-white rounded-lg overflow-hidden mb-6">
-      <div className="h-[500px] w-full">
-        <GoogleMap mapContainerStyle={containerStyle} center={center} zoom={12}>
-          {withLocation.map((v) => (
-            <Marker
-              key={v.vehicleId}
-              position={{ lat: v.lastLocation!.latitude, lng: v.lastLocation!.longitude }}
-              icon={{
-                path: window.google.maps.SymbolPath.CIRCLE,
-                scale: 8,
-                fillColor: statusColor[v.status] || "#9ca3af",
-                fillOpacity: 1,
-                strokeColor: "white",
-                strokeWeight: 2,
-              }}
-              onClick={() => setSelected(v)}
-            />
+      {/* Map */}
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-6">
+        <div className="h-[500px] w-full">
+          <GoogleMap mapContainerStyle={containerStyle} center={center} zoom={12}>
+            {withLocation.map((v) => (
+              <OverlayView
+                key={v.vehicleId}
+                position={{ lat: v.lastLocation!.latitude, lng: v.lastLocation!.longitude }}
+                mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+              >
+                <VehicleMarker vehicle={v} onClick={() => router.push(`${basePath}/${v.vehicleId}`)} />
+              </OverlayView>
+            ))}
+          </GoogleMap>
+        </div>
+        {withLocation.length === 0 && (
+          <p className="text-sm text-gray-400 text-center py-4">
+            No vehicle location data yet — vehicles will appear once GPS pings start coming in.
+          </p>
+        )}
+      </div>
+
+      {/* Legend */}
+      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+        <p className="text-xs font-medium text-gray-500 mb-2">Marker colors</p>
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
+          {LEGEND_ITEMS.map((item) => (
+            <div key={item.label} className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full border-2 border-white shadow" style={{ background: item.color }} />
+              <span className="text-xs text-gray-600">{item.label}</span>
+            </div>
           ))}
-
-          {selected && selected.lastLocation && (
-            <InfoWindow
-              position={{ lat: selected.lastLocation.latitude, lng: selected.lastLocation.longitude }}
-              onCloseClick={() => setSelected(null)}
-            >
-              <div className="text-sm">
-                <strong>{selected.plateNumber}</strong>
-                <br />
-                Status: {selected.status}
-                <br />
-                Updated: {timeAgo(selected.lastLocation.recordedAt)}
-              </div>
-            </InfoWindow>
-          )}
-        </GoogleMap>
+        </div>
       </div>
-      {withLocation.length === 0 && (
-        <p className="text-sm text-gray-400 text-center py-4">
-          No vehicle location data yet — vehicles will appear once GPS pings start coming in.
-        </p>
-      )}
-    </div>
 
-    {/* Legend */}
-    <div className="bg-white rounded-lg p-4 mb-6">
-      <p className="text-xs font-medium text-gray-500 mb-2">Marker colors</p>
-      <div className="flex flex-wrap gap-x-6 gap-y-2">
-        {LEGEND_ITEMS.map((item) => (
-          <div key={item.label} className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full border-2 border-white shadow" style={{ background: item.color }} />
-            <span className="text-xs text-gray-600">{item.label}</span>
-          </div>
-        ))}
+      {/* Reporting % + freshness */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <CircleStat percentage={reportingPct} label="Vehicles reporting location" color="#4ade80" />
+        <StatCard
+          label="Most recent update"
+          value={mostRecent ? timeAgo(mostRecent.lastLocation!.recordedAt) : "—"}
+          accent="green"
+        />
       </div>
     </div>
-
-    {/* Reporting % + freshness */}
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <CircleStat percentage={reportingPct} label="Vehicles reporting location" color="#4ade80" />
-      <StatCard
-        label="Most recent update"
-        value={mostRecent ? timeAgo(mostRecent.lastLocation!.recordedAt) : "—"}
-        accent="green"
-      />
-    </div>
-  </div>
-)
+  );
 }
-
-
-
-
-
-

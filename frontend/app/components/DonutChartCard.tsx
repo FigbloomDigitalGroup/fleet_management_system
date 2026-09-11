@@ -9,9 +9,9 @@ interface DonutSlice {
 }
 
 const titleSizes = {
-  sm: "text-sm",
-  md: "text-base",
-  lg: "text-xl",
+  sm: "text-xs",
+  md: "text-sm",
+  lg: "text-base",
 };
 
 export default function DonutChartCard({

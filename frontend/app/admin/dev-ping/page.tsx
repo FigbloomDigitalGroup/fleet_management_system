@@ -10,6 +10,7 @@ export default function DevPingPage() {
   const [latitude, setLatitude] = useState("-1.2921");
   const [longitude, setLongitude] = useState("36.8219");
   const [speedKph, setSpeedKph] = useState("0");
+  const [fuelLevelLiters, setFuelLevelLiters] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,14 +28,19 @@ export default function DevPingPage() {
     setResult(null);
     setIsSending(true);
     try {
+      const body: Record<string, any> = {
+        vehicleId,
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        speedKph: parseFloat(speedKph),
+      };
+      if (fuelLevelLiters.trim() !== "") {
+        body.fuelLevelLiters = parseFloat(fuelLevelLiters);
+      }
+
       const data = await apiRequest("/api/tracking/ping", {
         method: "POST",
-        body: JSON.stringify({
-          vehicleId,
-          latitude: parseFloat(latitude),
-          longitude: parseFloat(longitude),
-          speedKph: parseFloat(speedKph),
-        }),
+        body: JSON.stringify(body),
       });
       setResult(JSON.stringify(data, null, 2));
     } catch (err: any) {
@@ -44,12 +50,14 @@ export default function DevPingPage() {
     }
   }
 
-  // Quick-fill buttons for the test sequence we planned
   const presets = [
-    { label: "1. Stationary", lat: "-1.2921", lng: "36.8219", speed: "0" },
-    { label: "2. Start moving", lat: "-1.2935", lng: "36.8225", speed: "45" },
-    { label: "3. Speeding", lat: "-1.2950", lng: "36.8240", speed: "95" },
-    { label: "4. Stop", lat: "-1.2965", lng: "36.8255", speed: "0" },
+    { label: "1. Stationary", lat: "-1.2921", lng: "36.8219", speed: "0", fuel: "" },
+    { label: "2. Start moving", lat: "-1.2935", lng: "36.8225", speed: "45", fuel: "" },
+    { label: "3. Speeding", lat: "-1.2950", lng: "36.8240", speed: "95", fuel: "" },
+    { label: "4. Stop", lat: "-1.2965", lng: "36.8255", speed: "0", fuel: "" },
+    { label: "5. Fuel A (full)", lat: "-1.2921", lng: "36.8219", speed: "40", fuel: "50" },
+    { label: "6. Fuel B (anomaly)", lat: "-1.2925", lng: "36.8222", speed: "40", fuel: "35" },
+    { label: "7. Off-route", lat: "-1.3100", lng: "36.8400", speed: "40", fuel: "" },
   ];
 
   return (
@@ -108,6 +116,19 @@ export default function DevPingPage() {
             </div>
           </div>
 
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Fuel level (liters) <span className="text-gray-400">— optional, leave blank if no sensor</span>
+            </label>
+            <input
+              type="text"
+              value={fuelLevelLiters}
+              onChange={(e) => setFuelLevelLiters(e.target.value)}
+              placeholder="e.g. 50"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400"
+            />
+          </div>
+
           {/* Quick-fill preset buttons */}
           <div>
             <p className="text-xs text-gray-500 mb-2">Quick fill:</p>
@@ -120,6 +141,7 @@ export default function DevPingPage() {
                     setLatitude(p.lat);
                     setLongitude(p.lng);
                     setSpeedKph(p.speed);
+                    setFuelLevelLiters(p.fuel);
                   }}
                   className="text-xs px-3 py-1.5 rounded-md border border-gray-300 text-gray-600 hover:border-green-400 hover:text-green-600"
                 >

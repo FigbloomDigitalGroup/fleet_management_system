@@ -102,16 +102,16 @@ export default function DashboardShell({
   return (
     <div className="h-screen overflow-hidden bg-blue-50 flex">
       {/* SIDEBAR */}
-      <aside className="h-screen w-60 shrink-0 overflow-y-auto bg-blue-950 border-r border-blue-950 flex flex-col text-white">
-        <div className="px-5 py-5 border-b border-blue-950">
-          <span className="flex items-center gap-2 text-lg font-bold text-white">
+      <aside className="h-screen w-48 shrink-0 overflow-y-auto bg-blue-950 border-r border-blue-950 flex flex-col text-white">
+        <div className="px-4 py-4 border-b border-blue-950">
+          <span className="flex items-center gap-2 text-sm font-bold text-white">
             <FaCog aria-hidden="true" />
-            MOVEC FLEET
+            FIGBLOOM FLEET
           </span>
-          <p className="text-xs text-white mt-0.5">{title}</p>
+          <p className="text-[11px] text-white mt-0.5">{title}</p>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-2.5 py-3 space-y-1">
           {navItems.map((item) => {
             const active = pathname === item.href;
             const Icon = item.icon;
@@ -119,12 +119,12 @@ export default function DashboardShell({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${active
+                className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs font-medium transition-colors ${active
                   ? "bg-blue-900 text-white"
                   : "text-white hover:bg-blue-900"
                   }`}
               >
-                <Icon size={16} />
+                <Icon size={14} />
                 {item.label}
               </Link>
             );
