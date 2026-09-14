@@ -37,7 +37,7 @@ export default function LoginPage() {
 
 
       {/* LEFT — Hero panel */}
-      <BackgroundSlideshow className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16 border-r border-gray-200">
+      <BackgroundSlideshow className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16">
         {/* dark overlay so text stays readable over the image */}
         <div className="absolute inset-0 z-10 bg-black/50" />
 

@@ -80,20 +80,27 @@ export default function AdminDashboard() {
     <div>
       {/* Top stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <StatCard label="Total vehicles" value={vehicleCounts.total} accent="blue" />
-        <StatCard label="Drivers" value={drivers.length} accent="green" />
-        <StatCard label="Active now" value={vehicleCounts.active} accent="green" />
-        <StatCard label="Unresolved alerts" value={unresolvedAlerts.length} accent="orange" />
+        <StatCard label="Total vehicles" value={vehicleCounts.total} accent="blue" description="All vehicles on your account" />
+        <StatCard label="Drivers" value={drivers.length} accent="green" description="Drivers registered to your fleet" />
+        <StatCard label="Active now" value={vehicleCounts.active} accent="green" description="Vehicles currently moving" />
+        <StatCard label="Unresolved alerts" value={unresolvedAlerts.length} accent="orange" description="Alerts still awaiting review" />
       </div>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
         <div className="lg:col-span-2">
-          <BarChartCard title="Trips — last 7 days" data={tripsPerDay} dataKey="trips" color="#ea580c" size="lg" />
+          <BarChartCard
+            title="Trips — last 7 days"
+            description="Number of trips started each day this week"
+            data={tripsPerDay}
+            dataKey="trips"
+            color="#ea580c"
+            size="lg"
+          />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <CircleStat percentage={activePct} label="Fleet active" color="#16a34a" />
-          <CircleStat percentage={assignedPct} label="Drivers assigned" color="#16a34a" />
+          <CircleStat percentage={activePct} label="Fleet active" color="#16a34a" description="Vehicles currently on the move" />
+          <CircleStat percentage={assignedPct} label="Drivers assigned" color="#16a34a" description="Drivers with a vehicle assigned" />
         </div>
       </div>
     
@@ -102,6 +109,7 @@ export default function AdminDashboard() {
   <div className="flex-1">
     <DonutChartCard
       title="Fleet status breakdown"
+      description="How your vehicles are distributed across statuses"
       data={[
         { name: "Active", value: vehicleCounts.active, color: "#4ade80" },
         { name: "Idle", value: vehicleCounts.idle, color: "#fb923c" },
@@ -122,12 +130,13 @@ export default function AdminDashboard() {
 
       {/* Recent alerts */}
       <div className="mb-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Recent alerts</h2>
           <Link href="/admin/alerts" className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700">
             View all
           </Link>
         </div>
+        <p className="text-xs text-gray-400 mb-3">The 5 most recent alerts across your fleet</p>
         <div className="bg-white rounded-lg overflow-hidden">
           {alerts.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">No alerts yet.</p>
@@ -159,12 +168,13 @@ export default function AdminDashboard() {
 
       {/* Recent trips */}
       <div>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Recent trips</h2>
           <Link href="/admin/trips" className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700">
             View all
           </Link>
         </div>
+        <p className="text-xs text-gray-400 mb-3">The 5 most recently started trips</p>
         <div className="bg-white rounded-lg overflow-hidden">
           {trips.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">No trips recorded yet.</p>

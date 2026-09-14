@@ -94,7 +94,11 @@ export default function VehiclesList({
         {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
         {error && <p className="text-sm text-red-600 p-5">{error}</p>}
         {!loading && !error && (
-          <table className="w-full text-sm">
+          <>
+            <p className="text-xs text-gray-400 px-5 pt-4">
+              Every vehicle on your account, its current status, and assigned driver.
+            </p>
+            <table className="w-full text-sm mt-2">
             <thead className="bg-gray-50 text-black text-xs uppercase">
               <tr>
                 <th className="text-left px-5 py-3 font-bold">Plate</th>
@@ -158,11 +162,13 @@ export default function VehiclesList({
               )}
             </tbody>
           </table>
+          </>
         )}
       </div>
 
       <div className="bg-white rounded-lg p-5 h-fit">
-        <h3 className="text-sm font-medium text-gray-700 mb-4">Add a vehicle</h3>
+        <h3 className="text-sm font-medium text-gray-700">Add a vehicle</h3>
+        <p className="text-xs text-gray-400 mt-0.5 mb-4">Register a vehicle to start tracking it.</p>
         <form onSubmit={handleAddVehicle} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Plate number</label>

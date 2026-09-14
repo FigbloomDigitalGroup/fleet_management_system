@@ -81,8 +81,9 @@ export default function CompanyDetailPage() {
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Details + users */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white border border-gray-200 rounded-lg p-5">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Company details</h3>
+          <div className="bg-white rounded-lg p-5">
+            <h3 className="text-sm font-medium text-gray-700">Company details</h3>
+            <p className="text-xs text-gray-400 mt-0.5 mb-3">Plan, sign-up date, and user count</p>
             <dl className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <dt className="text-gray-500">Subscription plan</dt>
@@ -102,7 +103,8 @@ export default function CompanyDetailPage() {
           </div>
 
           <div className="bg-white rounded-lg overflow-hidden">
-            <h3 className="text-sm font-medium text-gray-700 p-5 pb-0">Users</h3>
+            <h3 className="text-sm font-medium text-gray-700 px-5 pt-5">Users</h3>
+            <p className="text-xs text-gray-400 px-5">Admins and drivers on this company's account</p>
             <table className="w-full text-sm mt-3">
               <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
                 <tr>
@@ -134,7 +136,8 @@ export default function CompanyDetailPage() {
 
         {/* Status controls */}
         <div className="bg-white border border-gray-200 rounded-lg p-5 h-fit">
-          <h3 className="text-sm font-medium text-gray-700 mb-4">Manage status</h3>
+          <h3 className="text-sm font-medium text-gray-700">Manage status</h3>
+          <p className="text-xs text-gray-400 mt-0.5 mb-4">Controls whether this company can access the platform</p>
           <div className="space-y-2">
             <button
               onClick={() => updateStatus("active")}

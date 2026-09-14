@@ -24,7 +24,17 @@ const FleetMap = dynamic<{ compact?: boolean }>(() => import("../../components/F
 
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-function CircleStat({ percentage, label, color }: { percentage: number; label: string; color: string }) {
+function CircleStat({
+  percentage,
+  label,
+  description,
+  color,
+}: {
+  percentage: number;
+  label: string;
+  description?: string;
+  color: string;
+}) {
   const radius = 28;
   const circumference = 2 * Math.PI * radius;
   const progress = (Math.max(0, Math.min(100, percentage)) / 100) * circumference;
@@ -50,6 +60,7 @@ function CircleStat({ percentage, label, color }: { percentage: number; label: s
         </span>
       </div>
       <span className="mt-2 text-sm text-gray-600">{label}</span>
+      {description && <span className="text-xs text-gray-400 text-center">{description}</span>}
     </div>
   );
 }
@@ -124,23 +135,31 @@ const vehicleCounts = {
     <div>
       {/* Top stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <StatCard label="Total vehicles" value={vehicleCounts.total} accent="blue" />
-        <StatCard label="Drivers" value={drivers.length} accent="green" />
-        <StatCard label="Admins" value={admins.length} accent="green" />
-        <StatCard label="Unresolved alerts" value={unresolvedAlerts.length} accent="orange" />
+        <StatCard label="Total vehicles" value={vehicleCounts.total} accent="blue" description="All vehicles on your account" />
+        <StatCard label="Drivers" value={drivers.length} accent="green" description="Drivers registered to your fleet" />
+        <StatCard label="Admins" value={admins.length} accent="green" description="Admin users on your account" />
+        <StatCard label="Unresolved alerts" value={unresolvedAlerts.length} accent="orange" description="Alerts still awaiting review" />
       </div>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
         <div className="lg:col-span-2">
-          <BarChartCard title="Trips — last 7 days" data={tripsPerDay} dataKey="trips" color="#ea580c" size="lg" />
+          <BarChartCard
+            title="Trips — last 7 days"
+            description="Number of trips started each day this week"
+            data={tripsPerDay}
+            dataKey="trips"
+            color="#ea580c"
+            size="lg"
+          />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <CircleStat percentage={activePct} label="Fleet active" color="#16a34a" />
+          <CircleStat percentage={activePct} label="Fleet active" color="#16a34a" description="Vehicles currently on the move" />
           <CircleStat
             percentage={vehicleCounts.total ? Math.round((vehicleCounts.offline / vehicleCounts.total) * 100) : 0}
             label="Offline"
             color="#9ca3af"
+            description="No recent signal received"
           />
         </div>
       </div>
@@ -150,6 +169,7 @@ const vehicleCounts = {
   <div className="flex-1">
     <DonutChartCard
       title="Fleet status breakdown"
+      description="How your vehicles are distributed across statuses"
       data={[
         { name: "Active", value: vehicleCounts.active, color: "#4ade80" },
         { name: "Idle", value: vehicleCounts.idle, color: "#fb923c" },
@@ -170,12 +190,13 @@ const vehicleCounts = {
 
       {/* Recent alerts */}
       <div>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Recent alerts</h2>
           <Link href="/company/alerts" className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700">
             View all
           </Link>
         </div>
+        <p className="text-xs text-gray-400 mb-3">The 5 most recent alerts across your fleet</p>
         <div className="bg-white rounded-lg overflow-hidden">
           {alerts.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">No alerts yet.</p>

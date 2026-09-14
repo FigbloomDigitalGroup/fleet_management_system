@@ -22,8 +22,11 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
   if (error) return <p className="text-sm text-red-600">{error}</p>;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <table className="w-full text-sm">
+    <div className="bg-white rounded-lg overflow-hidden">
+      <p className="text-xs text-gray-400 px-5 pt-4">
+        Every recorded trip, most recent first — tap a vehicle to see its full route.
+      </p>
+      <table className="w-full text-sm mt-2">
         <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
           <tr>
             <th className="text-left px-5 py-3 font-medium">Vehicle</th>
@@ -50,11 +53,10 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
                 <td className="px-5 py-3 text-gray-600">{new Date(t.startTime).toLocaleString()}</td>
                 <td className="px-5 py-3">
                   <span
-                    className={`text-xs px-2 py-1 rounded-full border ${
-                      t.endTime
+                    className={`text-xs px-2 py-1 rounded-full border ${t.endTime
                         ? "bg-gray-100 text-gray-500 border-gray-200"
                         : "bg-green-50 text-green-600 border-green-200"
-                    }`}
+                      }`}
                   >
                     {t.endTime ? "completed" : "in progress"}
                   </span>

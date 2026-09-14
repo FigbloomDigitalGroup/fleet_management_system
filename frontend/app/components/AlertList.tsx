@@ -90,8 +90,11 @@ export default function AlertsList() {
   return (
     <div className="grid lg:grid-cols-3 gap-6">
       {/* Alerts list */}
-      <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="lg:col-span-2 bg-white rounded-lg overflow-hidden">
+        <p className="text-xs text-gray-400 px-5 pt-4">
+          Speeding, geofence, and offline alerts raised across your fleet.
+        </p>
+        <table className="w-full text-sm mt-2">
           <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
             <tr>
               <th className="text-left px-5 py-3 font-medium">Vehicle</th>
@@ -118,11 +121,10 @@ export default function AlertsList() {
                   <td className="px-5 py-3 text-gray-600">{a.message}</td>
                   <td className="px-5 py-3">
                     <span
-                      className={`text-xs px-2 py-1 rounded-full border ${
-                        a.resolved
+                      className={`text-xs px-2 py-1 rounded-full border ${a.resolved
                           ? "bg-gray-100 text-gray-500 border-gray-200"
                           : "bg-orange-50 text-orange-600 border-orange-200"
-                      }`}
+                        }`}
                     >
                       {a.resolved ? "resolved" : "open"}
                     </span>
@@ -146,8 +148,9 @@ export default function AlertsList() {
       </div>
 
       {/* Send alert form */}
-      <div className="bg-white border border-gray-200 rounded-lg p-5 h-fit">
-        <h3 className="text-sm font-medium text-gray-700 mb-4">Send an alert</h3>
+      <div className="bg-white rounded-lg p-5 h-fit">
+        <h3 className="text-sm font-medium text-gray-700">Send an alert</h3>
+        <p className="text-xs text-gray-400 mt-0.5 mb-4">Manually notify the team about a vehicle issue.</p>
         <form onSubmit={handleSendAlert} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Vehicle</label>

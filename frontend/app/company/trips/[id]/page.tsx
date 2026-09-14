@@ -6,6 +6,7 @@ import { FiArrowLeft } from "react-icons/fi";
 import { apiRequest } from "../../../lib/api";
 import { TripRecord } from "../../../types/auth";
 import FullPageLoading from "../../../components/FullPageLoading";
+import CompanyTripReplayMap from "../../../components/CompanyTripReplayMap";
 
 export default function CompanyTripDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -40,17 +41,17 @@ export default function CompanyTripDetailPage() {
           <p className="text-sm text-gray-500 mt-1">{new Date(trip.startTime).toLocaleString()}</p>
         </div>
         <span
-          className={`text-xs px-3 py-1.5 rounded-full border font-medium ${
-            trip.endTime
+          className={`text-xs px-3 py-1.5 rounded-full border font-medium ${trip.endTime
               ? "bg-gray-100 text-gray-500 border-gray-200"
               : "bg-green-50 text-green-600 border-green-200"
-          }`}
+            }`}
         >
           {trip.endTime ? "completed" : "in progress"}
         </span>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-5 max-w-xl">
+      <div className="bg-white rounded-lg p-5 max-w-xl mb-6">
+        <p className="text-xs text-gray-400 mb-3">Key details recorded for this trip</p>
         <dl className="grid grid-cols-2 gap-5 text-sm">
           <div>
             <dt className="text-gray-500">Vehicle</dt>
@@ -77,6 +78,11 @@ export default function CompanyTripDetailPage() {
             </dd>
           </div>
         </dl>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-medium text-gray-700 mb-3">Journey replay</h3>
+        <CompanyTripReplayMap tripId={trip._id} />
       </div>
     </div>
   );
