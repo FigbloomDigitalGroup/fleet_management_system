@@ -1,6 +1,7 @@
 import Trip from "../models/Trip.js";
 import Vehicle from "../models/Vehicle.js";
 import { tenantScope } from "../middleware/auth.js";
+import LocationPing from "../models/LocationPing.js";
 
 // List trips for the requester's tenant, newest first
 export async function listTrips(req, res) {
@@ -35,5 +36,28 @@ export async function getTrip(req, res) {
     return res.status(500).json({ error: "Failed to fetch trip" });
   }
 }
+
+export async function getTripPath(req, res) {
+  try {
+    const trip = await Trip.findById(req.params.id);
+    if (!trip) return res.status(404).json({ error: "Trip not found" });
+
+    const pings = await LocationPing.find({
+      vehicleId: trip.vehicleId,
+      recordedAt: {
+        $gte: trip.startTime,
+        $lte: trip.endTime || new Date(),
+      },
+    }).sort({ recordedAt: 1 });
+
+    return res.json(pings);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to fetch trip path" });
+  }
+}
+
+
+
 
 

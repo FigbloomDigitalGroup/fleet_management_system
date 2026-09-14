@@ -5,12 +5,13 @@ interface StatusItem {
   description: string;
 }
 
-export default function StatusDetailsCard({ items }: { items: StatusItem[] }) {
+export default function StatusDetailsCard({ items, title = "Breakdown" }: { items: StatusItem[]; title?: string }) {
   const total = items.reduce((sum, i) => sum + i.value, 0);
 
   return (
     <div className="bg-white rounded-lg p-5 flex-1">
-      <h3 className="text-sm font-bold text-blue-950 mb-4">Breakdown</h3>
+      <h3 className="text-sm font-bold text-blue-950">{title}</h3>
+      <p className="text-xs text-gray-400 mt-0.5 mb-4">Share of the total for each status</p>
       <div className="space-y-4">
         {items.map((item) => {
           const pct = total ? Math.round((item.value / total) * 100) : 0;

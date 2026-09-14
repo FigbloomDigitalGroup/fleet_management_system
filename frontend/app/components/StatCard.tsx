@@ -29,16 +29,18 @@ function getStatIcon(label: string) {
 export default function StatCard({
   label,
   value,
+  description,
   accent = "green",
 }: {
   label: string;
   value: string | number;
+  description?: string;
   accent?: "green" | "orange" | "blue";
 }) {
   const Icon = getStatIcon(label);
 
   return (
-    <div className="relative h-36 overflow-hidden rounded-lg bg-white">
+    <div className="relative min-h-36 overflow-hidden rounded-lg bg-white">
       {/* Wavy orange band — covers the top half of the card, white below */}
       <svg
         viewBox="0 0 200 40"
@@ -53,14 +55,17 @@ export default function StatCard({
         />
       </svg>
 
-      <div className="relative flex h-full flex-col justify-between p-5">
+      <div className="relative flex h-full flex-col justify-between gap-2 p-5">
         <div className="flex items-start justify-between gap-3">
           <p className="text-xs font-medium uppercase tracking-wide text-blue-950">{label}</p>
           <span className="rounded-md bg-blue-50 p-2 text-lg text-blue-950" aria-hidden="true">
             <Icon />
           </span>
         </div>
-        <p className="text-xl font-bold text-orange-500/60">{value}</p>
+        <div>
+          <p className="text-xl font-bold text-orange-500/60">{value}</p>
+          {description && <p className="text-xs text-gray-400 mt-1">{description}</p>}
+        </div>
       </div>
     </div>
   );

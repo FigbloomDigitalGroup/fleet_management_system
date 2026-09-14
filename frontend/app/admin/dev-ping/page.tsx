@@ -69,7 +69,7 @@ export default function DevPingPage() {
         </p>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-5">
+      <div className="bg-white rounded-lg p-5">
         <form onSubmit={sendPing} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Vehicle</label>

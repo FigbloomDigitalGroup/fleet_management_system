@@ -12,6 +12,7 @@ const navItems = [
   { label: "Drivers", href: "/admin/drivers", icon: FiUsers },
   { label: "Trips", href: "/admin/trips", icon: FiFileText },
   { label: "Alerts", href: "/admin/alerts", icon: FiAlertTriangle },
+    { label: "Live Ping", href: "/admin/dev-ping", icon: FiAlertTriangle },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

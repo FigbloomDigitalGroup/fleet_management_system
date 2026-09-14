@@ -1,10 +1,12 @@
 export default function CircleStat({
   percentage,
   label,
+  description,
   color = "#16a34a",
 }: {
   percentage: number;
   label: string;
+  description?: string;
   color?: string;
 }) {
   const radius = 34;
@@ -32,6 +34,7 @@ export default function CircleStat({
         </text>
       </svg>
       <p className="text-sm text-gray-600 mt-2">{label}</p>
+      {description && <p className="text-xs text-gray-400 mt-0.5 text-center">{description}</p>}
     </div>
   );
 }

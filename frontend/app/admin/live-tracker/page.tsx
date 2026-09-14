@@ -110,7 +110,7 @@ export default function LiveTrackerPage() {
         </p>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-5 mb-6">
+      <div className="bg-white rounded-lg p-5 mb-6">
         <label className="block text-xs font-medium text-gray-600 mb-1">Vehicle</label>
         <select
           value={vehicleId}
@@ -152,7 +152,7 @@ export default function LiveTrackerPage() {
       </div>
 
       {logs.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white rounded-lg overflow-hidden">
           <p className="text-xs font-medium text-gray-500 p-4 pb-0">Recent pings</p>
           <table className="w-full text-sm mt-2">
             <tbody>
@@ -165,11 +165,10 @@ export default function LiveTrackerPage() {
                   <td className="px-4 py-2 text-gray-600">{log.speedKph} km/h</td>
                   <td className="px-4 py-2">
                     <span
-                      className={`text-xs px-2 py-1 rounded-full border ${
-                        log.status === "ok"
+                      className={`text-xs px-2 py-1 rounded-full border ${log.status === "ok"
                           ? "bg-green-50 text-green-600 border-green-200"
                           : "bg-red-50 text-red-600 border-red-200"
-                      }`}
+                        }`}
                     >
                       {log.status}
                     </span>
