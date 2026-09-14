@@ -14,13 +14,15 @@ const titleSizes = {
 
 function BarChartCard({
     title,
+    description,
     data,
     dataKey,
     color,
     size = "md",
 }: {
     title: string;
-    data: { name: string; [key: string]: string | number }[];
+    description?: string;
+    data: { name: string;[key: string]: string | number }[];
     dataKey: string;
     color: string;
     size?: "sm" | "md" | "lg";
@@ -28,8 +30,11 @@ function BarChartCard({
     const maxValue = Math.max(...data.map((item) => Number(item[dataKey])), 1);
 
     return (
-        <div className="rounded-lg border border-gray-200 bg-white p-5">
-            <h2 className={`mb-4 ${titleSizes[size]} font-bold text-blue-950`}>{title}</h2>
+        <div className="rounded-lg bg-white p-5">
+            <div className="mb-4">
+                <h2 className={`${titleSizes[size]} font-bold text-blue-950`}>{title}</h2>
+                {description && <p className="text-xs text-gray-400 mt-0.5">{description}</p>}
+            </div>
             {data.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-10">No data yet.</p>
             ) : (
@@ -117,68 +122,70 @@ export default function AnalyticsPage() {
 
             {/* Core totals */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-                <StatCard label="Total companies" value={data.totals.totalCompanies} accent="blue" />
-                <StatCard label="Total vehicles" value={data.totals.totalVehicles} accent="green" />
-                <StatCard label="Total users" value={data.totals.totalUsers} accent="green" />
-                <StatCard label="Pending approval" value={data.totals.pendingCompanies} accent="orange" />
+                <StatCard label="Total companies" value={data.totals.totalCompanies} accent="blue" description="Companies registered on the platform" />
+                <StatCard label="Total vehicles" value={data.totals.totalVehicles} accent="green" description="Vehicles across all companies" />
+                <StatCard label="Total users" value={data.totals.totalUsers} accent="green" description="Admins and drivers combined" />
+                <StatCard label="Pending approval" value={data.totals.pendingCompanies} accent="orange" description="Companies awaiting review" />
             </div>
 
             {/* Billing plan breakdown */}
-          
 
-{/* Billing plan breakdown */}
-<div className="mb-4">
-  <StatusDetailsCard
-    items={[
-      {
-        label: "Trial",
-        value: billing?.planCounts?.trial || 0,
-        color: "#9ca3af",
-        description: "Free trial period, limited vehicle count",
-      },
-      {
-        label: "Basic",
-        value: billing?.planCounts?.basic || 0,
-        color: "#60a5fa",
-        description: "Entry-level paid plan",
-      },
-      {
-        label: "Pro",
-        value: billing?.planCounts?.pro || 0,
-        color: "#4ade80",
-        description: "Full-featured plan for growing fleets",
-      },
-      {
-        label: "Enterprise",
-        value: billing?.planCounts?.enterprise || 0,
-        color: "#fb923c",
-        description: "Highest tier, largest fleets and custom needs",
-      },
-    ]}
-  />
-</div>
+
+            {/* Billing plan breakdown */}
+            <div className="mb-4">
+                <StatusDetailsCard
+                    items={[
+                        {
+                            label: "Trial",
+                            value: billing?.planCounts?.trial || 0,
+                            color: "#9ca3af",
+                            description: "Free trial period, limited vehicle count",
+                        },
+                        {
+                            label: "Basic",
+                            value: billing?.planCounts?.basic || 0,
+                            color: "#60a5fa",
+                            description: "Entry-level paid plan",
+                        },
+                        {
+                            label: "Pro",
+                            value: billing?.planCounts?.pro || 0,
+                            color: "#4ade80",
+                            description: "Full-featured plan for growing fleets",
+                        },
+                        {
+                            label: "Enterprise",
+                            value: billing?.planCounts?.enterprise || 0,
+                            color: "#fb923c",
+                            description: "Highest tier, largest fleets and custom needs",
+                        },
+                    ]}
+                />
+            </div>
 
 
             {/* Vehicles per company + active % */}
             <div className="grid lg:grid-cols-3 gap-3 mb-4">
                 <div className="lg:col-span-2">
-                  <BarChartCard
-                            title="Vehicles per company"
-                            data={data.vehiclesPerCompany.map((v) => ({ name: v.name, vehicles: v.count }))}
-                            dataKey="vehicles"
-                            color="#ea580c"
-                          />
+                    <BarChartCard
+                        title="Vehicles per company"
+                        description="How fleet size compares across your companies"
+                        data={data.vehiclesPerCompany.map((v) => ({ name: v.name, vehicles: v.count }))}
+                        dataKey="vehicles"
+                        color="#ea580c"
+                    />
 
                 </div>
                 <div className="grid grid-cols-1 gap-3">
-                    <StatCard label="Companies active" value={`${activeCompanyPct}%`} accent="green" />
-                    <StatCard label="Vehicles active" value={`${activeVehiclePct}%`} accent="green" />
+                    <StatCard label="Companies active" value={`${activeCompanyPct}%`} accent="green" description="Share of companies in active status" />
+                    <StatCard label="Vehicles active" value={`${activeVehiclePct}%`} accent="green" description="Share of vehicles currently active" />
                 </div>
             </div>
 
             {/* Growth over time */}
             <BarChartCard
                 title="New companies (last 6 months)"
+                description="Sign-ups per month across the platform"
                 data={data.growth}
                 dataKey="companies"
                 color="#16a34a"

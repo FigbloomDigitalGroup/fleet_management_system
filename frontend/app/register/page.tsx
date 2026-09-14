@@ -108,7 +108,7 @@ export default function RegisterPage() {
 
 
             {/* LEFT — Info panel */}
-            <BackgroundSlideshow className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16 border-r border-gray-200">
+            <BackgroundSlideshow className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16">
                 <div className="absolute inset-0 z-10 bg-black/50" />
 
                 <div className="relative z-20 flex flex-col justify-between h-full">

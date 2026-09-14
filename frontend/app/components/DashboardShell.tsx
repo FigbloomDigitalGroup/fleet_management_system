@@ -102,8 +102,8 @@ export default function DashboardShell({
   return (
     <div className="h-screen overflow-hidden bg-blue-50 flex">
       {/* SIDEBAR */}
-      <aside className="h-screen w-48 shrink-0 overflow-y-auto bg-blue-950 border-r border-blue-950 flex flex-col text-white">
-        <div className="px-4 py-4 border-b border-blue-950">
+      <aside className="h-screen w-48 shrink-0 overflow-y-auto bg-blue-950 flex flex-col text-white">
+        <div className="px-4 py-4">
           <span className="flex items-center gap-2 text-sm font-bold text-white">
             <FaCog aria-hidden="true" />
             FIGBLOOM FLEET

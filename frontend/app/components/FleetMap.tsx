@@ -120,8 +120,8 @@ export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: 
 
   const mostRecent = withLocation.length
     ? withLocation.reduce((latest, v) =>
-        new Date(v.lastLocation!.recordedAt) > new Date(latest.lastLocation!.recordedAt) ? v : latest
-      )
+      new Date(v.lastLocation!.recordedAt) > new Date(latest.lastLocation!.recordedAt) ? v : latest
+    )
     : null;
 
   if (loading || !isLoaded) return <FullPageLoading label="Loading map" />;
@@ -130,14 +130,15 @@ export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: 
     <div>
       {/* Top stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Total vehicles" value={counts.total} accent="green" />
-        <StatCard label="Active" value={counts.active} accent="green" />
-        <StatCard label="Idle" value={counts.idle} accent="orange" />
-        <StatCard label="Offline" value={counts.offline} accent="orange" />
+        <StatCard label="Total vehicles" value={counts.total} accent="green" description="All vehicles on your account" />
+        <StatCard label="Active" value={counts.active} accent="green" description="Currently moving" />
+        <StatCard label="Idle" value={counts.idle} accent="orange" description="Stationary, engine on" />
+        <StatCard label="Offline" value={counts.offline} accent="orange" description="No recent signal" />
       </div>
 
       {/* Map */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-6">
+      <p className="text-xs text-gray-400 mb-2">Live vehicle positions, refreshed every 10 seconds.</p>
+      <div className="bg-white rounded-lg overflow-hidden mb-6">
         <div className="h-[500px] w-full">
           <GoogleMap mapContainerStyle={containerStyle} center={center} zoom={12}>
             {withLocation.map((v) => (
@@ -159,7 +160,7 @@ export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: 
       </div>
 
       {/* Legend */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+      <div className="bg-white rounded-lg p-4 mb-6">
         <p className="text-xs font-medium text-gray-500 mb-2">Marker colors</p>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
           {LEGEND_ITEMS.map((item) => (
@@ -173,11 +174,17 @@ export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: 
 
       {/* Reporting % + freshness */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <CircleStat percentage={reportingPct} label="Vehicles reporting location" color="#4ade80" />
+        <CircleStat
+          percentage={reportingPct}
+          label="Vehicles reporting location"
+          color="#4ade80"
+          description="Share of the fleet with a GPS fix right now"
+        />
         <StatCard
           label="Most recent update"
           value={mostRecent ? timeAgo(mostRecent.lastLocation!.recordedAt) : "—"}
           accent="green"
+          description="Time since the last GPS ping came in"
         />
       </div>
     </div>

@@ -54,7 +54,7 @@ export default function DriversList({ canAdd = false }: { canAdd?: boolean }) {
   return (
     <div className={canAdd ? "grid lg:grid-cols-3 gap-4" : ""}>
 
-      <div className={`${canAdd ? "lg:col-span-2" : ""} bg-white border border-gray-200 rounded-lg overflow-hidden`}>
+      <div className={`${canAdd ? "lg:col-span-2" : ""} bg-white rounded-lg overflow-hidden`}>
         {loading && <p className="text-sm text-gray-500 p-5">Loading…</p>}
         {error && <p className="text-sm text-red-600 p-5">{error}</p>}
         {!loading && !error && (
@@ -93,8 +93,9 @@ export default function DriversList({ canAdd = false }: { canAdd?: boolean }) {
 
    
       {canAdd && (
-        <div className="bg-white border border-gray-200 rounded-lg p-5 h-fit">
-          <h3 className="text-sm font-medium text-gray-700 mb-4">Add a driver</h3>
+        <div className="bg-white rounded-lg p-5 h-fit">
+          <h3 className="text-sm font-medium text-gray-700">Add a driver</h3>
+          <p className="text-xs text-gray-400 mt-0.5 mb-4">Creates a driver login they can use on their phone.</p>
           <form onSubmit={handleAddDriver} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Full name</label>
@@ -241,7 +242,11 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
         {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
         {error && <p className="text-sm text-red-600 p-5">{error}</p>}
         {!loading && !error && (
-          <table className="w-full text-sm">
+          <>
+            <p className="text-xs text-gray-400 px-5 pt-4">
+              Everyone with driver access on your account and the vehicle they're currently on.
+            </p>
+            <table className="w-full text-sm mt-2">
             <thead className="bg-gray-50 text-black text-xs uppercase">
               <tr>
                 <th className="text-left px-5 py-3 font-bold">Name</th>
@@ -290,12 +295,14 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
               )}
             </tbody>
           </table>
+          </>
         )}
       </div>
 
       {canAdd && (
         <div className="bg-white rounded-lg p-5 h-fit">
-          <h3 className="text-sm font-medium text-gray-700 mb-4">Add a driver</h3>
+          <h3 className="text-sm font-medium text-gray-700">Add a driver</h3>
+          <p className="text-xs text-gray-400 mt-0.5 mb-4">Creates a driver login they can use on their phone.</p>
           <form onSubmit={handleAddDriver} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Full name</label>

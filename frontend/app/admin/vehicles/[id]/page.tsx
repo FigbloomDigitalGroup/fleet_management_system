@@ -79,8 +79,9 @@ export default function AdminVehicleDetailPage() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg p-5">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Vehicle details</h3>
+        <div className="lg:col-span-2 bg-white rounded-lg p-5">
+          <h3 className="text-sm font-medium text-gray-700">Vehicle details</h3>
+          <p className="text-xs text-gray-400 mt-0.5 mb-3">Registration info for this vehicle</p>
           <dl className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <dt className="text-gray-500">Device ID</dt>
@@ -99,8 +100,9 @@ export default function AdminVehicleDetailPage() {
           </dl>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-5 h-fit">
-          <h3 className="text-sm font-medium text-gray-700 mb-4">Change status</h3>
+        <div className="bg-white rounded-lg p-5 h-fit">
+          <h3 className="text-sm font-medium text-gray-700">Change status</h3>
+          <p className="text-xs text-gray-400 mt-0.5 mb-4">Updates how this vehicle shows up across the fleet</p>
           <div className="space-y-2">
             {STATUS_OPTIONS.map((opt) => (
               <button
