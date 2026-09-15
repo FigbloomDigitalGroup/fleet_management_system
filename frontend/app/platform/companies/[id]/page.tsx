@@ -7,7 +7,7 @@ import FullPageLoading from "@/app/components/FullPageLoading";
 import { CompanyRecord, AdminRecord } from "../../../types/auth";
 
 const statusStyles: Record<string, string> = {
-  active: "bg-green-50 text-green-600 border-green-200",
+  active: "bg-teal-50 text-teal-600 border-teal-200",
   pending: "bg-orange-50 text-orange-600 border-orange-200",
   suspended: "bg-gray-100 text-gray-500 border-gray-200",
 };
@@ -81,9 +81,9 @@ export default function CompanyDetailPage() {
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Details + users */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-lg p-5">
+          <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
             <h3 className="text-sm font-medium text-gray-700">Company details</h3>
-            <p className="text-xs text-gray-400 mt-0.5 mb-3">Plan, sign-up date, and user count</p>
+            <p className="text-xs text-teal-600 mt-0.5 mb-3">Plan, sign-up date, and user count</p>
             <dl className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <dt className="text-gray-500">Subscription plan</dt>
@@ -102,9 +102,9 @@ export default function CompanyDetailPage() {
             </dl>
           </div>
 
-          <div className="bg-white rounded-lg overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
             <h3 className="text-sm font-medium text-gray-700 px-5 pt-5">Users</h3>
-            <p className="text-xs text-gray-400 px-5">Admins and drivers on this company's account</p>
+            <p className="text-xs text-teal-600 px-5">Admins and drivers on this company's account</p>
             <table className="w-full text-sm mt-3">
               <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
                 <tr>
@@ -135,14 +135,14 @@ export default function CompanyDetailPage() {
         </div>
 
         {/* Status controls */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 h-fit">
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 h-fit">
           <h3 className="text-sm font-medium text-gray-700">Manage status</h3>
-          <p className="text-xs text-gray-400 mt-0.5 mb-4">Controls whether this company can access the platform</p>
+          <p className="text-xs text-teal-600 mt-0.5 mb-4">Controls whether this company can access the platform</p>
           <div className="space-y-2">
             <button
               onClick={() => updateStatus("active")}
               disabled={updating || company.status === "active"}
-              className="w-full py-2 rounded-md text-sm font-medium text-white bg-green-500 hover:bg-green-600 disabled:opacity-40"
+              className="w-full py-2 rounded-md text-sm font-medium text-white bg-teal-500 hover:bg-teal-600 disabled:opacity-40"
             >
               Approve / Activate
             </button>

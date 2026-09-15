@@ -99,8 +99,8 @@ export default function AdminDashboard() {
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <CircleStat percentage={activePct} label="Fleet active" color="#16a34a" description="Vehicles currently on the move" />
-          <CircleStat percentage={assignedPct} label="Drivers assigned" color="#16a34a" description="Drivers with a vehicle assigned" />
+          <CircleStat percentage={activePct} label="Fleet active" color="#2dd4bf" description="Vehicles currently on the move" />
+          <CircleStat percentage={assignedPct} label="Drivers assigned" color="#0d9488" description="Drivers with a vehicle assigned" />
         </div>
       </div>
     
@@ -111,7 +111,7 @@ export default function AdminDashboard() {
       title="Fleet status breakdown"
       description="How your vehicles are distributed across statuses"
       data={[
-        { name: "Active", value: vehicleCounts.active, color: "#4ade80" },
+        { name: "Active", value: vehicleCounts.active, color: "#2dd4bf" },
         { name: "Idle", value: vehicleCounts.idle, color: "#fb923c" },
         { name: "Offline", value: vehicleCounts.offline, color: "#9ca3af" },
         { name: "Maintenance", value: vehicleCounts.maintenance, color: "#f87171" },
@@ -120,7 +120,7 @@ export default function AdminDashboard() {
   </div>
 <StatusDetailsCard
   items={[
-    { label: "Active", value: vehicleCounts.active, color: "#4ade80", description: "Currently moving, sending live GPS updates" },
+    { label: "Active", value: vehicleCounts.active, color: "#2dd4bf", description: "Currently moving, sending live GPS updates" },
     { label: "Idle", value: vehicleCounts.idle, color: "#fb923c", description: "Engine on or stationary, not actively driving" },
     { label: "Offline", value: vehicleCounts.offline, color: "#9ca3af", description: "No signal received recently from this vehicle" },
     { label: "Maintenance", value: vehicleCounts.maintenance, color: "#f87171", description: "Taken out of service for repair or servicing" },
@@ -132,12 +132,12 @@ export default function AdminDashboard() {
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Recent alerts</h2>
-          <Link href="/admin/alerts" className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700">
+          <Link href="/admin/alerts" className="rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-teal-700">
             View all
           </Link>
         </div>
-        <p className="text-xs text-gray-400 mb-3">The 5 most recent alerts across your fleet</p>
-        <div className="bg-white rounded-lg overflow-hidden">
+        <p className="text-xs text-teal-600 mb-3">The 5 most recent alerts across your fleet</p>
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
           {alerts.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">No alerts yet.</p>
           ) : (
@@ -170,12 +170,12 @@ export default function AdminDashboard() {
       <div>
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Recent trips</h2>
-          <Link href="/admin/trips" className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700">
+          <Link href="/admin/trips" className="rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-teal-700">
             View all
           </Link>
         </div>
-        <p className="text-xs text-gray-400 mb-3">The 5 most recently started trips</p>
-        <div className="bg-white rounded-lg overflow-hidden">
+        <p className="text-xs text-teal-600 mb-3">The 5 most recently started trips</p>
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
           {trips.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">No trips recorded yet.</p>
           ) : (

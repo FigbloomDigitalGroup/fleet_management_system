@@ -94,53 +94,6 @@ export async function createUserUnderCompany(req, res) {
     }
 }
 
-// Login for any role
-/*
-export async function login(req, res) {
-    try {
-        const { email, password } = req.body;
-        const normalizedEmail = email?.trim().toLowerCase();
-        if (!normalizedEmail || !password) {
-            return res.status(400).json({ error: "email and password are required" });
-        }
-
-        const user = await User.findOne({ email: normalizedEmail });
-        if (!user) {
-            return res.status(401).json({ error: "Invalid email or password" });
-        }
-
-        const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) {
-            return res.status(401).json({ error: "Invalid email or password" });
-        }
-
-        if (user.status !== "active") {
-            return res.status(403).json({ error: "This account has been suspended" });
-        }
-
-        const accessToken = signAccessToken(user);
-        const refreshToken = signRefreshToken(user);
-
-        return res.json({
-            user: {
-                id: user._id,
-                email: user.email,
-                fullName: user.fullName,
-                role: user.role,
-                companyId: user.companyId,
-            },
-            accessToken,
-            refreshToken,
-        });
-    } catch (err) {
-        console.error(err);
-        return res.status(500).json({ error: "Login failed" });
-    }
-}
-*/
-
-
-
 export async function login(req, res) {
   try {
     const { email, password } = req.body;

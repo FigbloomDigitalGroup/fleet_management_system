@@ -9,6 +9,7 @@ import { CompanyRecord, AlertRecord } from "../types/auth";
 import { IconType } from "react-icons";
 import { FiBell } from "react-icons/fi";
 import { FaCog } from "react-icons/fa";
+import ThemeToggle from "./ThemeToggle";
 
 interface NavItem {
   label: string;
@@ -142,6 +143,7 @@ export default function DashboardShell({
             {header && <h1 className="text-lg font-bold text-blue-950">{header.title}</h1>}
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             {alertsHref && (
               <Link
                 href={alertsHref}
@@ -158,7 +160,7 @@ export default function DashboardShell({
             )}
             <button
               onClick={logout}
-              className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
+              className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700"
             >
               Sign out
             </button>

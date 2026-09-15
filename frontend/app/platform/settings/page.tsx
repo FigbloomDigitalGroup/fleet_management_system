@@ -59,7 +59,7 @@ export default function PlatformSettingsPage() {
         <p className="text-sm text-gray-500 mt-1">Policies applied to every company on the platform</p>
       </div>
 
-      <form onSubmit={handleSave} className="bg-white rounded-lg p-6 space-y-6">
+      <form onSubmit={handleSave} className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-6 space-y-6">
         <Toggle
           checked={settings.requireManualApproval}
           onChange={(value) => setSettings({ ...settings, requireManualApproval: value })}
@@ -75,7 +75,7 @@ export default function PlatformSettingsPage() {
           <select
             value={settings.defaultPlan}
             onChange={(e) => setSettings({ ...settings, defaultPlan: e.target.value })}
-            className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+            className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
           >
             <option value="trial">Trial</option>
             <option value="basic">Basic</option>
@@ -92,7 +92,7 @@ export default function PlatformSettingsPage() {
             min={1}
             value={settings.trialDays}
             onChange={(e) => setSettings({ ...settings, trialDays: Number(e.target.value) })}
-            className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+            className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
           />
         </div>
 
@@ -115,7 +115,7 @@ export default function PlatformSettingsPage() {
                       vehicleLimits: { ...settings.vehicleLimits, [plan]: Number(e.target.value) },
                     })
                   }
-                  className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                  className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                 />
               </div>
             ))}
@@ -131,12 +131,12 @@ export default function PlatformSettingsPage() {
             type="email"
             value={settings.supportEmail}
             onChange={(e) => setSettings({ ...settings, supportEmail: e.target.value })}
-            className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+            className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
           />
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
-        {saved && <p className="text-sm text-green-600">Settings saved.</p>}
+        {saved && <p className="text-sm text-teal-600">Settings saved.</p>}
 
         <button
           type="submit"

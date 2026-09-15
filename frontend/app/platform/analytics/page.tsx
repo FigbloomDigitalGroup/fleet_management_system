@@ -3,60 +3,9 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "../../lib/api";
 import StatCard from "../../components/StatCard";
+import BarChartCard from "../../components/BarChartCard";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import StatusDetailsCard from "@/app/components/StatusDetailsCard";
-
-const titleSizes = {
-    sm: "text-sm",
-    md: "text-base",
-    lg: "text-xl",
-};
-
-function BarChartCard({
-    title,
-    description,
-    data,
-    dataKey,
-    color,
-    size = "md",
-}: {
-    title: string;
-    description?: string;
-    data: { name: string;[key: string]: string | number }[];
-    dataKey: string;
-    color: string;
-    size?: "sm" | "md" | "lg";
-}) {
-    const maxValue = Math.max(...data.map((item) => Number(item[dataKey])), 1);
-
-    return (
-        <div className="rounded-lg bg-white p-5">
-            <div className="mb-4">
-                <h2 className={`${titleSizes[size]} font-bold text-blue-950`}>{title}</h2>
-                {description && <p className="text-xs text-gray-400 mt-0.5">{description}</p>}
-            </div>
-            {data.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-10">No data yet.</p>
-            ) : (
-                <div className="flex h-48 items-end gap-3">
-                    {data.map((item) => (
-                        <div key={item.name} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2">
-                            <div
-                                className="w-full rounded-t"
-                                style={{
-                                    height: `${(Number(item[dataKey]) / maxValue) * 100}%`,
-                                    backgroundColor: color,
-                                }}
-                                title={`${item.name}: ${item[dataKey]}`}
-                            />
-                            <span className="w-full truncate text-center text-xs text-gray-500">{item.name}</span>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
 
 interface AnalyticsData {
     totals: {
@@ -150,7 +99,7 @@ export default function AnalyticsPage() {
                         {
                             label: "Pro",
                             value: billing?.planCounts?.pro || 0,
-                            color: "#4ade80",
+                            color: "#2dd4bf",
                             description: "Full-featured plan for growing fleets",
                         },
                         {
@@ -188,7 +137,7 @@ export default function AnalyticsPage() {
                 description="Sign-ups per month across the platform"
                 data={data.growth}
                 dataKey="companies"
-                color="#16a34a"
+                color="#0d9488"
                 size="sm"
             />
         </div>

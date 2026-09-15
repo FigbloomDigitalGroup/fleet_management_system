@@ -22,8 +22,8 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
   if (error) return <p className="text-sm text-red-600">{error}</p>;
 
   return (
-    <div className="bg-white rounded-lg overflow-hidden">
-      <p className="text-xs text-gray-400 px-5 pt-4">
+    <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+      <p className="text-xs text-teal-600 px-5 pt-4">
         Every recorded trip, most recent first — tap a vehicle to see its full route.
       </p>
       <table className="w-full text-sm mt-2">
@@ -46,7 +46,7 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
           ) : (
             trips.map((t) => (
               <tr key={t._id} className="border-t border-gray-100">
-                <td className="px-5 py-3 font-medium text-green-600 hover:underline">
+                <td className="px-5 py-3 font-medium text-teal-600 hover:underline">
                   <Link href={`${basePath}/${t._id}`}>{t.vehicleId?.plateNumber || "View trip"}</Link>
                 </td>
                 <td className="px-5 py-3 text-gray-600">{t.driverId?.fullName || "Unassigned"}</td>
@@ -55,7 +55,7 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
                   <span
                     className={`text-xs px-2 py-1 rounded-full border ${t.endTime
                         ? "bg-gray-100 text-gray-500 border-gray-200"
-                        : "bg-green-50 text-green-600 border-green-200"
+                        : "bg-teal-50 text-teal-600 border-teal-200"
                       }`}
                   >
                     {t.endTime ? "completed" : "in progress"}

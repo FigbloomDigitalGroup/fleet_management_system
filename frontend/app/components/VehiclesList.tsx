@@ -7,7 +7,7 @@ import { VehicleRecord, DriverRecord } from "../types/auth";
 import Skeleton from "./Skeleton";
 
 const statusStyles: Record<string, string> = {
-  active: "bg-green-50 text-green-600 border-green-200",
+  active: "bg-teal-50 text-teal-600 border-teal-200",
   idle: "bg-orange-50 text-orange-600 border-orange-200",
   offline: "bg-gray-100 text-gray-500 border-gray-200",
   maintenance: "bg-red-50 text-red-600 border-red-200",
@@ -90,12 +90,12 @@ export default function VehiclesList({
 
   return (
     <div className="grid lg:grid-cols-3 gap-4">
-      <div className="lg:col-span-2 bg-white rounded-lg overflow-hidden">
+      <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
         {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
         {error && <p className="text-sm text-red-600 p-5">{error}</p>}
         {!loading && !error && (
           <>
-            <p className="text-xs text-gray-400 px-5 pt-4">
+            <p className="text-xs text-teal-600 px-5 pt-4">
               Every vehicle on your account, its current status, and assigned driver.
             </p>
             <table className="w-full text-sm mt-2">
@@ -141,7 +141,7 @@ export default function VehiclesList({
         value={v.driverId?._id || ""}
         disabled={assigningId === v._id}
         onChange={(e) => handleAssignDriver(v._id, e.target.value)}
-        className="text-sm border border-gray-300 rounded-md px-2 py-1 outline-none focus:border-green-400"
+        className="text-sm border border-gray-300 rounded-md px-2 py-1 outline-none focus:border-teal-400"
       >
         <option value="">Unassigned</option>
         {drivers.map((d) => (
@@ -177,9 +177,9 @@ export default function VehiclesList({
         )}
       </div>
 
-      <div className="bg-white rounded-lg p-5 h-fit">
+      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 h-fit">
         <h3 className="text-sm font-medium text-gray-700">Add a vehicle</h3>
-        <p className="text-xs text-gray-400 mt-0.5 mb-4">Register a vehicle to start tracking it.</p>
+        <p className="text-xs text-teal-600 mt-0.5 mb-4">Register a vehicle to start tracking it.</p>
         <form onSubmit={handleAddVehicle} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Plate number</label>
@@ -189,7 +189,7 @@ export default function VehiclesList({
               value={plateNumber}
               onChange={(e) => setPlateNumber(e.target.value)}
               placeholder="KDA 123A"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
             />
           </div>
           <div>
@@ -199,7 +199,7 @@ export default function VehiclesList({
               value={make}
               onChange={(e) => setMake(e.target.value)}
               placeholder="Toyota"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
             />
           </div>
           <div>
@@ -209,7 +209,7 @@ export default function VehiclesList({
               value={model}
               onChange={(e) => setModel(e.target.value)}
               placeholder="Hiace"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
             />
           </div>
           <div>
@@ -221,7 +221,7 @@ export default function VehiclesList({
               value={deviceId}
               onChange={(e) => setDeviceId(e.target.value)}
               placeholder="TRK-001"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
             />
           </div>
 

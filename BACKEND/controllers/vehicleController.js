@@ -51,9 +51,38 @@ export async function updateVehicle(req, res) {
     if (!existing) return res.status(404).json({ error: "Vehicle not found" });
 
     const { plateNumber, make, model, deviceId, status, driverId } = req.body;
+
+    const nextDriverId = driverId !== undefined ? driverId : existing.driverId;
+    const effectiveStatus = status !== undefined ? status : existing.status;
+
+    // A driver can only be behind the wheel of one vehicle at a time —
+    // bump them off any other vehicle they're currently assigned to.
+    if (nextDriverId && String(nextDriverId) !== String(existing.driverId || "")) {
+      const otherVehicle = await Vehicle.findOne({
+        _id: { $ne: existing._id },
+        companyId: existing.companyId,
+        driverId: nextDriverId,
+      });
+      if (otherVehicle) {
+        await Vehicle.findByIdAndUpdate(otherVehicle._id, {
+          driverId: null,
+          status: otherVehicle.status === "active" ? "idle" : otherVehicle.status,
+        });
+      }
+    }
+
+    let statusToSet = status;
+    if (effectiveStatus === "active" && !nextDriverId) {
+      if (status === "active") {
+        return res.status(400).json({ error: "Cannot set a vehicle to active without an assigned driver" });
+      }
+      // Driver was just removed from an already-active vehicle — demote it automatically
+      statusToSet = "idle";
+    }
+
     const vehicle = await Vehicle.findByIdAndUpdate(
       existing._id,
-      { plateNumber, make, model, deviceId, status, driverId },
+      { plateNumber, make, model, deviceId, status: statusToSet, driverId },
       { new: true }
     );
     return res.json(vehicle);

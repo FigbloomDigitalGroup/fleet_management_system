@@ -61,7 +61,7 @@ export default function AdminsPage() {
 
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Admins list */}
-        <div className="lg:col-span-2 bg-white rounded-lg overflow-hidden">
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
           {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
           {error && <p className="text-sm text-red-600 p-5">{error}</p>}
           {!loading && !error && (
@@ -86,7 +86,7 @@ export default function AdminsPage() {
                       <td className="px-5 py-3 font-medium text-gray-900">{a.fullName}</td>
                       <td className="px-5 py-3 text-gray-600">{a.email}</td>
                       <td className="px-5 py-3">
-                        <span className="text-xs px-2 py-1 rounded-full border bg-green-50 text-green-600 border-green-200">
+                        <span className="text-xs px-2 py-1 rounded-full border bg-teal-50 text-teal-600 border-teal-200">
                           {a.status}
                         </span>
                       </td>
@@ -99,7 +99,7 @@ export default function AdminsPage() {
         </div>
 
         {/* Add admin form */}
-        <div className="bg-white rounded-lg p-5 h-fit">
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 h-fit">
           <h3 className="text-sm font-medium text-gray-700 mb-4">Add an admin</h3>
           <form onSubmit={handleAddAdmin} className="space-y-4">
             <div>
@@ -109,7 +109,7 @@ export default function AdminsPage() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
               />
             </div>
             <div>
@@ -119,7 +119,7 @@ export default function AdminsPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
               />
             </div>
             <div>
@@ -129,7 +129,7 @@ export default function AdminsPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
               />
             </div>
 

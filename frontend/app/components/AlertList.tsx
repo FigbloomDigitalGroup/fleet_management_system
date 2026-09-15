@@ -90,8 +90,8 @@ export default function AlertsList() {
   return (
     <div className="grid lg:grid-cols-3 gap-6">
       {/* Alerts list */}
-      <div className="lg:col-span-2 bg-white rounded-lg overflow-hidden">
-        <p className="text-xs text-gray-400 px-5 pt-4">
+      <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+        <p className="text-xs text-teal-600 px-5 pt-4">
           Speeding, geofence, and offline alerts raised across your fleet.
         </p>
         <table className="w-full text-sm mt-2">
@@ -134,7 +134,7 @@ export default function AlertsList() {
                       <button
                         onClick={() => handleResolve(a._id)}
                         disabled={resolvingId === a._id}
-                        className="text-xs text-green-600 hover:underline disabled:opacity-50"
+                        className="text-xs text-teal-600 hover:underline disabled:opacity-50"
                       >
                         Mark resolved
                       </button>
@@ -148,16 +148,16 @@ export default function AlertsList() {
       </div>
 
       {/* Send alert form */}
-      <div className="bg-white rounded-lg p-5 h-fit">
+      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 h-fit">
         <h3 className="text-sm font-medium text-gray-700">Send an alert</h3>
-        <p className="text-xs text-gray-400 mt-0.5 mb-4">Manually notify the team about a vehicle issue.</p>
+        <p className="text-xs text-teal-600 mt-0.5 mb-4">Manually notify the team about a vehicle issue.</p>
         <form onSubmit={handleSendAlert} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Vehicle</label>
             <select
               value={vehicleId}
               onChange={(e) => setVehicleId(e.target.value)}
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
             >
               {vehicles.length === 0 && <option value="">No vehicles yet</option>}
               {vehicles.map((v) => (
@@ -173,7 +173,7 @@ export default function AlertsList() {
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
             >
               {ALERT_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
@@ -191,7 +191,7 @@ export default function AlertsList() {
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Describe what's happening…"
               rows={3}
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
             />
           </div>
 

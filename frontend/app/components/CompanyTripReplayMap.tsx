@@ -55,7 +55,7 @@ export default function CompanyTripReplayMap({ tripId }: { tripId: string }) {
   return (
     <div className="grid lg:grid-cols-3 gap-4">
       {/* Map */}
-      <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
         <div className="h-[380px] w-full">
           <GoogleMap mapContainerStyle={containerStyle} center={center} zoom={13}>
             <Polyline
@@ -84,7 +84,7 @@ export default function CompanyTripReplayMap({ tripId }: { tripId: string }) {
       </div>
 
       {/* Journey summary timeline */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
+      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-4">
         <p className="text-xs font-medium text-gray-500 mb-1">Journey summary</p>
         <p className="text-sm text-gray-900 font-semibold mb-4">
           {totalDurationMin > 0 ? `${totalDurationMin.toFixed(0)} min journey` : "In progress"}
