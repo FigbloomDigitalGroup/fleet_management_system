@@ -75,3 +75,34 @@ export async function getMyCompany(req, res) {
     return res.status(500).json({ error: "Failed to fetch company" });
   }
 }
+
+// COMPANY_OWNER — update their own company's profile
+export async function updateMyCompany(req, res) {
+  try {
+    if (!req.user.companyId) {
+      return res.status(400).json({ error: "This account is not linked to a company" });
+    }
+
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: "name is required" });
+    }
+
+    const company = await Company.findByIdAndUpdate(
+      req.user.companyId,
+      { name: name.trim() },
+      { new: true }
+    );
+    if (!company) return res.status(404).json({ error: "Company not found" });
+
+    return res.json(company);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to update company" });
+  }
+}
+
+
+
+
+

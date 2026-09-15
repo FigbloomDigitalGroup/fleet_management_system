@@ -9,28 +9,26 @@ export default function UnauthorizedPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-8" style={{ background: "var(--ink)" }}>
+    <div className="min-h-screen flex items-center justify-center p-8 bg-white">
       <div className="max-w-sm text-center">
-        <h1 className="font-display text-2xl mb-3" style={{ color: "var(--paper)" }}>
-          Not your workspace
-        </h1>
-        <p className="text-sm mb-8" style={{ color: "var(--fog)" }}>
+        <h1 className="text-2xl font-bold text-gray-900 mb-3">Not your workspace</h1>
+        <p className="text-sm text-gray-500 mb-8">
           This page isn't available for your account. Head back to your own dashboard instead.
         </p>
-        <button
-          onClick={() => (user ? router.push(redirectPathForRole(user.role)) : router.push("/login"))}
-          className="px-5 py-2.5 rounded-md text-sm font-medium mr-3"
-          style={{ background: "var(--signal)", color: "var(--ink)" }}
-        >
-          Go to my dashboard
-        </button>
-        <button
-          onClick={logout}
-          className="px-5 py-2.5 rounded-md text-sm"
-          style={{ border: "1px solid var(--line)", color: "var(--fog)" }}
-        >
-          Sign out
-        </button>
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={() => (user ? router.push(redirectPathForRole(user.role)) : router.push("/login"))}
+            className="px-5 py-2.5 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600"
+          >
+            Go to my dashboard
+          </button>
+          <button
+            onClick={logout}
+            className="px-5 py-2.5 rounded-md text-sm border border-gray-300 text-gray-600 hover:border-gray-400"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
     </div>
   );

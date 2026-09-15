@@ -13,6 +13,8 @@ const alertSchema = new mongoose.Schema(
         "unauthorized_movement",
         "device_offline",
         "maintenance_due",
+        "route_deviation",
+        "fuel_anomaly",
       ],
       required: true,
     },

@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { apiRequest } from "../../lib/api";
 import { CompanyRecord } from "../../types/auth";
+import Skeleton from "../../components/Skeleton";
 
 const statusStyles: Record<string, string> = {
   active: "bg-green-50 text-green-600 border-green-200",
@@ -31,12 +33,12 @@ export default function CompaniesPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Companies</h1>
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-blue-950">Companies</h1>
         <p className="text-sm text-gray-500 mt-1">Every vehicle company registered on the platform</p>
       </div>
 
-      {loading && <p className="text-sm text-gray-500">Loading…</p>}
+      {loading && <Skeleton rows={5} rowClassName="h-12" />}
 
       {error && (
         <div className="text-sm px-3.5 py-2.5 rounded-md bg-red-50 text-red-600 border border-red-200 mb-4">
@@ -45,7 +47,7 @@ export default function CompaniesPage() {
       )}
 
       {!loading && !error && (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
               <tr>
@@ -66,7 +68,14 @@ export default function CompaniesPage() {
               ) : (
                 companies.map((c) => (
                   <tr key={c._id} className="border-t border-gray-100">
-                    <td className="px-5 py-3 font-medium text-gray-900">{c.name}</td>
+                    <td className="px-5 py-3">
+                      <Link
+                        href={`/platform/companies/${c._id}`}
+                        className="inline-block cursor-pointer rounded-md bg-blue-950 px-3 py-1.5 text-sm font-medium text-white"
+                      >
+                        {c.name}
+                      </Link>
+                    </td>
                     <td className="px-5 py-3">
                       <span className={`text-xs px-2 py-1 rounded-full border ${statusStyles[c.status]}`}>
                         {c.status}

@@ -3,6 +3,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { apiRequest } from "../../lib/api";
 import { AdminRecord } from "../../types/auth";
+import Skeleton from "../../components/Skeleton";
 
 export default function AdminsPage() {
   const [admins, setAdmins] = useState<AdminRecord[]>([]);
@@ -53,15 +54,15 @@ export default function AdminsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Admins</h1>
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-blue-950">Admins</h1>
         <p className="text-sm text-gray-500 mt-1">People who manage your fleet's day-to-day tracking</p>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-3 gap-4">
         {/* Admins list */}
-        <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg overflow-hidden">
-          {loading && <p className="text-sm text-gray-500 p-5">Loading…</p>}
+        <div className="lg:col-span-2 bg-white rounded-lg overflow-hidden">
+          {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
           {error && <p className="text-sm text-red-600 p-5">{error}</p>}
           {!loading && !error && (
             <table className="w-full text-sm">
@@ -98,7 +99,7 @@ export default function AdminsPage() {
         </div>
 
         {/* Add admin form */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 h-fit">
+        <div className="bg-white rounded-lg p-5 h-fit">
           <h3 className="text-sm font-medium text-gray-700 mb-4">Add an admin</h3>
           <form onSubmit={handleAddAdmin} className="space-y-4">
             <div>
@@ -108,7 +109,7 @@ export default function AdminsPage() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
               />
             </div>
             <div>
@@ -118,7 +119,7 @@ export default function AdminsPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
               />
             </div>
             <div>
@@ -128,7 +129,7 @@ export default function AdminsPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
               />
             </div>
 

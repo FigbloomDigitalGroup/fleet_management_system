@@ -4,6 +4,8 @@ import { useState, FormEvent, type JSX } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { redirectPathForRole } from "../lib/roleRedirect";
+import { FaCog } from "react-icons/fa";
+import BackgroundSlideshow from "../components/BackgroundSlideshow";
 
 type AccountType = "SITE_OWNER" | "ADMIN" | "DRIVER";
 
@@ -102,44 +104,45 @@ export default function RegisterPage() {
     return (
         <div className="min-h-screen bg-white flex flex-col lg:flex-row">
             {/* LEFT — Info panel */}
-        
-    
 
-{/* LEFT — Info panel */}
-<div
-  className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16 border-r border-gray-200 relative bg-cover bg-center"
-  style={{ backgroundImage: "url('/dariuszsankowski-navigation-1048294_1920.jpg')" }}>
-  <div className="absolute inset-0 bg-black/50" />
 
-  <div className="relative z-10 flex flex-col justify-between h-full">
-    <span className="text-xl font-bold text-white">DETOUR</span>
 
-    <div>
-      <h1 className="text-3xl lg:text-4xl font-bold text-white mb-3 leading-tight">
-        Set up your
-        <br />
-        account.
-      </h1>
-      <p className="text-gray-200 max-w-xs">
-        Vehicle companies register directly. Admins and drivers are added
-        by whoever manages their account.
-      </p>
-    </div>
+            {/* LEFT — Info panel */}
+            <BackgroundSlideshow className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16">
+                <div className="absolute inset-0 z-10 bg-black/50" />
 
-    <p className="text-sm text-gray-200">
-      Already have an account?{" "}
-      <a href="/login" className="text-green-400 font-medium hover:underline">
-        Sign in
-      </a>
-    </p>
-  </div>
-</div>
+                <div className="relative z-20 flex flex-col justify-between h-full">
+                    <span className="flex items-center gap-2 text-xl font-bold text-white">
+                        <FaCog aria-hidden="true" />
+                        FIGBLOOM FLEET
+                    </span>
+
+                    <div>
+                        <h1 className="text-3xl lg:text-4xl font-bold text-white mb-3 leading-tight">
+                            Set up your
+                            <br />
+                            account.
+                        </h1>
+                        <p className="text-gray-200 max-w-xs">
+                            Vehicle companies register directly. Admins and drivers are added
+                            by whoever manages their account.
+                        </p>
+                    </div>
+
+                    <p className="text-sm text-gray-200">
+                        Already have an account?{" "}
+                        <a href="/login" className="text-green-600 font-medium hover:underline">
+                            Sign in
+                        </a>
+                    </p>
+                </div>
+            </BackgroundSlideshow>
 
 
             {/* RIGHT — Form panel */}
             <div className="lg:w-1/2 flex items-center justify-center p-8">
                 <div className="w-full max-w-sm">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-1">Create your account</h2>
+                    <h2 className="text-5xl font-extrabold text-blue-950 mb-2">Create your account</h2>
                     <p className="text-sm text-gray-500 mb-6">Tell us who you are.</p>
 
                     {/* Role cubes */}
@@ -152,8 +155,8 @@ export default function RegisterPage() {
                                     type="button"
                                     onClick={() => selectType(t.value)}
                                     className={`flex-1 flex flex-col items-center justify-center gap-2 py-4 rounded-lg text-xs font-medium border transition-colors ${active
-                                            ? "border-green-400 bg-green-50 text-green-500"
-                                            : "border-gray-200 text-gray-500 hover:border-gray-300"
+                                        ? "border-green-600 bg-green-50 text-green-500"
+                                        : "border-gray-200 text-gray-500 hover:border-gray-300"
                                         }`}
                                 >
                                     {t.icon}
@@ -176,7 +179,7 @@ export default function RegisterPage() {
                                     value={companyName}
                                     onChange={(e) => setCompanyName(e.target.value)}
                                     placeholder="Acme Logistics"
-                                    className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                                    className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
                                 />
                             </div>
                         )}
@@ -192,7 +195,7 @@ export default function RegisterPage() {
                                 value={fullName}
                                 onChange={(e) => setFullName(e.target.value)}
                                 placeholder="Jane Doe"
-                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
                             />
                         </div>
 
@@ -208,7 +211,7 @@ export default function RegisterPage() {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="jane@acme.com"
-                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
                             />
                         </div>
 
@@ -226,7 +229,7 @@ export default function RegisterPage() {
                                     value={inviteCode}
                                     onChange={(e) => setInviteCode(e.target.value)}
                                     placeholder="Acme Logistics"
-                                    className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                                    className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
                                 />
                             </div>
                         )}
@@ -243,7 +246,7 @@ export default function RegisterPage() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="At least 8 characters"
-                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
                             />
                         </div>
 

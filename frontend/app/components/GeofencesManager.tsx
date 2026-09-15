@@ -1,0 +1,228 @@
+"use client";
+
+import { useEffect, useState, FormEvent } from "react";
+import { GoogleMap, Circle, useJsApiLoader } from "@react-google-maps/api";
+import { apiRequest } from "../lib/api";
+import { GeofenceRecord } from "../types/auth";
+
+const containerStyle = { width: "100%", height: "100%" };
+const defaultCenter = { lat: -1.2921, lng: 36.8219 };
+
+export default function GeofencesManager({ canManage = false }: { canManage?: boolean }) {
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+  });
+
+  const [geofences, setGeofences] = useState<GeofenceRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [name, setName] = useState("");
+  const [clickedCenter, setClickedCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [radiusM, setRadiusM] = useState("500");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  async function load() {
+    try {
+      const data = await apiRequest<GeofenceRecord[]>("/api/geofences");
+      setGeofences(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  function handleMapClick(e: google.maps.MapMouseEvent) {
+    if (!canManage || !e.latLng) return;
+    setClickedCenter({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+  }
+
+  async function handleCreate(e: FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+
+    if (!clickedCenter) {
+      setFormError("Click on the map to set the center point first.");
+      return;
+    }
+    if (!name.trim()) {
+      setFormError("Give this zone a name.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await apiRequest("/api/geofences", {
+        method: "POST",
+        body: JSON.stringify({
+          name: name.trim(),
+          type: "circle",
+          centerLat: clickedCenter.lat,
+          centerLng: clickedCenter.lng,
+          radiusM: parseFloat(radiusM),
+        }),
+      });
+      setName("");
+      setClickedCenter(null);
+      setRadiusM("500");
+      await load();
+    } catch (err: any) {
+      setFormError(err.message || "Failed to create geofence");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Delete this geofence?")) return;
+    try {
+      await apiRequest(`/api/geofences/${id}`, { method: "DELETE" });
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  }
+
+  if (loading || !isLoaded) return <p className="text-sm text-gray-500">Loading geofences…</p>;
+  if (error) return <p className="text-sm text-red-600">{error}</p>;
+
+  const mapCenter =
+    geofences.length > 0 && geofences[0].centerLat
+      ? { lat: geofences[0].centerLat, lng: geofences[0].centerLng! }
+      : defaultCenter;
+
+  return (
+    <div className="grid lg:grid-cols-3 gap-6">
+      {/* Map */}
+      <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="h-[450px] w-full">
+          <GoogleMap
+            mapContainerStyle={containerStyle}
+            center={mapCenter}
+            zoom={12}
+            onClick={handleMapClick}
+          >
+            {/* Existing geofences */}
+            {geofences.map(
+              (g) =>
+                g.type === "circle" &&
+                g.centerLat &&
+                g.centerLng && (
+                  <Circle
+                    key={g._id}
+                    center={{ lat: g.centerLat, lng: g.centerLng }}
+                    radius={g.radiusM}
+                    options={{
+                      fillColor: "#4ade80",
+                      fillOpacity: 0.15,
+                      strokeColor: "#4ade80",
+                      strokeWeight: 2,
+                    }}
+                  />
+                )
+            )}
+
+            {/* Preview of the zone being created */}
+            {canManage && clickedCenter && (
+              <Circle
+                center={clickedCenter}
+                radius={parseFloat(radiusM) || 0}
+                options={{
+                  fillColor: "#fb923c",
+                  fillOpacity: 0.15,
+                  strokeColor: "#fb923c",
+                  strokeWeight: 2,
+                  strokeOpacity: 0.6,
+                }}
+              />
+            )}
+          </GoogleMap>
+        </div>
+        {canManage && (
+          <p className="text-xs text-gray-400 text-center py-3 border-t border-gray-100">
+            Click anywhere on the map to set a new zone's center point.
+          </p>
+        )}
+      </div>
+
+      {/* Sidebar: list + create form */}
+      <div className="space-y-4">
+        {canManage && (
+          <div className="bg-white border border-gray-200 rounded-lg p-5">
+            <h3 className="text-sm font-medium text-gray-700 mb-4">Add a zone</h3>
+            <form onSubmit={handleCreate} className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Zone name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Main Depot"
+                  className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Radius (meters)</label>
+                <input
+                  type="number"
+                  value={radiusM}
+                  onChange={(e) => setRadiusM(e.target.value)}
+                  className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400"
+                />
+              </div>
+              <p className="text-xs text-gray-400">
+                {clickedCenter
+                  ? `Center set: ${clickedCenter.lat.toFixed(4)}, ${clickedCenter.lng.toFixed(4)}`
+                  : "Click the map to set a center point."}
+              </p>
+
+              {formError && <p className="text-xs text-red-600">{formError}</p>}
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-2 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+              >
+                {isSubmitting ? "Creating…" : "Create zone"}
+              </button>
+            </form>
+          </div>
+        )}
+
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <p className="text-xs font-medium text-gray-500 p-4 pb-0">Existing zones</p>
+          {geofences.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">No zones created yet.</p>
+          ) : (
+            <ul className="divide-y divide-gray-100 mt-2">
+              {geofences.map((g) => (
+                <li key={g._id} className="flex items-center justify-between px-4 py-3 text-sm">
+                  <div>
+                    <p className="font-medium text-gray-900">{g.name}</p>
+                    <p className="text-xs text-gray-400">
+                      {g.type === "circle" ? `${g.radiusM}m radius` : "custom shape"}
+                    </p>
+                  </div>
+                  {canManage && (
+                    <button
+                      onClick={() => handleDelete(g._id)}
+                      className="text-xs text-red-500 hover:underline"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

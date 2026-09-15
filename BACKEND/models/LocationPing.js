@@ -6,10 +6,10 @@ const locationPingSchema = new mongoose.Schema({
   longitude: { type: Number, required: true },
   speedKph: { type: Number },
   heading: { type: Number },
+  fuelLevelLiters: { type: Number, default: null }, // null = no fuel sensor data available
   recordedAt: { type: Date, default: Date.now },
 });
 
-// Speeds up "get latest location" and "get history between dates" queries
 locationPingSchema.index({ vehicleId: 1, recordedAt: -1 });
 
 export default mongoose.model("LocationPing", locationPingSchema);

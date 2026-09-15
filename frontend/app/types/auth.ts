@@ -33,4 +33,52 @@ export interface AdminRecord {
   createdAt: string;
 }
 
+export interface VehicleRecord {
+  _id: string;
+  plateNumber: string;
+  make?: string;
+  model?: string;
+  deviceId?: string;
+  status: "active" | "idle" | "offline" | "maintenance";
+  driverId?: { _id: string; fullName: string; email: string } | null;
+  createdAt: string;
+}
+
+export interface DriverRecord {
+  _id: string;
+  fullName: string;
+  email: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface TripRecord {
+  _id: string;
+  vehicleId: { _id: string; plateNumber: string } | null;
+  driverId: { _id: string; fullName: string } | null;
+  startTime: string;
+  endTime?: string;
+  distanceKm?: number;
+}
+
+export interface AlertRecord {
+  _id: string;
+  vehicleId: { _id: string; plateNumber: string } | null;
+  type: string;
+  message: string;
+  resolved: boolean;
+  createdAt: string;
+}
+
+
+export interface GeofenceRecord {
+  _id: string;
+  name: string;
+  type: "circle" | "polygon";
+  centerLat?: number;
+  centerLng?: number;
+  radiusM?: number;
+  polygon?: { lat: number; lng: number }[];
+  createdAt: string;
+}
 
