@@ -133,30 +133,41 @@ export default function VehiclesList({
                         {v.status}
                       </span>
                     </td>
-                    <td className="px-5 py-3">
-                      {canAssignDriver ? (
-                        <select
-                          value={v.driverId?._id || ""}
-                          disabled={assigningId === v._id}
-                          onChange={(e) => handleAssignDriver(v._id, e.target.value)}
-                          className="text-sm border border-gray-300 rounded-md px-2 py-1 outline-none focus:border-green-600"
-                        >
-                          <option value="">Unassigned</option>
-                          {drivers.map((d) => (
-                            <option key={d._id} value={d._id}>
-                              {d.fullName}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span
-                          className="inline-block rounded-full bg-orange-500 px-3 py-1 text-xs font-medium"
-                          style={{ color: "#ffffff" }}
-                        >
-                          {v.driverId ? v.driverId.fullName : "Unassigned"}
-                        </span>
-                      )}
-                    </td>
+
+<td className="px-5 py-3">
+  {canAssignDriver ? (
+    <div className="flex items-center gap-2">
+      <select
+        value={v.driverId?._id || ""}
+        disabled={assigningId === v._id}
+        onChange={(e) => handleAssignDriver(v._id, e.target.value)}
+        className="text-sm border border-gray-300 rounded-md px-2 py-1 outline-none focus:border-green-400"
+      >
+        <option value="">Unassigned</option>
+        {drivers.map((d) => (
+          <option key={d._id} value={d._id}>
+            {d.fullName}
+          </option>
+        ))}
+      </select>
+      {!v.driverId && (
+        <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">
+          No driver
+        </span>
+      )}
+    </div>
+  ) : (
+    <div className="flex items-center gap-2">
+      <span className="text-gray-600">{v.driverId ? v.driverId.fullName : "Unassigned"}</span>
+      {!v.driverId && (
+        <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">
+          No driver
+        </span>
+      )}
+    </div>
+  )}
+</td>
+
                   </tr>
                 ))
               )}
@@ -228,6 +239,11 @@ export default function VehiclesList({
     </div>
   );
 }
+
+
+
+
+
 
 
 

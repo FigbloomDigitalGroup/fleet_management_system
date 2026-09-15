@@ -3,12 +3,14 @@ import LocationPing from "../models/LocationPing.js";
 import Trip from "../models/Trip.js";
 import Alert from "../models/Alert.js";
 import Route from "../models/Route.js";
+import Geofence from "../models/Geofence.js";
 import { tenantScope } from "../middleware/auth.js";
 
 const SPEEDING_LIMIT_KPH = 80;
 const TRIP_IDLE_TIMEOUT_MINUTES = 5;
-const FUEL_ANOMALY_THRESHOLD_PCT = 50; // if actual fuel drop is 50%+ more than expected, flag it
+const FUEL_ANOMALY_THRESHOLD_PCT = 50;
 
+// Haversine distance between two lat/lng points, in km
 function distanceKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -27,13 +29,39 @@ function distanceToRouteKm(lat, lng, waypoints) {
 
   let minDist = Infinity;
   for (let i = 0; i < waypoints.length - 1; i++) {
-    // Approximate: check distance to both segment endpoints (good enough at city scale,
-    // avoids more complex point-to-line-segment projection math)
     const dA = distanceKm(lat, lng, waypoints[i].lat, waypoints[i].lng);
     const dB = distanceKm(lat, lng, waypoints[i + 1].lat, waypoints[i + 1].lng);
     minDist = Math.min(minDist, dA, dB);
   }
   return minDist;
+}
+
+// Geofence containment checks
+function isPointInCircle(lat, lng, centerLat, centerLng, radiusM) {
+  const distM = distanceKm(lat, lng, centerLat, centerLng) * 1000;
+  return distM <= radiusM;
+}
+
+function isPointInPolygon(lat, lng, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].lat, yi = polygon[i].lng;
+    const xj = polygon[j].lat, yj = polygon[j].lng;
+    const intersect =
+      yi > lng !== yj > lng && lat < ((xj - xi) * (lng - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function isInsideGeofence(lat, lng, geofence) {
+  if (geofence.type === "circle") {
+    return isPointInCircle(lat, lng, geofence.centerLat, geofence.centerLng, geofence.radiusM);
+  }
+  if (geofence.type === "polygon" && geofence.polygon?.length >= 3) {
+    return isPointInPolygon(lat, lng, geofence.polygon);
+  }
+  return false;
 }
 
 export async function ingestLocation(req, res) {
@@ -48,7 +76,7 @@ export async function ingestLocation(req, res) {
 
     const isMoving = speedKph && speedKph > 2;
 
-    // Get the previous ping BEFORE saving the new one — needed for fuel + distance comparisons
+    // Get the previous ping BEFORE saving the new one — needed for fuel + geofence comparisons
     const previousPing = await LocationPing.findOne({ vehicleId }).sort({ recordedAt: -1 });
 
     // 1. Save the raw ping
@@ -61,11 +89,27 @@ export async function ingestLocation(req, res) {
       fuelLevelLiters: fuelLevelLiters ?? null,
     });
 
-    // 2. Update vehicle status
-    vehicle.status = isMoving ? "active" : "idle";
-    await vehicle.save();
 
-    // 3. Trip start/end logic (unchanged from before)
+// 2. Update vehicle status — but never "active" without a driver assigned
+if (!vehicle.driverId) {
+  vehicle.status = "offline";
+
+  // Flag it if the vehicle is actually moving with nobody assigned to it
+  if (isMoving) {
+    await Alert.create({
+      companyId: vehicle.companyId,
+      vehicleId,
+      type: "unauthorized_movement",
+      message: `Vehicle is moving at ${speedKph} km/h with no driver assigned.`,
+    });
+  }
+} else {
+  vehicle.status = isMoving ? "active" : "idle";
+}
+await vehicle.save();
+
+
+    // 3. Trip start/end logic
     let openTrip = await Trip.findOne({ vehicleId, endTime: { $exists: false } }).sort({ startTime: -1 });
 
     if (isMoving && !openTrip) {
@@ -150,7 +194,6 @@ export async function ingestLocation(req, res) {
       );
       const fuelDropLiters = previousPing.fuelLevelLiters - fuelLevelLiters;
 
-      // Only check if the vehicle actually moved a meaningful distance and fuel dropped at all
       if (distanceSinceLastPingKm > 0.5 && fuelDropLiters > 0) {
         const expectedDropLiters = (vehicle.avgConsumptionLPer100Km / 100) * distanceSinceLastPingKm;
         const percentOverExpected =
@@ -164,6 +207,34 @@ export async function ingestLocation(req, res) {
             message: `Unusual fuel consumption: used ${fuelDropLiters.toFixed(1)}L over ${distanceSinceLastPingKm.toFixed(1)}km, ${percentOverExpected.toFixed(0)}% more than expected for this vehicle.`,
           });
         }
+      }
+    }
+
+    // 7. Geofence entry/exit detection
+    const geofences = await Geofence.find({ companyId: vehicle.companyId });
+
+    for (const geofence of geofences) {
+      const isInsideNow = isInsideGeofence(latitude, longitude, geofence);
+
+      let wasInsideBefore = false;
+      if (previousPing) {
+        wasInsideBefore = isInsideGeofence(previousPing.latitude, previousPing.longitude, geofence);
+      }
+
+      if (isInsideNow && !wasInsideBefore) {
+        await Alert.create({
+          companyId: vehicle.companyId,
+          vehicleId,
+          type: "geofence_entry",
+          message: `Vehicle entered geofence "${geofence.name}".`,
+        });
+      } else if (!isInsideNow && wasInsideBefore) {
+        await Alert.create({
+          companyId: vehicle.companyId,
+          vehicleId,
+          type: "geofence_exit",
+          message: `Vehicle exited geofence "${geofence.name}".`,
+        });
       }
     }
 
@@ -189,3 +260,9 @@ export async function getLiveLocations(req, res) {
     return res.status(500).json({ error: "Failed to fetch live locations" });
   }
 }
+
+
+
+
+
+

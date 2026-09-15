@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GoogleMap, OverlayView, useJsApiLoader } from "@react-google-maps/api";
+import { GoogleMap, OverlayView, Circle, useJsApiLoader } from "@react-google-maps/api";
 import { FaTruck } from "react-icons/fa";
 import { apiRequest } from "../lib/api";
 import StatCard from "./StatCard";
 import CircleStat from "./CircleStat";
 import FullPageLoading from "./FullPageLoading";
+import { GeofenceRecord } from "../types/auth";
 
 interface LiveVehicle {
   vehicleId: string;
@@ -84,12 +85,18 @@ export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: 
   });
 
   const [vehicles, setVehicles] = useState<LiveVehicle[]>([]);
+  const [geofences, setGeofences] = useState<GeofenceRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showGeofences, setShowGeofences] = useState(true);
 
   async function load() {
     try {
-      const data = await apiRequest<LiveVehicle[]>("/api/tracking/live");
-      setVehicles(data);
+      const [vehicleData, geofenceData] = await Promise.all([
+        apiRequest<LiveVehicle[]>("/api/tracking/live"),
+        apiRequest<GeofenceRecord[]>("/api/geofences"),
+      ]);
+      setVehicles(vehicleData);
+      setGeofences(geofenceData);
     } catch (err) {
       console.error(err);
     } finally {
@@ -120,8 +127,8 @@ export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: 
 
   const mostRecent = withLocation.length
     ? withLocation.reduce((latest, v) =>
-      new Date(v.lastLocation!.recordedAt) > new Date(latest.lastLocation!.recordedAt) ? v : latest
-    )
+        new Date(v.lastLocation!.recordedAt) > new Date(latest.lastLocation!.recordedAt) ? v : latest
+      )
     : null;
 
   if (loading || !isLoaded) return <FullPageLoading label="Loading map" />;
@@ -130,17 +137,39 @@ export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: 
     <div>
       {/* Top stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Total vehicles" value={counts.total} accent="green" description="All vehicles on your account" />
-        <StatCard label="Active" value={counts.active} accent="green" description="Currently moving" />
-        <StatCard label="Idle" value={counts.idle} accent="orange" description="Stationary, engine on" />
-        <StatCard label="Offline" value={counts.offline} accent="orange" description="No recent signal" />
+        <StatCard label="Total vehicles" value={counts.total} accent="green" />
+        <StatCard label="Active" value={counts.active} accent="green" />
+        <StatCard label="Idle" value={counts.idle} accent="orange" />
+        <StatCard label="Offline" value={counts.offline} accent="orange" />
       </div>
 
       {/* Map */}
-      <p className="text-xs text-gray-400 mb-2">Live vehicle positions, refreshed every 10 seconds.</p>
-      <div className="bg-white rounded-lg overflow-hidden mb-6">
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-3">
         <div className="h-[500px] w-full">
           <GoogleMap mapContainerStyle={containerStyle} center={center} zoom={12}>
+            {/* Geofence zones */}
+            {showGeofences &&
+              geofences.map(
+                (g) =>
+                  g.type === "circle" &&
+                  g.centerLat &&
+                  g.centerLng && (
+                    <Circle
+                      key={g._id}
+                      center={{ lat: g.centerLat, lng: g.centerLng }}
+                      radius={g.radiusM}
+                      options={{
+                        fillColor: "#4ade80",
+                        fillOpacity: 0.12,
+                        strokeColor: "#4ade80",
+                        strokeWeight: 1.5,
+                        clickable: false,
+                      }}
+                    />
+                  )
+              )}
+
+            {/* Vehicles */}
             {withLocation.map((v) => (
               <OverlayView
                 key={v.vehicleId}
@@ -152,6 +181,22 @@ export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: 
             ))}
           </GoogleMap>
         </div>
+
+        {/* Geofence toggle */}
+        {geofences.length > 0 && (
+          <div className="px-4 py-2 border-t border-gray-100 flex items-center justify-between">
+            <span className="text-xs text-gray-500">
+              {geofences.length} geofence{geofences.length !== 1 ? "s" : ""} on this map
+            </span>
+            <button
+              onClick={() => setShowGeofences((s) => !s)}
+              className="text-xs text-green-600 hover:underline"
+            >
+              {showGeofences ? "Hide zones" : "Show zones"}
+            </button>
+          </div>
+        )}
+
         {withLocation.length === 0 && (
           <p className="text-sm text-gray-400 text-center py-4">
             No vehicle location data yet — vehicles will appear once GPS pings start coming in.
@@ -160,7 +205,7 @@ export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: 
       </div>
 
       {/* Legend */}
-      <div className="bg-white rounded-lg p-4 mb-6">
+      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
         <p className="text-xs font-medium text-gray-500 mb-2">Marker colors</p>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
           {LEGEND_ITEMS.map((item) => (
@@ -169,24 +214,28 @@ export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: 
               <span className="text-xs text-gray-600">{item.label}</span>
             </div>
           ))}
+          {geofences.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full border-2 border-green-400 bg-green-400/20" />
+              <span className="text-xs text-gray-600">Geofence zone</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Reporting % + freshness */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <CircleStat
-          percentage={reportingPct}
-          label="Vehicles reporting location"
-          color="#4ade80"
-          description="Share of the fleet with a GPS fix right now"
-        />
+        <CircleStat percentage={reportingPct} label="Vehicles reporting location" color="#4ade80" />
         <StatCard
           label="Most recent update"
           value={mostRecent ? timeAgo(mostRecent.lastLocation!.recordedAt) : "—"}
           accent="green"
-          description="Time since the last GPS ping came in"
         />
       </div>
     </div>
   );
 }
+
+
+
+
