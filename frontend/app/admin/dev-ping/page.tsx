@@ -69,14 +69,14 @@ export default function DevPingPage() {
         </p>
       </div>
 
-      <div className="bg-white rounded-lg p-5">
+      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
         <form onSubmit={sendPing} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Vehicle</label>
             <select
               value={vehicleId}
               onChange={(e) => setVehicleId(e.target.value)}
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
             >
               {vehicles.map((v) => (
                 <option key={v._id} value={v._id}>
@@ -93,7 +93,7 @@ export default function DevPingPage() {
                 type="text"
                 value={latitude}
                 onChange={(e) => setLatitude(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
               />
             </div>
             <div>
@@ -102,7 +102,7 @@ export default function DevPingPage() {
                 type="text"
                 value={longitude}
                 onChange={(e) => setLongitude(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
               />
             </div>
             <div>
@@ -111,7 +111,7 @@ export default function DevPingPage() {
                 type="text"
                 value={speedKph}
                 onChange={(e) => setSpeedKph(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
               />
             </div>
           </div>
@@ -125,7 +125,7 @@ export default function DevPingPage() {
               value={fuelLevelLiters}
               onChange={(e) => setFuelLevelLiters(e.target.value)}
               placeholder="e.g. 50"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
             />
           </div>
 
@@ -143,7 +143,7 @@ export default function DevPingPage() {
                     setSpeedKph(p.speed);
                     setFuelLevelLiters(p.fuel);
                   }}
-                  className="text-xs px-3 py-1.5 rounded-md border border-gray-300 text-gray-600 hover:border-green-400 hover:text-green-600"
+                  className="text-xs px-3 py-1.5 rounded-md border border-gray-300 text-gray-600 hover:border-teal-400 hover:text-teal-600"
                 >
                   {p.label}
                 </button>

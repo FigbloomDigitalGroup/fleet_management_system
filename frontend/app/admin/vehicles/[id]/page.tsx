@@ -7,14 +7,14 @@ import FullPageLoading from "@/app/components/FullPageLoading";
 import { VehicleRecord } from "../../../types/auth";
 
 const statusStyles: Record<string, string> = {
-  active: "bg-green-50 text-green-600 border-green-200",
+  active: "bg-teal-50 text-teal-600 border-teal-200",
   idle: "bg-orange-50 text-orange-600 border-orange-200",
   offline: "bg-gray-100 text-gray-500 border-gray-200",
   maintenance: "bg-red-50 text-red-600 border-red-200",
 };
 
 const STATUS_OPTIONS = [
-  { value: "active", label: "Set Active", color: "bg-green-500 hover:bg-green-600" },
+  { value: "active", label: "Set Active", color: "bg-teal-500 hover:bg-teal-600" },
   { value: "idle", label: "Set Idle", color: "bg-orange-500 hover:bg-orange-600" },
   { value: "offline", label: "Set Offline", color: "bg-gray-500 hover:bg-gray-600" },
   { value: "maintenance", label: "Set Maintenance", color: "bg-red-500 hover:bg-red-600" },
@@ -79,9 +79,9 @@ export default function AdminVehicleDetailPage() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white rounded-lg p-5">
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
           <h3 className="text-sm font-medium text-gray-700">Vehicle details</h3>
-          <p className="text-xs text-gray-400 mt-0.5 mb-3">Registration info for this vehicle</p>
+          <p className="text-xs text-teal-600 mt-0.5 mb-3">Registration info for this vehicle</p>
           <dl className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <dt className="text-gray-500">Device ID</dt>
@@ -100,21 +100,28 @@ export default function AdminVehicleDetailPage() {
           </dl>
         </div>
 
-        <div className="bg-white rounded-lg p-5 h-fit">
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 h-fit">
           <h3 className="text-sm font-medium text-gray-700">Change status</h3>
-          <p className="text-xs text-gray-400 mt-0.5 mb-4">Updates how this vehicle shows up across the fleet</p>
+          <p className="text-xs text-teal-600 mt-0.5 mb-4">Updates how this vehicle shows up across the fleet</p>
           <div className="space-y-2">
-            {STATUS_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => updateStatus(opt.value)}
-                disabled={updating || vehicle.status === opt.value}
-                className={`w-full py-2 rounded-md text-sm font-medium text-white disabled:opacity-40 ${opt.color}`}
-              >
-                {opt.label}
-              </button>
-            ))}
+            {STATUS_OPTIONS.map((opt) => {
+              const blocked = opt.value === "active" && !vehicle.driverId;
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => updateStatus(opt.value)}
+                  disabled={updating || vehicle.status === opt.value || blocked}
+                  title={blocked ? "Assign a driver to this vehicle before setting it active" : undefined}
+                  className={`w-full py-2 rounded-md text-sm font-medium text-white disabled:opacity-40 ${opt.color}`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
+          {!vehicle.driverId && (
+            <p className="text-xs text-gray-400 mt-3">Assign a driver to this vehicle before setting it active.</p>
+          )}
         </div>
       </div>
     </div>

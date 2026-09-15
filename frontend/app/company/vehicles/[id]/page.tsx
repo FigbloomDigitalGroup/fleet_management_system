@@ -7,7 +7,7 @@ import FullPageLoading from "@/app/components/FullPageLoading";
 import { VehicleRecord } from "../../../types/auth";
 
 const statusStyles: Record<string, string> = {
-  active: "bg-green-50 text-green-600 border-green-200",
+  active: "bg-teal-50 text-teal-600 border-teal-200",
   idle: "bg-orange-50 text-orange-600 border-orange-200",
   offline: "bg-gray-100 text-gray-500 border-gray-200",
   maintenance: "bg-red-50 text-red-600 border-red-200",
@@ -50,7 +50,7 @@ export default function CompanyVehicleDetailPage() {
         </span>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-5 max-w-xl">
+      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 max-w-xl">
         <h3 className="text-sm font-medium text-gray-700 mb-3">Vehicle details</h3>
         <dl className="grid grid-cols-2 gap-3 text-sm">
           <div>
@@ -68,7 +68,7 @@ export default function CompanyVehicleDetailPage() {
             <dd className="text-gray-900 font-medium mt-0.5">{new Date(vehicle.createdAt).toLocaleDateString()}</dd>
           </div>
         </dl>
-        <p className="text-xs text-gray-400 mt-4">Status changes are managed by your fleet Admin.</p>
+        <p className="text-xs text-teal-600 mt-4">Status changes are managed by your fleet Admin.</p>
       </div>
     </div>
   );

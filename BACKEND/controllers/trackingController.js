@@ -5,22 +5,11 @@ import Alert from "../models/Alert.js";
 import Route from "../models/Route.js";
 import Geofence from "../models/Geofence.js";
 import { tenantScope } from "../middleware/auth.js";
+import { distanceKm, isInsideGeofence } from "../lib/geo.js";
 
 const SPEEDING_LIMIT_KPH = 80;
 const TRIP_IDLE_TIMEOUT_MINUTES = 5;
 const FUEL_ANOMALY_THRESHOLD_PCT = 50;
-
-// Haversine distance between two lat/lng points, in km
-function distanceKm(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
 
 // Distance in km from a point to the nearest segment of a route's waypoints
 function distanceToRouteKm(lat, lng, waypoints) {
@@ -34,34 +23,6 @@ function distanceToRouteKm(lat, lng, waypoints) {
     minDist = Math.min(minDist, dA, dB);
   }
   return minDist;
-}
-
-// Geofence containment checks
-function isPointInCircle(lat, lng, centerLat, centerLng, radiusM) {
-  const distM = distanceKm(lat, lng, centerLat, centerLng) * 1000;
-  return distM <= radiusM;
-}
-
-function isPointInPolygon(lat, lng, polygon) {
-  let inside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i].lat, yi = polygon[i].lng;
-    const xj = polygon[j].lat, yj = polygon[j].lng;
-    const intersect =
-      yi > lng !== yj > lng && lat < ((xj - xi) * (lng - yi)) / (yj - yi) + xi;
-    if (intersect) inside = !inside;
-  }
-  return inside;
-}
-
-function isInsideGeofence(lat, lng, geofence) {
-  if (geofence.type === "circle") {
-    return isPointInCircle(lat, lng, geofence.centerLat, geofence.centerLng, geofence.radiusM);
-  }
-  if (geofence.type === "polygon" && geofence.polygon?.length >= 3) {
-    return isPointInPolygon(lat, lng, geofence.polygon);
-  }
-  return false;
 }
 
 export async function ingestLocation(req, res) {

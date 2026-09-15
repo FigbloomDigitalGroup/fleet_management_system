@@ -16,7 +16,7 @@ interface BillingCompany {
 const planStyles: Record<string, string> = {
   trial: "bg-gray-100 text-gray-600 border-gray-200",
   basic: "bg-blue-50 text-blue-600 border-blue-200",
-  pro: "bg-green-50 text-green-600 border-green-200",
+  pro: "bg-teal-50 text-teal-600 border-teal-200",
   enterprise: "bg-orange-50 text-orange-600 border-orange-200",
 };
 
@@ -83,7 +83,7 @@ export default function BillingPage() {
         ))}
       </div>
 
-      <div className="bg-white rounded-lg overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
             <tr>
@@ -108,7 +108,7 @@ export default function BillingPage() {
                     value={c.subscriptionPlan}
                     disabled={updatingId === c._id}
                     onChange={(e) => changePlan(c._id, e.target.value)}
-                    className="text-sm border border-gray-300 rounded-md px-2 py-1 outline-none focus:border-green-600"
+                    className="text-sm border border-gray-300 rounded-md px-2 py-1 outline-none focus:border-teal-600"
                   >
                     {PLAN_OPTIONS.map((p) => (
                       <option key={p} value={p}>

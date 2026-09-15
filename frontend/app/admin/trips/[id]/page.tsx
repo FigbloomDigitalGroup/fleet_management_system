@@ -43,15 +43,15 @@ export default function AdminTripDetailPage() {
         <span
           className={`text-xs px-3 py-1.5 rounded-full border font-medium ${trip.endTime
               ? "bg-gray-100 text-gray-500 border-gray-200"
-              : "bg-green-50 text-green-600 border-green-200"
+              : "bg-teal-50 text-teal-600 border-teal-200"
             }`}
         >
           {trip.endTime ? "completed" : "in progress"}
         </span>
       </div>
 
-      <div className="bg-white rounded-lg p-5 max-w-xl">
-        <p className="text-xs text-gray-400 mb-3">Key details recorded for this trip</p>
+      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 max-w-xl">
+        <p className="text-xs text-teal-600 mb-3">Key details recorded for this trip</p>
         <dl className="grid grid-cols-2 gap-5 text-sm">
           <div>
             <dt className="text-gray-500">Vehicle</dt>

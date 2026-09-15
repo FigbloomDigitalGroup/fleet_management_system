@@ -3,6 +3,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { GoogleMap, Circle, useJsApiLoader } from "@react-google-maps/api";
 import { apiRequest } from "../lib/api";
+import { usePulseColor } from "../lib/usePulseColor";
 import { GeofenceRecord } from "../types/auth";
 
 const containerStyle = { width: "100%", height: "100%" };
@@ -12,6 +13,7 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
   });
+  const zoneColor = usePulseColor();
 
   const [geofences, setGeofences] = useState<GeofenceRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,7 +102,7 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
   return (
     <div className="grid lg:grid-cols-3 gap-6">
       {/* Map */}
-      <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
         <div className="h-[450px] w-full">
           <GoogleMap
             mapContainerStyle={containerStyle}
@@ -119,9 +121,9 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
                     center={{ lat: g.centerLat, lng: g.centerLng }}
                     radius={g.radiusM}
                     options={{
-                      fillColor: "#4ade80",
+                      fillColor: zoneColor,
                       fillOpacity: 0.15,
-                      strokeColor: "#4ade80",
+                      strokeColor: zoneColor,
                       strokeWeight: 2,
                     }}
                   />
@@ -145,7 +147,7 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
           </GoogleMap>
         </div>
         {canManage && (
-          <p className="text-xs text-gray-400 text-center py-3 border-t border-gray-100">
+          <p className="text-xs text-teal-600 text-center py-3 border-t border-gray-100">
             Click anywhere on the map to set a new zone's center point.
           </p>
         )}
@@ -154,7 +156,7 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
       {/* Sidebar: list + create form */}
       <div className="space-y-4">
         {canManage && (
-          <div className="bg-white border border-gray-200 rounded-lg p-5">
+          <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
             <h3 className="text-sm font-medium text-gray-700 mb-4">Add a zone</h3>
             <form onSubmit={handleCreate} className="space-y-3">
               <div>
@@ -164,7 +166,7 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Main Depot"
-                  className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400"
+                  className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
                 />
               </div>
               <div>
@@ -173,10 +175,10 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
                   type="number"
                   value={radiusM}
                   onChange={(e) => setRadiusM(e.target.value)}
-                  className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400"
+                  className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
                 />
               </div>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-teal-600">
                 {clickedCenter
                   ? `Center set: ${clickedCenter.lat.toFixed(4)}, ${clickedCenter.lng.toFixed(4)}`
                   : "Click the map to set a center point."}
@@ -195,7 +197,7 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
           </div>
         )}
 
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
           <p className="text-xs font-medium text-gray-500 p-4 pb-0">Existing zones</p>
           {geofences.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">No zones created yet.</p>

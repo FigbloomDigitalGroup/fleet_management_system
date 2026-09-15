@@ -8,7 +8,7 @@ import { CompanyRecord } from "../../types/auth";
 const planStyles: Record<string, string> = {
   trial: "bg-gray-100 text-gray-600 border-gray-200",
   basic: "bg-blue-50 text-blue-600 border-blue-200",
-  pro: "bg-green-50 text-green-600 border-green-200",
+  pro: "bg-teal-50 text-teal-600 border-teal-200",
   enterprise: "bg-orange-50 text-orange-600 border-orange-200",
 };
 
@@ -35,7 +35,7 @@ export default function CompanyBillingPage() {
         <p className="text-sm text-gray-500 mt-1">Your subscription details</p>
       </div>
 
-      <div className="bg-white rounded-lg p-6 space-y-5">
+      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-6 space-y-5">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-500">Current plan</p>
