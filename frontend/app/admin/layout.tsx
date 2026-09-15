@@ -1,13 +1,14 @@
 "use client";
 
 import { ReactNode } from "react";
-import { FiHome, FiTruck, FiUsers, FiMapPin, FiAlertTriangle, FiFileText } from "react-icons/fi";
+import { FiHome, FiTruck, FiUsers, FiMapPin, FiAlertTriangle, FiFileText, FiMap } from "react-icons/fi";
 import ProtectedRoute from "../components/ProtectedRoute";
 import DashboardShell from "../components/DashboardShell";
 
 const navItems = [
   { label: "Overview", href: "/admin/dashboard", icon: FiHome },
   { label: "Live Map", href: "/admin/live-map", icon: FiMapPin },
+  { label: "Geofences", href: "/admin/geofences", icon: FiMap },
   { label: "Vehicles", href: "/admin/vehicles", icon: FiTruck },
   { label: "Drivers", href: "/admin/drivers", icon: FiUsers },
   { label: "Trips", href: "/admin/trips", icon: FiFileText },

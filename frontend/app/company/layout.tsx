@@ -11,6 +11,7 @@ import {
   FiTruck,
   FiUserPlus,
   FiUsers,
+  FiMap,
 } from "react-icons/fi";
 import ProtectedRoute from "../components/ProtectedRoute";
 import DashboardShell from "../components/DashboardShell";
@@ -20,6 +21,7 @@ import DashboardShell from "../components/DashboardShell";
 const navItems = [
   { label: "Overview", href: "/company/dashboard", icon: FiHome },
   { label: "Live Map", href: "/company/live-map", icon: FiMapPin },
+  { label: "Geofences", href: "/company/geofences", icon: FiMap },
   { label: "Vehicles", href: "/company/vehicles", icon: FiTruck },
    { label: "Trips", href: "/company/trips", icon: FiFileText },
   { label: "Drivers", href: "/company/drivers", icon: FiUsers },

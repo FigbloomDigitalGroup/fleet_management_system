@@ -71,5 +71,14 @@ export interface AlertRecord {
 }
 
 
-
+export interface GeofenceRecord {
+  _id: string;
+  name: string;
+  type: "circle" | "polygon";
+  centerLat?: number;
+  centerLng?: number;
+  radiusM?: number;
+  polygon?: { lat: number; lng: number }[];
+  createdAt: string;
+}
 
