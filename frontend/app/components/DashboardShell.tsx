@@ -9,7 +9,6 @@ import { CompanyRecord, AlertRecord } from "../types/auth";
 import { IconType } from "react-icons";
 import { FiBell } from "react-icons/fi";
 import { FaCog } from "react-icons/fa";
-import ThemeToggle from "./ThemeToggle";
 
 interface NavItem {
   label: string;
@@ -143,7 +142,6 @@ export default function DashboardShell({
             {header && <h1 className="text-lg font-bold text-blue-950">{header.title}</h1>}
           </div>
           <div className="flex items-center gap-2">
-            <ThemeToggle />
             {alertsHref && (
               <Link
                 href={alertsHref}

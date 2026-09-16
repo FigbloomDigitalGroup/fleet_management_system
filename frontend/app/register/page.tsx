@@ -6,7 +6,6 @@ import { useAuth } from "../context/AuthContext";
 import { redirectPathForRole } from "../lib/roleRedirect";
 import { FaCog } from "react-icons/fa";
 import BackgroundSlideshow from "../components/BackgroundSlideshow";
-import ThemeToggle from "../components/ThemeToggle";
 
 type AccountType = "SITE_OWNER" | "ADMIN" | "DRIVER";
 
@@ -138,9 +137,6 @@ export default function RegisterPage() {
                     </p>
                 </div>
             </BackgroundSlideshow>
-
-
-            <ThemeToggle className="fixed top-6 right-6 z-50" />
 
             {/* RIGHT — Form panel */}
             <div className="lg:w-1/2 flex items-center justify-center p-8">
