@@ -1,9 +1,5 @@
 @import "tailwindcss";
 
-/* Drive Tailwind's `dark:` variant off a `.dark` class (set by next-themes)
-   instead of the `prefers-color-scheme` media query. */
-@custom-variant dark (&:where(.dark, .dark *));
-
 @theme {
     --color-blue-950: oklch(25.7% 0.09 281.288);
 }
@@ -12,13 +8,6 @@
 
 body {
     font-family: var(--font-body), sans-serif;
-    background-color: #ffffff;
-    color: #111827;
-}
-
-.dark body {
-    background-color: #0a0a0a;
-    color: #e7e5e4;
 }
 
 input,
@@ -31,129 +20,6 @@ input::placeholder,
 textarea::placeholder {
     color: #9ca3af;
     opacity: 1;
-}
-
-.dark input,
-.dark textarea,
-.dark select {
-    color: #e7e5e4;
-}
-
-.dark input::placeholder,
-.dark textarea::placeholder {
-    color: #6b6560;
-}
-
-/*
- * Site-wide dark theme — black surfaces, orange accent (swapped out from an
- * earlier navy-tinted palette).
- *
- * Nearly every page/component in this app is built from a small, consistent
- * palette of hardcoded utility classes (bg-white cards, text-gray-* labels,
- * ring-black/5 borders, etc.) rather than semantic/themeable tokens. Rather
- * than touching every page individually, we repaint that shared palette
- * here whenever the `.dark` class is active, so toggling the theme covers
- * the whole site — landing, auth, and every dashboard — consistently.
- */
-.dark .bg-white {
-    background-color: #161616 !important;
-}
-
-.dark .bg-gray-50 {
-    background-color: #0f0f0f !important;
-}
-
-.dark .bg-gray-100 {
-    background-color: #202020 !important;
-}
-
-.dark .bg-blue-50 {
-    background-color: #0a0a0a !important;
-}
-
-/* Light-tint status/accent chips (used across ~35 pages for badges,
-   icon chips, and info panels) — without this they'd keep their pale
-   light-mode background and read as a jarring bright patch on black. */
-.dark .bg-teal-50 {
-    background-color: rgba(45, 212, 191, 0.12) !important;
-}
-
-.dark .bg-orange-50 {
-    background-color: rgba(251, 146, 60, 0.12) !important;
-}
-
-.dark .bg-red-50 {
-    background-color: rgba(248, 113, 113, 0.12) !important;
-}
-
-.dark .bg-gray-900 {
-    background-color: #050505 !important;
-}
-
-.dark .ring-black\/5 {
-    --tw-ring-color: rgb(255 255 255 / 0.08) !important;
-}
-
-.dark .shadow-sm,
-.dark .shadow,
-.dark .shadow-md {
-    --tw-shadow-color: rgb(0 0 0 / 0.4);
-}
-
-.dark .text-gray-900 {
-    color: #f5f5f4 !important;
-}
-
-.dark .text-gray-800 {
-    color: #e7e5e4 !important;
-}
-
-.dark .text-gray-700 {
-    color: #d6d3d1 !important;
-}
-
-.dark .text-gray-600 {
-    color: #a8a29e !important;
-}
-
-.dark .text-gray-500 {
-    color: #8a8580 !important;
-}
-
-.dark .text-gray-400 {
-    color: #6b6560 !important;
-}
-
-/* text-blue-950 is this app's default heading color (near-black navy) —
-   in dark mode it becomes the orange accent instead of blue, both so it
-   stays legible against the blacked-out card backgrounds above and so
-   headings carry the black+orange dark theme. */
-.dark .text-blue-950 {
-    color: #fb923c !important;
-}
-
-.dark .text-black {
-    color: #f5f5f4 !important;
-}
-
-.dark .border-gray-100 {
-    border-color: #262626 !important;
-}
-
-.dark .border-gray-200 {
-    border-color: #303030 !important;
-}
-
-.dark .border-gray-300 {
-    border-color: #3f3f3f !important;
-}
-
-.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) {
-    border-color: #262626 !important;
-}
-
-.dark .landing-section::before {
-    background: #303030;
 }
 
 .font-display {

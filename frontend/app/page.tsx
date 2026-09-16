@@ -1,7 +1,6 @@
 "use client";
 
 import { FaCog, FaTwitter, FaLinkedin, FaFacebook } from "react-icons/fa";
-import ThemeToggle from "./components/ThemeToggle";
 
 export default function LandingPage() {
   return (
@@ -12,12 +11,9 @@ export default function LandingPage() {
             <FaCog aria-hidden="true" />
             FIGBLOOM FLEET
           </span>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <a href="/login" className="text-sm text-gray-700 hover:text-teal-500">
-              Sign in
-            </a>
-          </div>
+          <a href="/login" className="text-sm text-gray-700 hover:text-teal-500">
+            Sign in
+          </a>
         </nav>
       </header>
 

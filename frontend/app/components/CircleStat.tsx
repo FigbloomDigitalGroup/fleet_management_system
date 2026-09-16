@@ -29,7 +29,7 @@ export default function CircleStat({
           strokeLinecap="round"
           transform="rotate(-90 50 50)"
         />
-        <text x="50" y="55" textAnchor="middle" fontSize="18" fontWeight="600" className="fill-gray-900 dark:fill-gray-100">
+        <text x="50" y="55" textAnchor="middle" fontSize="18" fontWeight="600" fill="#111827">
           {percentage}%
         </text>
       </svg>
