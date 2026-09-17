@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "../../lib/api";
 import { VehicleRecord } from "../../types/auth";
+import { usePageHeader } from "../../components/DashboardShell";
 
 interface PingLog {
   time: string;
@@ -101,15 +102,13 @@ export default function LiveTrackerPage() {
     };
   }, []);
 
+  usePageHeader(
+    "Live Tracker",
+    "Uses your phone's real GPS to send live location pings — open this page on your phone's browser."
+  );
+
   return (
     <div className="max-w-xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Live Tracker</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Uses your phone's real GPS to send live location pings — open this page on your phone's browser.
-        </p>
-      </div>
-
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 mb-6">
         <label className="block text-xs font-medium text-gray-600 mb-1">Vehicle</label>
         <select

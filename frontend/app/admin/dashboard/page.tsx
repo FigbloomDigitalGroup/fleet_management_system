@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { apiRequest } from "../../lib/api";
-import { useAuth } from "../../context/AuthContext";
 import StatCard from "../../components/StatCard";
 import CircleStat from "../../components/CircleStat";
 import BarChartCard from "../../components/BarChartCard";
@@ -19,15 +18,34 @@ import StatusDetailsCard from "@/app/components/StatusDetailsCard";
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
-
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
   const [trips, setTrips] = useState<TripRecord[]>([]);
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  usePageHeader("Fleet overview", `Signed in as ${user?.email}`);
+  const vehicleCounts = {
+    total: vehicles.length,
+    active: vehicles.filter((v) => v.status === "active").length,
+    idle: vehicles.filter((v) => v.status === "idle").length,
+    offline: vehicles.filter((v) => v.status === "offline").length,
+    maintenance: vehicles.filter((v) => v.status === "maintenance").length,
+  };
+  const unresolvedAlertCount = alerts.filter((a) => !a.resolved).length;
+
+  const statsNode = useMemo(
+    () => (
+      <div className="grid grid-cols-2 gap-3 h-full">
+        <StatCard label="Total vehicles" value={vehicleCounts.total} accent="blue" description="All vehicles on your account" />
+        <StatCard label="Drivers" value={drivers.length} accent="green" description="Drivers registered to your fleet" />
+        <StatCard label="Active now" value={vehicleCounts.active} accent="green" description="Vehicles currently moving" />
+        <StatCard label="Unresolved alerts" value={unresolvedAlertCount} accent="orange" description="Alerts still awaiting review" />
+      </div>
+    ),
+    [vehicleCounts.total, drivers.length, vehicleCounts.active, unresolvedAlertCount]
+  );
+
+  usePageHeader("Fleet overview", "Real-time visibility across your entire fleet.", statsNode);
 
   useEffect(() => {
     async function loadAll() {
@@ -53,18 +71,9 @@ export default function AdminDashboard() {
 
   if (loading) return <FullPageLoading label="Loading dashboard" />;
 
-  const vehicleCounts = {
-    total: vehicles.length,
-    active: vehicles.filter((v) => v.status === "active").length,
-    idle: vehicles.filter((v) => v.status === "idle").length,
-    offline: vehicles.filter((v) => v.status === "offline").length,
-    maintenance: vehicles.filter((v) => v.status === "maintenance").length,
-  };
-
   const activePct = vehicleCounts.total ? Math.round((vehicleCounts.active / vehicleCounts.total) * 100) : 0;
   const assignedDrivers = vehicles.filter((v) => v.driverId).length;
   const assignedPct = drivers.length ? Math.round((assignedDrivers / drivers.length) * 100) : 0;
-  const unresolvedAlerts = alerts.filter((a) => !a.resolved);
 
   const last7Days = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date();
@@ -78,14 +87,6 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      {/* Top stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <StatCard label="Total vehicles" value={vehicleCounts.total} accent="blue" description="All vehicles on your account" />
-        <StatCard label="Drivers" value={drivers.length} accent="green" description="Drivers registered to your fleet" />
-        <StatCard label="Active now" value={vehicleCounts.active} accent="green" description="Vehicles currently moving" />
-        <StatCard label="Unresolved alerts" value={unresolvedAlerts.length} accent="orange" description="Alerts still awaiting review" />
-      </div>
-
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
         <div className="lg:col-span-2">

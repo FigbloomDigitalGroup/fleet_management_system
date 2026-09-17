@@ -7,6 +7,7 @@ import { apiRequest } from "../../../lib/api";
 import { TripRecord } from "../../../types/auth";
 import FullPageLoading from "../../../components/FullPageLoading";
 import CompanyTripReplayMap from "../../../components/CompanyTripReplayMap";
+import { usePageHeader } from "../../../components/DashboardShell";
 
 export default function CompanyTripDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +24,11 @@ export default function CompanyTripDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  usePageHeader(
+    trip ? `Trip — ${trip.vehicleId?.plateNumber || "Unknown vehicle"}` : "Trip",
+    trip ? new Date(trip.startTime).toLocaleString() : undefined
+  );
+
   if (loading) return <FullPageLoading label="Loading trip" />;
   if (error) return <p className="text-sm text-red-600">{error}</p>;
   if (!trip) return null;
@@ -33,13 +39,7 @@ export default function CompanyTripDetailPage() {
         <FiArrowLeft size={14} /> Back
       </button>
 
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Trip — {trip.vehicleId?.plateNumber || "Unknown vehicle"}
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">{new Date(trip.startTime).toLocaleString()}</p>
-        </div>
+      <div className="mb-8 flex justify-end">
         <span
           className={`text-xs px-3 py-1.5 rounded-full border font-medium ${trip.endTime
               ? "bg-gray-100 text-gray-500 border-gray-200"

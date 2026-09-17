@@ -5,17 +5,18 @@ import {
   getCompany,
   updateCompanyStatus,
   getMyCompany,
-  updateMyCompany
+  updateMyCompany,
+  updateStartPoint,
 } from "../controllers/companyController.js";
 
 const router = express.Router();
-
 router.use(authenticate);
 
 router.get("/", authorize("PLATFORM_ADMIN"), listCompanies);
-router.get("/me", authorize("COMPANY_OWNER", "ADMIN", "PLATFORM_ADMIN"), getMyCompany);
+router.get("/me", authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN", "DRIVER"), getMyCompany);
+router.patch("/me", authorize("COMPANY_OWNER"), updateMyCompany);
+router.patch("/me/start-point", authorize("ADMIN", "COMPANY_OWNER"), updateStartPoint);
 router.get("/:id", authorize("PLATFORM_ADMIN"), getCompany);
 router.patch("/:id/status", authorize("PLATFORM_ADMIN"), updateCompanyStatus);
-router.patch("/me", authorize("COMPANY_OWNER"), updateMyCompany);
 
 export default router;

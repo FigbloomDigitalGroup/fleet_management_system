@@ -118,7 +118,7 @@ export default function AlertsList() {
                     {a.vehicleId?.plateNumber || "—"}
                   </td>
                   <td className="px-5 py-3 text-gray-600">{a.type.replace(/_/g, " ")}</td>
-                  <td className="px-5 py-3 text-gray-600">{a.message}</td>
+                  <td className="px-5 py-3 text-xs text-teal-600">{a.message}</td>
                   <td className="px-5 py-3">
                     <span
                       className={`text-xs px-2 py-1 rounded-full border ${a.resolved

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { apiRequest } from "../../lib/api";
 import StatCard from "../../components/StatCard";
 import FullPageLoading from "@/app/components/FullPageLoading";
+import { usePageHeader } from "../../components/DashboardShell";
 
 interface BillingCompany {
   _id: string;
@@ -62,17 +63,9 @@ export default function BillingPage() {
     }
   }
 
-  if (loading) return <FullPageLoading />;
-  if (error) return <p className="text-sm text-red-600">{error}</p>;
-
-  return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-blue-950">Billing</h1>
-        <p className="text-sm text-gray-500 mt-1">Subscription plans across all companies</p>
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+  const statsNode = useMemo(
+    () => (
+      <div className="grid grid-cols-2 gap-3 h-full">
         {PLAN_OPTIONS.map((plan) => (
           <StatCard
             key={plan}
@@ -82,7 +75,17 @@ export default function BillingPage() {
           />
         ))}
       </div>
+    ),
+    [planCounts]
+  );
 
+  usePageHeader("Billing", "Subscription plans across all companies", statsNode);
+
+  if (loading) return <FullPageLoading />;
+  if (error) return <p className="text-sm text-red-600">{error}</p>;
+
+  return (
+    <div>
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500 text-xs uppercase">

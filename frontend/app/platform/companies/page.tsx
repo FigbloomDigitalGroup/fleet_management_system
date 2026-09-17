@@ -5,6 +5,7 @@ import Link from "next/link";
 import { apiRequest } from "../../lib/api";
 import { CompanyRecord } from "../../types/auth";
 import Skeleton from "../../components/Skeleton";
+import { usePageHeader } from "../../components/DashboardShell";
 
 const statusStyles: Record<string, string> = {
   active: "bg-teal-50 text-teal-600 border-teal-200",
@@ -31,13 +32,10 @@ export default function CompaniesPage() {
     load();
   }, []);
 
+  usePageHeader("Companies", "Every vehicle company registered on the platform");
+
   return (
     <div>
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-blue-950">Companies</h1>
-        <p className="text-sm text-gray-500 mt-1">Every vehicle company registered on the platform</p>
-      </div>
-
       {loading && <Skeleton rows={5} rowClassName="h-12" />}
 
       {error && (

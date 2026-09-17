@@ -4,6 +4,7 @@ import { useEffect, useState, FormEvent } from "react";
 import { apiRequest } from "../../lib/api";
 import Toggle from "../../components/Toggle";
 import FullPageLoading from "@/app/components/FullPageLoading";
+import { usePageHeader } from "../../components/DashboardShell";
 
 interface Settings {
   requireManualApproval: boolean;
@@ -49,16 +50,13 @@ export default function PlatformSettingsPage() {
     }
   }
 
+  usePageHeader("Platform Settings", "Policies applied to every company on the platform");
+
   if (loading) return <FullPageLoading />;
   if (!settings) return null;
 
   return (
     <div className="max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-blue-950">Platform Settings</h1>
-        <p className="text-sm text-gray-500 mt-1">Policies applied to every company on the platform</p>
-      </div>
-
       <form onSubmit={handleSave} className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-6 space-y-6">
         <Toggle
           checked={settings.requireManualApproval}

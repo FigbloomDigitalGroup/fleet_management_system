@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { apiRequest } from "../../lib/api";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import { CompanyRecord } from "../../types/auth";
+import { usePageHeader } from "../../components/DashboardShell";
 
 const planStyles: Record<string, string> = {
   trial: "bg-gray-100 text-gray-600 border-gray-200",
@@ -24,17 +25,14 @@ export default function CompanyBillingPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  usePageHeader("Billing", "Your subscription details");
+
   if (loading) return <FullPageLoading />;
   if (error) return <p className="text-sm text-red-600">{error}</p>;
   if (!company) return null;
 
   return (
     <div className="max-w-xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-blue-950">Billing</h1>
-        <p className="text-sm text-gray-500 mt-1">Your subscription details</p>
-      </div>
-
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-6 space-y-5">
         <div className="flex items-center justify-between">
           <div>

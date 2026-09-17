@@ -3,8 +3,9 @@
 import { useEffect, useState, FormEvent } from "react";
 import Link from "next/link";
 import { apiRequest } from "../lib/api";
-import { VehicleRecord, DriverRecord } from "../types/auth";
+import { VehicleRecord, DriverRecord, GeofenceRecord } from "../types/auth";
 import Skeleton from "./Skeleton";
+import ZoneStatusBadge from "./ZoneStatusBadge";
 
 const statusStyles: Record<string, string> = {
   active: "bg-teal-50 text-teal-600 border-teal-200",
@@ -12,6 +13,11 @@ const statusStyles: Record<string, string> = {
   offline: "bg-gray-100 text-gray-500 border-gray-200",
   maintenance: "bg-red-50 text-red-600 border-red-200",
 };
+
+interface LiveLocation {
+  vehicleId: string;
+  lastLocation: { latitude: number; longitude: number; recordedAt: string } | null;
+}
 
 export default function VehiclesList({
   basePath = "/admin/vehicles",
@@ -22,6 +28,8 @@ export default function VehiclesList({
 }) {
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
+  const [geofences, setGeofences] = useState<GeofenceRecord[]>([]);
+  const [liveLocations, setLiveLocations] = useState<Record<string, LiveLocation["lastLocation"]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [assigningId, setAssigningId] = useState<string | null>(null);
@@ -35,12 +43,16 @@ export default function VehiclesList({
 
   async function loadAll() {
     try {
-      const [vehicleData, driverData] = await Promise.all([
+      const [vehicleData, driverData, geofenceData, liveData] = await Promise.all([
         apiRequest<VehicleRecord[]>("/api/vehicles"),
         apiRequest<DriverRecord[]>("/api/users/drivers"),
+        apiRequest<GeofenceRecord[]>("/api/geofences"),
+        apiRequest<LiveLocation[]>("/api/tracking/live"),
       ]);
       setVehicles(vehicleData);
       setDrivers(driverData);
+      setGeofences(geofenceData);
+      setLiveLocations(Object.fromEntries(liveData.map((v) => [v.vehicleId, v.lastLocation])));
     } catch (err: any) {
       setError(err.message || "Failed to load vehicles");
     } finally {
@@ -104,13 +116,14 @@ export default function VehiclesList({
                 <th className="text-left px-5 py-3 font-bold">Plate</th>
                 <th className="text-left px-5 py-3 font-bold">Make / Model</th>
                 <th className="text-left px-5 py-3 font-bold">Status</th>
+                <th className="text-left px-5 py-3 font-bold">Zone</th>
                 <th className="text-left px-5 py-3 font-bold">Driver</th>
               </tr>
             </thead>
             <tbody>
               {vehicles.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-5 py-8 text-center text-gray-400">
+                  <td colSpan={5} className="px-5 py-8 text-center text-gray-400">
                     No vehicles added yet.
                   </td>
                 </tr>
@@ -132,6 +145,9 @@ export default function VehiclesList({
                       <span className={`text-xs px-2 py-1 rounded-full border ${statusStyles[v.status]}`}>
                         {v.status}
                       </span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <ZoneStatusBadge lastLocation={liveLocations[v._id]} geofences={geofences} />
                     </td>
 
 <td className="px-5 py-3">

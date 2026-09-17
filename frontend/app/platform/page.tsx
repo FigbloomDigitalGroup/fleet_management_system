@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Skeleton from "../components/Skeleton";
+import { usePageHeader } from "../components/DashboardShell";
 async function apiRequest<T>(url: string): Promise<T> {
   const response = await fetch(url);
 
@@ -46,13 +47,10 @@ export default function CompaniesPage() {
     load();
   }, []);
 
+  usePageHeader("Companies", "Every vehicle company registered on the platform");
+
   return (
     <div>
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-blue-950">Companies</h1>
-        <p className="text-sm text-gray-500 mt-1">Every vehicle company registered on the platform</p>
-      </div>
-
       {loading && <Skeleton rows={5} rowClassName="h-12" />}
 
       {error && (

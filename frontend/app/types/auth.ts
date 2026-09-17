@@ -22,6 +22,12 @@ export interface CompanyRecord {
   subscriptionPlan: string;
   createdAt: string;
   userCount?: number;
+  dailyStartPoint?: {
+    lat: number;
+    lng: number;
+    geofenceId?: string;
+    updatedAt?: string;
+  } | null;
 }
 
 export interface AdminRecord {
@@ -41,6 +47,7 @@ export interface VehicleRecord {
   deviceId?: string;
   status: "active" | "idle" | "offline" | "maintenance";
   driverId?: { _id: string; fullName: string; email: string } | null;
+  startGeofenceId?: { _id: string; name: string } | null;
   createdAt: string;
 }
 

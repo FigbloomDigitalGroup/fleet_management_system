@@ -4,6 +4,7 @@ import { useEffect, useState, FormEvent } from "react";
 import { apiRequest } from "../../lib/api";
 import { AdminRecord } from "../../types/auth";
 import Skeleton from "../../components/Skeleton";
+import { usePageHeader } from "../../components/DashboardShell";
 
 export default function AdminsPage() {
   const [admins, setAdmins] = useState<AdminRecord[]>([]);
@@ -52,13 +53,10 @@ export default function AdminsPage() {
     }
   }
 
+  usePageHeader("Admins", "People who manage your fleet's day-to-day tracking");
+
   return (
     <div>
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-blue-950">Admins</h1>
-        <p className="text-sm text-gray-500 mt-1">People who manage your fleet's day-to-day tracking</p>
-      </div>
-
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Admins list */}
         <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">

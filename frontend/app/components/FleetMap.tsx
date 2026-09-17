@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GoogleMap, OverlayView, Circle, useJsApiLoader } from "@react-google-maps/api";
 import { IoCarSportSharp } from "react-icons/io5";
+import { FaFlagCheckered } from "react-icons/fa";
 import { apiRequest } from "../lib/api";
 import { usePulseColor } from "../lib/usePulseColor";
+import { isOutsideGeofences } from "../lib/geofence";
 import StatCard from "./StatCard";
 import CircleStat from "./CircleStat";
 import FullPageLoading from "./FullPageLoading";
@@ -42,51 +44,6 @@ function timeAgo(dateStr: string) {
   if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
   return `${hours}h ago`;
-}
-
-// Great-circle distance between two lat/lng points, in meters
-function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number) {
-  const R = 6371000;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
-}
-
-function isPointInPolygon(lat: number, lng: number, polygon: { lat: number; lng: number }[]) {
-  let inside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i].lat, yi = polygon[i].lng;
-    const xj = polygon[j].lat, yj = polygon[j].lng;
-    const intersect =
-      yi > lng !== yj > lng && lat < ((xj - xi) * (lng - yi)) / (yj - yi) + xi;
-    if (intersect) inside = !inside;
-  }
-  return inside;
-}
-
-function isInsideGeofence(lat: number, lng: number, geofence: GeofenceRecord) {
-  if (geofence.type === "circle" && geofence.centerLat != null && geofence.centerLng != null && geofence.radiusM != null) {
-    return distanceMeters(lat, lng, geofence.centerLat, geofence.centerLng) <= geofence.radiusM;
-  }
-  if (geofence.type === "polygon" && geofence.polygon && geofence.polygon.length >= 3) {
-    return isPointInPolygon(lat, lng, geofence.polygon);
-  }
-  return false;
-}
-
-// A vehicle only counts as "outside" a geofence when at least one usable
-// zone exists to be outside of — with none defined there's nothing to violate.
-function isOutsideGeofences(lat: number, lng: number, geofences: GeofenceRecord[]) {
-  const usable = geofences.filter(
-    (g) =>
-      (g.type === "circle" && g.centerLat != null && g.centerLng != null && g.radiusM != null) ||
-      (g.type === "polygon" && g.polygon && g.polygon.length >= 3)
-  );
-  if (usable.length === 0) return false;
-  return !usable.some((g) => isInsideGeofence(lat, lng, g));
 }
 
 function VehicleMarker({
@@ -142,7 +99,47 @@ function VehicleMarker({
   );
 }
 
-export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: string }) {
+function StartPointMarker({ variant }: { variant: "saved" | "preview" }) {
+  const color = variant === "saved" ? "#0d9488" : "#f97316";
+
+  return (
+    <div className="flex flex-col items-center" style={{ transform: "translate(-50%, -100%)" }}>
+      <div
+        className="mb-1 px-2 py-1 rounded-md shadow-sm bg-white border text-xs font-semibold whitespace-nowrap"
+        style={{ borderColor: color, color }}
+      >
+        {variant === "saved" ? "Start point" : "New start point"}
+      </div>
+      <div
+        className="w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow"
+        style={{ background: color }}
+      >
+        <FaFlagCheckered size={12} color="white" />
+      </div>
+    </div>
+  );
+}
+
+interface LatLng {
+  lat: number;
+  lng: number;
+}
+
+export default function FleetMap({
+  basePath = "/admin/vehicles",
+  pickMode = false,
+  savedStartPoint = null,
+  pickedStartPoint = null,
+  onPickStartPoint,
+  mapOverlay,
+}: {
+  basePath?: string;
+  pickMode?: boolean;
+  savedStartPoint?: LatLng | null;
+  pickedStartPoint?: LatLng | null;
+  onPickStartPoint?: (point: LatLng) => void;
+  mapOverlay?: ReactNode;
+}) {
   const router = useRouter();
 
   const { isLoaded } = useJsApiLoader({
@@ -176,10 +173,14 @@ export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: 
     return () => clearInterval(interval);
   }, []);
 
+  // Vehicles only ever appear on the map once at least one geofence zone
+  // exists — there's nothing meaningful to plot a fleet against otherwise.
+  const hasZones = geofences.length > 0;
   const withLocation = vehicles.filter((v) => v.lastLocation);
+  const visibleVehicles = hasZones ? withLocation : [];
   const center =
-    withLocation.length > 0
-      ? { lat: withLocation[0].lastLocation!.latitude, lng: withLocation[0].lastLocation!.longitude }
+    visibleVehicles.length > 0
+      ? { lat: visibleVehicles[0].lastLocation!.latitude, lng: visibleVehicles[0].lastLocation!.longitude }
       : defaultCenter;
 
   const counts = {
@@ -204,8 +205,20 @@ export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: 
       {/* Map — takes the big central space */}
       <div className="flex-1 min-w-0">
         <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden mb-3">
-          <div className="h-[calc(100vh-260px)] min-h-[520px] w-full">
-            <GoogleMap mapContainerStyle={containerStyle} center={center} zoom={12}>
+          <div className="relative h-[calc(100vh-260px)] min-h-[520px] w-full">
+            <GoogleMap
+              mapContainerStyle={containerStyle}
+              center={center}
+              zoom={12}
+              onClick={
+                pickMode && onPickStartPoint
+                  ? (e) => {
+                      if (e.latLng) onPickStartPoint({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+                    }
+                  : undefined
+              }
+              options={pickMode ? { draggableCursor: "crosshair" } : undefined}
+            >
               {/* Geofence zones */}
               {showGeofences &&
                 geofences.map(
@@ -228,8 +241,8 @@ export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: 
                     )
                 )}
 
-              {/* Vehicles */}
-              {withLocation.map((v) => (
+              {/* Vehicles — hidden entirely until at least one geofence zone exists */}
+              {visibleVehicles.map((v) => (
                 <OverlayView
                   key={v.vehicleId}
                   position={{ lat: v.lastLocation!.latitude, lng: v.lastLocation!.longitude }}
@@ -246,7 +259,27 @@ export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: 
                   />
                 </OverlayView>
               ))}
+
+              {/* Driver daily starting point */}
+              {savedStartPoint && (
+                <OverlayView position={savedStartPoint} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+                  <StartPointMarker variant="saved" />
+                </OverlayView>
+              )}
+              {pickedStartPoint && (
+                <OverlayView position={pickedStartPoint} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+                  <StartPointMarker variant="preview" />
+                </OverlayView>
+              )}
             </GoogleMap>
+
+            {!hasZones && (
+              <div className="absolute inset-x-0 top-0 z-10 bg-orange-50 px-4 py-2 text-center text-xs font-medium text-orange-700 shadow-sm">
+                No geofence zones yet — vehicles won&apos;t appear on the map until you create one.
+              </div>
+            )}
+
+            {mapOverlay}
           </div>
 
           {/* Geofence toggle */}
@@ -264,7 +297,7 @@ export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: 
             </div>
           )}
 
-          {withLocation.length === 0 && (
+          {hasZones && withLocation.length === 0 && (
             <p className="text-sm text-gray-400 text-center py-4">
               No vehicle location data yet — vehicles will appear once GPS pings start coming in.
             </p>
@@ -294,6 +327,12 @@ export default function FleetMap({ basePath = "/admin/vehicles" }: { basePath?: 
                   <span className="relative block w-3 h-3 rounded-full bg-red-500" />
                 </span>
                 <span className="text-xs text-gray-600">Vehicle outside geofence</span>
+              </div>
+            )}
+            {savedStartPoint && (
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full border-2 border-white shadow" style={{ background: "#0d9488" }} />
+                <span className="text-xs text-gray-600">Driver starting point</span>
               </div>
             )}
           </div>

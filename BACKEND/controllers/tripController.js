@@ -57,7 +57,22 @@ export async function getTripPath(req, res) {
   }
 }
 
+export async function listMyTrips(req, res) {
+  try {
+    const vehicle = await Vehicle.findOne({ driverId: req.user.id });
+    if (!vehicle) return res.json([]);
 
+    const trips = await Trip.find({ vehicleId: vehicle._id })
+      .populate("vehicleId", "plateNumber")
+      .sort({ startTime: -1 })
+      .limit(50);
+
+    return res.json(trips);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to fetch your trips" });
+  }
+}
 
 
 

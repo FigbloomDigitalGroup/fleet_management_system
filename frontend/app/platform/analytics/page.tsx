@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { apiRequest } from "../../lib/api";
 import StatCard from "../../components/StatCard";
 import BarChartCard from "../../components/BarChartCard";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import StatusDetailsCard from "@/app/components/StatusDetailsCard";
+import { usePageHeader } from "../../components/DashboardShell";
 
 interface AnalyticsData {
     totals: {
@@ -50,6 +51,20 @@ export default function AnalyticsPage() {
         load();
     }, []);
 
+    const statsNode = useMemo(() => {
+        if (!data) return undefined;
+        return (
+            <div className="grid grid-cols-2 gap-3 h-full">
+                <StatCard label="Total companies" value={data.totals.totalCompanies} accent="blue" description="Companies registered on the platform" />
+                <StatCard label="Total vehicles" value={data.totals.totalVehicles} accent="green" description="Vehicles across all companies" />
+                <StatCard label="Total users" value={data.totals.totalUsers} accent="green" description="Admins and drivers combined" />
+                <StatCard label="Pending approval" value={data.totals.pendingCompanies} accent="orange" description="Companies awaiting review" />
+            </div>
+        );
+    }, [data]);
+
+    usePageHeader("Analytics", "Platform-wide usage across all companies", statsNode);
+
     if (loading) return <FullPageLoading />;
     if (error) return <p className="text-sm text-red-600">{error}</p>;
     if (!data) return null;
@@ -64,19 +79,6 @@ export default function AnalyticsPage() {
 
     return (
         <div>
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-blue-950">Analytics</h1>
-                <p className="text-sm text-gray-500 mt-1">Platform-wide usage across all companies</p>
-            </div>
-
-            {/* Core totals */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-                <StatCard label="Total companies" value={data.totals.totalCompanies} accent="blue" description="Companies registered on the platform" />
-                <StatCard label="Total vehicles" value={data.totals.totalVehicles} accent="green" description="Vehicles across all companies" />
-                <StatCard label="Total users" value={data.totals.totalUsers} accent="green" description="Admins and drivers combined" />
-                <StatCard label="Pending approval" value={data.totals.pendingCompanies} accent="orange" description="Companies awaiting review" />
-            </div>
-
             {/* Billing plan breakdown */}
 
 
