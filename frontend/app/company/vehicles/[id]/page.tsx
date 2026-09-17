@@ -4,7 +4,14 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { apiRequest } from "../../../lib/api";
 import FullPageLoading from "@/app/components/FullPageLoading";
-import { VehicleRecord } from "../../../types/auth";
+import ZoneStatusBadge from "@/app/components/ZoneStatusBadge";
+import { usePageHeader } from "@/app/components/DashboardShell";
+import { CompanyRecord, GeofenceRecord, VehicleRecord } from "../../../types/auth";
+
+interface LiveLocation {
+  vehicleId: string;
+  lastLocation: { latitude: number; longitude: number; recordedAt: string } | null;
+}
 
 const statusStyles: Record<string, string> = {
   active: "bg-teal-50 text-teal-600 border-teal-200",
@@ -18,6 +25,9 @@ export default function CompanyVehicleDetailPage() {
   const router = useRouter();
 
   const [vehicle, setVehicle] = useState<VehicleRecord | null>(null);
+  const [company, setCompany] = useState<CompanyRecord | null>(null);
+  const [geofences, setGeofences] = useState<GeofenceRecord[]>([]);
+  const [lastLocation, setLastLocation] = useState<LiveLocation["lastLocation"]>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,6 +37,22 @@ export default function CompanyVehicleDetailPage() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    apiRequest<CompanyRecord>("/api/companies/me").then(setCompany).catch(() => {});
+    apiRequest<GeofenceRecord[]>("/api/geofences").then(setGeofences).catch(() => {});
+    apiRequest<LiveLocation[]>("/api/tracking/live")
+      .then((data) => setLastLocation(data.find((v) => v.vehicleId === id)?.lastLocation ?? null))
+      .catch(() => {});
+  }, [id]);
+
+  const defaultZoneName = geofences.find((g) => g._id === company?.dailyStartPoint?.geofenceId)?.name ?? null;
+  const startZoneName = vehicle?.startGeofenceId?.name ?? defaultZoneName;
+
+  usePageHeader(
+    vehicle?.plateNumber ?? "Vehicle",
+    vehicle ? [vehicle.make, vehicle.model].filter(Boolean).join(" ") || "No make/model set" : undefined
+  );
 
   if (loading) return <FullPageLoading />;
   if (error) return <p className="text-sm text-red-600">{error}</p>;
@@ -38,16 +64,11 @@ export default function CompanyVehicleDetailPage() {
         Back
       </button>
 
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-blue-950">{vehicle.plateNumber}</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {[vehicle.make, vehicle.model].filter(Boolean).join(" ") || "No make/model set"}
-          </p>
-        </div>
+      <div className="mb-6 flex items-center gap-2">
         <span className={`text-xs px-3 py-1.5 rounded-full border font-medium ${statusStyles[vehicle.status]}`}>
           {vehicle.status}
         </span>
+        <ZoneStatusBadge lastLocation={lastLocation} geofences={geofences} />
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 max-w-xl">
@@ -67,8 +88,17 @@ export default function CompanyVehicleDetailPage() {
             <dt className="text-gray-500">Added on</dt>
             <dd className="text-gray-900 font-medium mt-0.5">{new Date(vehicle.createdAt).toLocaleDateString()}</dd>
           </div>
+          <div>
+            <dt className="text-gray-500">Daily starting point</dt>
+            <dd className="text-gray-900 font-medium mt-0.5">
+              {startZoneName || "Not set yet"}
+              {!vehicle.startGeofenceId && startZoneName && (
+                <span className="text-gray-400 font-normal"> (company default)</span>
+              )}
+            </dd>
+          </div>
         </dl>
-        <p className="text-xs text-teal-600 mt-4">Status changes are managed by your fleet Admin.</p>
+        <p className="text-xs text-teal-600 mt-4">Status changes and starting points are managed by your fleet Admin.</p>
       </div>
     </div>
   );

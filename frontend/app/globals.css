@@ -22,6 +22,68 @@ textarea::placeholder {
     opacity: 1;
 }
 
+/*
+ * Site-wide card treatment. Every card in the app uses this exact
+ * `rounded-2xl ... shadow-sm ring-1 ring-black/5` combo (verified: every
+ * `rounded-2xl` usage in the codebase pairs with `ring-black/5`, nothing
+ * else uses that pairing) — so restyling it here reskins every card on
+ * every page at once, without touching dozens of individual files.
+ * Borderless — a soft, understated shadow gives it depth instead.
+ */
+.rounded-2xl.ring-black\/5 {
+    border-radius: 0.875rem;
+    border: none;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 10px rgba(15, 23, 42, 0.06);
+}
+
+/*
+ * Tighter spacing rhythm across the dashboard shell (scoped to `main`, the
+ * DashboardShell content area — landing/login/register keep their own
+ * spacious marketing rhythm untouched, since they render outside it).
+ * Only the larger "space between components" utilities are compressed —
+ * grid/section gaps of 1rem and up. Finer spacing (mb-1, mt-0/1/2, gap-2,
+ * label-to-field spacing, etc.) is left alone since it's already tight.
+ */
+main .gap-6 {
+    gap: 1rem;
+}
+
+main .gap-4 {
+    gap: 0.75rem;
+}
+
+main .mb-8 {
+    margin-bottom: 1.25rem;
+}
+
+main .mb-6 {
+    margin-bottom: 1rem;
+}
+
+main .mb-4 {
+    margin-bottom: 0.75rem;
+}
+
+main .mt-6 {
+    margin-top: 1rem;
+}
+
+main .mt-4 {
+    margin-top: 0.75rem;
+}
+
+main .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 1rem;
+}
+
+main .space-y-5 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.875rem;
+}
+
+main .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.75rem;
+}
+
 .font-display {
     font-family: var(--font-display), sans-serif;
 }
@@ -112,6 +174,48 @@ textarea::placeholder {
 
 @media (prefers-reduced-motion: reduce) {
   .spin-slow {
+    animation: none;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-toast-in {
+  animation: toast-in 0.25s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-toast-in {
+    animation: none;
+  }
+}
+
+@keyframes panel-up {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-panel-up {
+  animation: panel-up 0.3s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-panel-up {
     animation: none;
   }
 }

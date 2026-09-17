@@ -4,6 +4,7 @@ import { useEffect, useState, FormEvent } from "react";
 import { apiRequest } from "../../lib/api";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import { CompanyRecord } from "../../types/auth";
+import { usePageHeader } from "../../components/DashboardShell";
 
 export default function CompanySettingsPage() {
   const [company, setCompany] = useState<CompanyRecord | null>(null);
@@ -44,16 +45,13 @@ export default function CompanySettingsPage() {
     }
   }
 
+  usePageHeader("Settings", "Manage your company profile");
+
   if (loading) return <FullPageLoading />;
   if (!company) return null;
 
   return (
     <div className="max-w-xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-blue-950">Settings</h1>
-        <p className="text-sm text-gray-500 mt-1">Manage your company profile</p>
-      </div>
-
       <form onSubmit={handleSave} className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-6 space-y-5">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Company name</label>

@@ -1,17 +1,14 @@
+"use client";
+
 import TripsList from "../../components/TripsList";
+import { usePageHeader } from "../../components/DashboardShell";
 
 export default function CompanyTripsPage() {
+  usePageHeader("Trips", "Trip history across your fleet");
+
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Trips</h1>
-        <p className="text-sm text-gray-500 mt-1">Trip history across your fleet</p>
-      </div>
       <TripsList basePath="/company/trips" />
     </div>
   );
 }
-
-
-
-

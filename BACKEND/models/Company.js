@@ -10,6 +10,14 @@ const companySchema = new mongoose.Schema(
       default: "pending",
     },
     subscriptionPlan: { type: String, default: "trial" },
+    // Where drivers should start their day — must fall inside one of the
+    // company's geofence zones (enforced in companyController.updateStartPoint).
+    dailyStartPoint: {
+      lat: { type: Number },
+      lng: { type: Number },
+      geofenceId: { type: mongoose.Schema.Types.ObjectId, ref: "Geofence" },
+      updatedAt: { type: Date },
+    },
   },
   { timestamps: true } // automatically adds createdAt and updatedAt
 );

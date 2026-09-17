@@ -86,7 +86,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="bg-blue-950/95 py-20">
+      <section className="bg-gray-900 py-20">
         <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
           <div className="order-2 md:order-1 w-full aspect-video bg-gray-100 overflow-hidden">
             <img src="/as_photography-digital-marketing-1725340_1920.jpg" alt="Fleet admin dashboard" className="w-full h-full object-cover" />
@@ -127,8 +127,6 @@ export default function LandingPage() {
           <img src="/noelsch-audi-a3-2095801_1920.jpg" alt="Driver mobile app" className="w-full h-full object-cover" />
         </div>
       </section>
-
-
 
       {/* PRICING */}
       <section className="max-w-6xl mx-auto px-6 py-20">

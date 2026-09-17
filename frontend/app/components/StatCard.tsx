@@ -50,39 +50,23 @@ export default function StatCard({
   const Icon = getStatIcon(label);
 
   return (
-    <div className={`relative min-h-36 overflow-hidden rounded-2xl ${background} shadow-sm ring-1 ring-black/5 transition-shadow hover:shadow-md`}>
-      {/* Faint wavy band on top — barely visible */}
-      <svg
-        viewBox="0 0 200 40"
-        preserveAspectRatio="none"
-        className="absolute inset-x-0 top-0 h-1/2 w-full"
-        aria-hidden="true"
-      >
-        <path
-          d="M0,0 L0,20 C25,5 75,35 100,20 C125,5 175,35 200,20 L200,0 Z"
-          fill="currentColor"
-          className={light ? "text-white/10" : "text-orange-500/5"}
-        />
-      </svg>
-
-      <div className="relative flex h-full flex-col justify-between gap-4 p-5">
-        <div className="flex items-start justify-between gap-3">
+    <div className={`relative overflow-hidden rounded-2xl ${background} shadow-sm ring-1 ring-black/5`}>
+      <div className="relative flex items-start justify-between gap-3 p-4">
+        <div>
           <p className={`text-xs font-medium uppercase tracking-wide ${light ? "text-white" : "text-blue-950"}`}>
             {label}
           </p>
-          <span
-            className={`rounded-xl p-2.5 text-lg ${light ? "bg-white/20 text-white" : accentChip[accent]}`}
-            aria-hidden="true"
-          >
-            <Icon />
-          </span>
-        </div>
-        <div>
-          <p className={`text-2xl font-bold ${light ? "text-white" : "text-blue-950"}`}>{value}</p>
+          <p className={`mt-1.5 text-xl font-bold ${light ? "text-white" : "text-blue-950"}`}>{value}</p>
           {description && (
             <p className={`text-xs mt-1 ${light ? "text-white/80" : "text-teal-600"}`}>{description}</p>
           )}
         </div>
+        <span
+          className={`shrink-0 rounded-xl p-2 text-base ${light ? "bg-white/20 text-white" : accentChip[accent]}`}
+          aria-hidden="true"
+        >
+          <Icon />
+        </span>
       </div>
     </div>
   );

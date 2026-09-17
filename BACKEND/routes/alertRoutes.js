@@ -4,7 +4,22 @@ import { listAlerts, resolveAlert, createAlert } from "../controllers/alertContr
 
 const router = express.Router();
 router.get("/", authenticate, listAlerts);
-router.post("/", authenticate, authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"), createAlert);
+router.post("/", authenticate, authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN", "DRIVER"), createAlert);
 router.patch("/:id/resolve", authenticate, resolveAlert);
 
 export default router;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

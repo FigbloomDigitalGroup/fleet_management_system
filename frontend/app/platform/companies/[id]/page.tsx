@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { apiRequest } from "../../../lib/api";
 import FullPageLoading from "@/app/components/FullPageLoading";
+import { usePageHeader } from "@/app/components/DashboardShell";
 import { CompanyRecord, AdminRecord } from "../../../types/auth";
 
 const statusStyles: Record<string, string> = {
@@ -55,6 +56,8 @@ export default function CompanyDetailPage() {
     }
   }
 
+  usePageHeader(company?.name ?? "Company", company ? `/${company.slug}` : undefined);
+
   if (loading) return <FullPageLoading />;
   if (error) return <p className="text-sm text-red-600">{error}</p>;
   if (!company) return null;
@@ -68,11 +71,7 @@ export default function CompanyDetailPage() {
         Back to companies
       </button>
 
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-blue-950">{company.name}</h1>
-          <p className="text-sm text-gray-500 mt-1">/{company.slug}</p>
-        </div>
+      <div className="mb-6 flex justify-end">
         <span className={`text-xs px-3 py-1.5 rounded-full border font-medium ${statusStyles[company.status]}`}>
           {company.status}
         </span>
