@@ -89,3 +89,37 @@ export interface GeofenceRecord {
   createdAt: string;
 }
 
+export interface AgentScanDetail {
+  vehicleId: string;
+  plateNumber: string;
+  anomaly: boolean;
+  reason: string;
+}
+
+export interface AgentScanLogRecord {
+  _id: string;
+  runAt: string;
+  vehiclesScanned: number;
+  anomaliesFound: number;
+  status: "success" | "failed";
+  errorMessage: string | null;
+  details: AgentScanDetail[];
+}
+
+export interface AgentFinding {
+  runAt: string;
+  vehicleId: string;
+  plateNumber: string;
+  anomaly: boolean;
+  reason: string;
+}
+
+export interface AgentSummary {
+  lastScanAt: string | null;
+  lastScanStatus: "success" | "failed" | null;
+  scansCoveringFleet: number;
+  vehicleChecksLogged: number;
+  anomaliesFound: number;
+  recentFindings: AgentFinding[];
+}
+

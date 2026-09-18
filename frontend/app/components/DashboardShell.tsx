@@ -10,6 +10,7 @@ import { IconType } from "react-icons";
 import { FiBell } from "react-icons/fi";
 import { FaCog } from "react-icons/fa";
 import AlertToastStack, { ToastAlert } from "./AlertToast";
+import AgentChatWidget from "./AgentChatWidget";
 
 interface NavItem {
   label: string;
@@ -133,6 +134,7 @@ export default function DashboardShell({
   return (
     <div className="h-screen overflow-hidden bg-blue-50 flex">
       <AlertToastStack toasts={toasts} onDismiss={dismissToast} />
+      {(user?.role === "ADMIN" || user?.role === "COMPANY_OWNER") && <AgentChatWidget />}
 
       {/* SIDEBAR */}
       <aside className="h-screen w-48 shrink-0 overflow-y-auto bg-blue-950 flex flex-col text-white">
