@@ -1,8 +1,34 @@
 "use client";
 
 import { FaCog, FaTwitter, FaLinkedin, FaFacebook } from "react-icons/fa";
+import { useState } from "react";
+
+const FAQS = [
+  {
+    q: "Do I need special hardware to start tracking?",
+    a: "No. You can start with our GPS ping API today, and connect a hardware tracker or the driver mobile app whenever you're ready — the dashboard works the same either way.",
+  },
+  {
+    q: "Can I track more than one company or fleet?",
+    a: "Each company account is isolated to its own fleet, vehicles, and drivers. If you manage multiple fleets, you can register a separate company account for each one.",
+  },
+  {
+    q: "What happens if a vehicle has no driver assigned?",
+    a: "The system automatically marks it offline and flags an alert if it detects movement, so you always know when a vehicle is being used without an assigned driver.",
+  },
+  {
+    q: "Can I change my plan later?",
+    a: "Yes. You can upgrade or downgrade your plan at any time from your company settings — your data and history stay exactly as they are.",
+  },
+  {
+    q: "Is my company's data visible to other companies on the platform?",
+    a: "No. Every company's vehicles, drivers, trips, and alerts are fully isolated — no other company on the platform can see your data.",
+  },
+];
 
 export default function LandingPage() {
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+
   return (
     <div className="bg-white min-h-screen">
       <header className="sticky top-0 z-50 bg-white">
@@ -39,6 +65,46 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section className="max-w-6xl mx-auto px-6 py-20">
+        <div className="text-center mb-14">
+          <span className="text-sm uppercase tracking-wide text-blue-950 font-bold mb-3 block">
+            How it works
+          </span>
+          <h2 className="text-3xl font-bold text-gray-900">Up and tracking in three steps</h2>
+        </div>
+
+        <div className="grid sm:grid-cols-3 gap-10">
+          <div className="text-center">
+            <div className="w-10 h-10 mx-auto mb-4 rounded-full bg-blue-950 text-white flex items-center justify-center font-bold">
+              1
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Register your company</h3>
+            <p className="text-sm text-gray-500">
+              Create your account in minutes and set up your company profile.
+            </p>
+          </div>
+          <div className="text-center">
+            <div className="w-10 h-10 mx-auto mb-4 rounded-full bg-blue-950 text-white flex items-center justify-center font-bold">
+              2
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Add vehicles & drivers</h3>
+            <p className="text-sm text-gray-500">
+              Register each vehicle, assign a driver, and set up alerts or zones as needed.
+            </p>
+          </div>
+          <div className="text-center">
+            <div className="w-10 h-10 mx-auto mb-4 rounded-full bg-blue-950 text-white flex items-center justify-center font-bold">
+              3
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Track live, get alerted</h3>
+            <p className="text-sm text-gray-500">
+              Watch your fleet move in real time and get notified the moment something needs attention.
+            </p>
           </div>
         </div>
       </section>
@@ -223,7 +289,37 @@ export default function LandingPage() {
             </a>
           </div>
         </div>
-      </section >
+      </section>
+
+      {/* FAQ */}
+      <section className="max-w-3xl mx-auto px-6 py-20">
+        <div className="text-center mb-12">
+          <span className="text-sm uppercase tracking-wide text-blue-950 font-bold mb-3 block">
+            FAQ
+          </span>
+          <h2 className="text-3xl font-bold text-gray-900">Common questions</h2>
+        </div>
+
+        <div className="space-y-3">
+          {FAQS.map((item, i) => {
+            const isOpen = openFaq === i;
+            return (
+              <div key={i} className="border border-gray-200 rounded-lg">
+                <button
+                  onClick={() => setOpenFaq(isOpen ? null : i)}
+                  className="w-full flex items-center justify-between px-5 py-4 text-left"
+                >
+                  <span className="text-sm font-medium text-gray-900">{item.q}</span>
+                  <span className="text-gray-400 text-lg leading-none">{isOpen ? "−" : "+"}</span>
+                </button>
+                {isOpen && (
+                  <p className="px-5 pb-4 text-sm text-gray-600">{item.a}</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       <section className="bg-gray-900 py-16">
         <div className="max-w-4xl mx-auto px-6 text-center">
@@ -304,6 +400,10 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
-    </div >
+    </div>
   );
 }
+
+
+
+

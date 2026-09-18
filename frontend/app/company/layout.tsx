@@ -11,6 +11,7 @@ import {
   FiUserPlus,
   FiUsers,
   FiMap,
+  FiCpu,
 } from "react-icons/fi";
 import { IoCarSportSharp } from "react-icons/io5";
 import ProtectedRoute from "../components/ProtectedRoute";
@@ -26,6 +27,7 @@ const navItems = [
    { label: "Trips", href: "/company/trips", icon: FiFileText },
   { label: "Drivers", href: "/company/drivers", icon: FiUsers },
   { label: "Alerts", href: "/company/alerts", icon: FiAlertTriangle },
+  { label: "AI Agent", href: "/company/agent", icon: FiCpu },
   { label: "Billing", href: "/company/billing", icon: FiCreditCard },
    { label: "Admins", href: "/company/admins", icon: FiUserPlus },
   { label: "Settings", href: "/company/settings", icon: FiSettings },
