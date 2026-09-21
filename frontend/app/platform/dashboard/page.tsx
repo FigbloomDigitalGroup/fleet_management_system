@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { apiRequest } from "../../lib/api";
-import { useAuth } from "../../context/AuthContext";
 import StatCard from "../../components/StatCard";
 import CircleStat from "../../components/CircleStat";
 import BarChartCard from "../../components/BarChartCard";
@@ -26,7 +25,7 @@ interface AnalyticsData {
 }
 
 const statusStyles: Record<string, string> = {
-  active: "bg-green-50 text-green-600 border-green-200",
+  active: "bg-teal-50 text-teal-600 border-teal-200",
   pending: "bg-orange-50 text-orange-600 border-orange-200",
   suspended: "bg-gray-100 text-gray-500 border-gray-200",
 };
@@ -35,17 +34,29 @@ const statusStyles: Record<string, string> = {
 const planStyles: Record<string, string> = {
   trial: "bg-gray-100 text-gray-600 border-gray-200",
   basic: "bg-blue-50 text-blue-600 border-blue-200",
-  pro: "bg-green-50 text-green-600 border-green-200",
+  pro: "bg-teal-50 text-teal-600 border-teal-200",
   enterprise: "bg-orange-50 text-orange-600 border-orange-200",
 };
 
 export default function PlatformDashboard() {
-  const { user } = useAuth();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [companies, setCompanies] = useState<CompanyRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  usePageHeader("Platform overview", `Signed in as ${user?.email}`);
+  const statsNode = useMemo(() => {
+    if (!analytics) return undefined;
+    const { totals } = analytics;
+    return (
+      <div className="grid grid-cols-2 gap-3 h-full">
+        <StatCard label="Total companies" value={totals.totalCompanies} accent="blue" description="Companies registered on the platform" />
+        <StatCard label="Total vehicles" value={totals.totalVehicles} accent="green" description="Vehicles across all companies" />
+        <StatCard label="Total users" value={totals.totalUsers} accent="green" description="Admins and drivers combined" />
+        <StatCard label="Pending approval" value={totals.pendingCompanies} accent="orange" description="Companies awaiting review" />
+      </div>
+    );
+  }, [analytics]);
+
+  usePageHeader("Platform overview", "Your platform, your network.", statsNode);
 
   useEffect(() => {
     async function loadAll() {
@@ -84,24 +95,16 @@ export default function PlatformDashboard() {
 
   return (
     <div>
-      {/* Top stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <StatCard label="Total companies" value={totals.totalCompanies} accent="blue" description="Companies registered on the platform" />
-        <StatCard label="Total vehicles" value={totals.totalVehicles} accent="green" description="Vehicles across all companies" />
-        <StatCard label="Total users" value={totals.totalUsers} accent="green" description="Admins and drivers combined" />
-        <StatCard label="Pending approval" value={totals.pendingCompanies} accent="orange" description="Companies awaiting review" />
-      </div>
-
       {/* Recently registered companies */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Recently registered</h2>
-          <Link href="/platform/companies" className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700">
+          <Link href="/platform/companies" className="rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-teal-700">
             View all
           </Link>
         </div>
-        <p className="text-xs text-gray-400 mb-3">The 5 most recently signed-up companies</p>
-        <div className="bg-white rounded-lg overflow-hidden">
+        <p className="text-xs text-teal-600 mb-3">The 5 most recently signed-up companies</p>
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
           {recentCompanies.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">No companies registered yet.</p>
           ) : (
@@ -154,8 +157,8 @@ export default function PlatformDashboard() {
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <CircleStat percentage={activeCompanyPct} label="Companies active" color="#16a34a" description="Share of companies in active status" />
-          <CircleStat percentage={activeVehiclePct} label="Vehicles active" color="#16a34a" description="Share of vehicles currently active" />
+          <CircleStat percentage={activeCompanyPct} label="Companies active" color="#0d9488" description="Share of companies in active status" />
+          <CircleStat percentage={activeVehiclePct} label="Vehicles active" color="#0d9488" description="Share of vehicles currently active" />
         </div>
       </div>
 
@@ -166,7 +169,7 @@ export default function PlatformDashboard() {
           description="Sign-ups per month across the platform"
           data={growth}
           dataKey="companies"
-          color="#16a34a"
+          color="#0d9488"
         />
       </div>
 
@@ -175,12 +178,12 @@ export default function PlatformDashboard() {
         <div className="mb-4">
           <div className="flex items-center justify-between mb-1">
             <h2 className="text-base font-semibold text-gray-900">Needs approval</h2>
-            <Link href="/platform/companies" className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700">
+            <Link href="/platform/companies" className="rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-teal-700">
               View all
             </Link>
           </div>
-          <p className="text-xs text-gray-400 mb-3">Companies waiting on a decision, oldest signups included</p>
-          <div className="bg-white rounded-lg overflow-hidden">
+          <p className="text-xs text-teal-600 mb-3">Companies waiting on a decision, oldest signups included</p>
+          <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
             <table className="w-full text-sm">
               <tbody>
                 {pendingCompanies.map((c) => (

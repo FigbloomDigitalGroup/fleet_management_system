@@ -1,5 +1,7 @@
 import Company from "../models/Company.js";
 import User from "../models/User.js";
+import Geofence from "../models/Geofence.js";
+import { isInsideGeofence } from "../lib/geo.js";
 
 // PLATFORM_ADMIN only — list every company on the platform
 export async function listCompanies(req, res) {
@@ -99,6 +101,42 @@ export async function updateMyCompany(req, res) {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update company" });
+  }
+}
+
+// ADMIN / COMPANY_OWNER — set where drivers should start their day. Must
+// land inside an existing geofence zone, so it's tied to a place the fleet
+// already monitors rather than an arbitrary point on the map.
+export async function updateStartPoint(req, res) {
+  try {
+    if (!req.user.companyId) {
+      return res.status(400).json({ error: "This account is not linked to a company" });
+    }
+
+    const { lat, lng } = req.body;
+    if (typeof lat !== "number" || typeof lng !== "number") {
+      return res.status(400).json({ error: "lat and lng are required" });
+    }
+
+    const geofences = await Geofence.find({ companyId: req.user.companyId });
+    const matchedGeofence = geofences.find((g) => isInsideGeofence(lat, lng, g));
+    if (!matchedGeofence) {
+      return res.status(400).json({
+        error: "The starting point must be inside one of your geofence zones — pick a spot inside a shaded zone, or create one there first.",
+      });
+    }
+
+    const company = await Company.findByIdAndUpdate(
+      req.user.companyId,
+      { dailyStartPoint: { lat, lng, geofenceId: matchedGeofence._id, updatedAt: new Date() } },
+      { new: true }
+    );
+    if (!company) return res.status(404).json({ error: "Company not found" });
+
+    return res.json(company);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to update starting point" });
   }
 }
 

@@ -4,17 +4,25 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { apiRequest } from "../../../lib/api";
 import FullPageLoading from "@/app/components/FullPageLoading";
-import { VehicleRecord } from "../../../types/auth";
+import ZoneStatusBadge from "@/app/components/ZoneStatusBadge";
+import VehicleTripsMap from "@/app/components/VehicleTripsMap";
+import { usePageHeader } from "@/app/components/DashboardShell";
+import { CompanyRecord, GeofenceRecord, VehicleRecord } from "../../../types/auth";
+
+interface LiveLocation {
+  vehicleId: string;
+  lastLocation: { latitude: number; longitude: number; recordedAt: string } | null;
+}
 
 const statusStyles: Record<string, string> = {
-  active: "bg-green-50 text-green-600 border-green-200",
+  active: "bg-teal-50 text-teal-600 border-teal-200",
   idle: "bg-orange-50 text-orange-600 border-orange-200",
   offline: "bg-gray-100 text-gray-500 border-gray-200",
   maintenance: "bg-red-50 text-red-600 border-red-200",
 };
 
 const STATUS_OPTIONS = [
-  { value: "active", label: "Set Active", color: "bg-green-500 hover:bg-green-600" },
+  { value: "active", label: "Set Active", color: "bg-teal-500 hover:bg-teal-600" },
   { value: "idle", label: "Set Idle", color: "bg-orange-500 hover:bg-orange-600" },
   { value: "offline", label: "Set Offline", color: "bg-gray-500 hover:bg-gray-600" },
   { value: "maintenance", label: "Set Maintenance", color: "bg-red-500 hover:bg-red-600" },
@@ -25,9 +33,13 @@ export default function AdminVehicleDetailPage() {
   const router = useRouter();
 
   const [vehicle, setVehicle] = useState<VehicleRecord | null>(null);
+  const [geofences, setGeofences] = useState<GeofenceRecord[]>([]);
+  const [company, setCompany] = useState<CompanyRecord | null>(null);
+  const [lastLocation, setLastLocation] = useState<LiveLocation["lastLocation"]>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [savingZone, setSavingZone] = useState(false);
 
   async function load() {
     try {
@@ -44,6 +56,14 @@ export default function AdminVehicleDetailPage() {
     load();
   }, [id]);
 
+  useEffect(() => {
+    apiRequest<GeofenceRecord[]>("/api/geofences").then(setGeofences).catch(() => {});
+    apiRequest<CompanyRecord>("/api/companies/me").then(setCompany).catch(() => {});
+    apiRequest<LiveLocation[]>("/api/tracking/live")
+      .then((data) => setLastLocation(data.find((v) => v.vehicleId === id)?.lastLocation ?? null))
+      .catch(() => {});
+  }, [id]);
+
   async function updateStatus(status: string) {
     setUpdating(true);
     try {
@@ -56,6 +76,26 @@ export default function AdminVehicleDetailPage() {
     }
   }
 
+  async function updateStartZone(geofenceId: string) {
+    setSavingZone(true);
+    try {
+      await apiRequest(`/api/vehicles/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({ startGeofenceId: geofenceId || null }),
+      });
+      await load();
+    } catch (err: any) {
+      setError(err.message || "Failed to update starting zone");
+    } finally {
+      setSavingZone(false);
+    }
+  }
+
+  usePageHeader(
+    vehicle?.plateNumber ?? "Vehicle",
+    vehicle ? [vehicle.make, vehicle.model].filter(Boolean).join(" ") || "No make/model set" : undefined
+  );
+
   if (loading) return <FullPageLoading />;
   if (error) return <p className="text-sm text-red-600">{error}</p>;
   if (!vehicle) return null;
@@ -66,22 +106,17 @@ export default function AdminVehicleDetailPage() {
         Back
       </button>
 
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-blue-950">{vehicle.plateNumber}</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {[vehicle.make, vehicle.model].filter(Boolean).join(" ") || "No make/model set"}
-          </p>
-        </div>
+      <div className="mb-6 flex items-center gap-2">
         <span className={`text-xs px-3 py-1.5 rounded-full border font-medium ${statusStyles[vehicle.status]}`}>
           {vehicle.status}
         </span>
+        <ZoneStatusBadge lastLocation={lastLocation} geofences={geofences} />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white rounded-lg p-5">
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
           <h3 className="text-sm font-medium text-gray-700">Vehicle details</h3>
-          <p className="text-xs text-gray-400 mt-0.5 mb-3">Registration info for this vehicle</p>
+          <p className="text-xs text-teal-600 mt-0.5 mb-3">Registration info for this vehicle</p>
           <dl className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <dt className="text-gray-500">Device ID</dt>
@@ -100,21 +135,78 @@ export default function AdminVehicleDetailPage() {
           </dl>
         </div>
 
-        <div className="bg-white rounded-lg p-5 h-fit">
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 h-fit">
           <h3 className="text-sm font-medium text-gray-700">Change status</h3>
-          <p className="text-xs text-gray-400 mt-0.5 mb-4">Updates how this vehicle shows up across the fleet</p>
+          <p className="text-xs text-teal-600 mt-0.5 mb-4">Updates how this vehicle shows up across the fleet</p>
           <div className="space-y-2">
-            {STATUS_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => updateStatus(opt.value)}
-                disabled={updating || vehicle.status === opt.value}
-                className={`w-full py-2 rounded-md text-sm font-medium text-white disabled:opacity-40 ${opt.color}`}
-              >
-                {opt.label}
-              </button>
-            ))}
+            {STATUS_OPTIONS.map((opt) => {
+              const blocked = opt.value === "active" && !vehicle.driverId;
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => updateStatus(opt.value)}
+                  disabled={updating || vehicle.status === opt.value || blocked}
+                  title={blocked ? "Assign a driver to this vehicle before setting it active" : undefined}
+                  className={`w-full py-2 rounded-md text-sm font-medium text-white disabled:opacity-40 ${opt.color}`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
+          {!vehicle.driverId && (
+            <p className="text-xs text-gray-400 mt-3">Assign a driver to this vehicle before setting it active.</p>
+          )}
+        </div>
+
+        <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+          <h3 className="text-sm font-medium text-gray-700">Recent trips</h3>
+          <p className="text-xs text-teal-600 mt-0.5 mb-3">Routes this vehicle has traveled recently</p>
+          <VehicleTripsMap vehicleId={vehicle._id} basePath="/admin/trips" />
+        </div>
+
+        <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+          <h3 className="text-sm font-medium text-gray-700">Daily starting point</h3>
+          <p className="text-xs text-teal-600 mt-0.5 mb-3">Where this vehicle's driver should start their day</p>
+
+          {geofences.length === 0 && (
+            <p className="text-sm text-gray-400">
+              No geofence zones yet — create one on the Live Map page to set a starting point.
+            </p>
+          )}
+
+          {geofences.length === 1 && (
+            <p className="text-sm text-gray-700">
+              Using the only zone available: <span className="font-medium text-gray-900">{geofences[0].name}</span>
+            </p>
+          )}
+
+          {geofences.length > 1 && (
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Starting zone</label>
+              <select
+                value={vehicle.startGeofenceId?._id || ""}
+                onChange={(e) => updateStartZone(e.target.value)}
+                disabled={savingZone}
+                className="w-full max-w-sm px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400 disabled:opacity-60"
+              >
+                <option value="">
+                  {(() => {
+                    const defaultZone = geofences.find((g) => g._id === company?.dailyStartPoint?.geofenceId);
+                    return `Use company default${defaultZone ? ` (${defaultZone.name})` : " (not set yet)"}`;
+                  })()}
+                </option>
+                {geofences.map((g) => (
+                  <option key={g._id} value={g._id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 mt-1.5">
+                Only needed if this vehicle should start somewhere other than the company default.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

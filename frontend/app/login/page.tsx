@@ -85,14 +85,19 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
-                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <a href="/forgot-password" className="text-xs text-teal-600 font-medium hover:underline">
+                  Forgot password?
+                </a>
+              </div>
               <div className="relative">
                 <input
                   id="password"
@@ -102,7 +107,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-3.5 py-2.5 pr-16 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                  className="w-full px-3.5 py-2.5 pr-16 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                 />
                 <button
                   type="button"
@@ -131,7 +136,7 @@ export default function LoginPage() {
 
           <p className="text-sm text-gray-500 mt-8">
             Registering a new company?{" "}
-            <a href="/register" className="text-green-500 font-medium hover:underline">
+            <a href="/register" className="text-teal-500 font-medium hover:underline">
               Set up your account
             </a>
           </p>

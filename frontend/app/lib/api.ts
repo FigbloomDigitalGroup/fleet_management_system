@@ -1,3 +1,5 @@
+import { emitSessionExpired } from "./sessionEvents";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 interface ApiRequestOptions extends RequestInit {
@@ -53,12 +55,18 @@ export async function apiRequest<T = any>(
     if (newToken) {
       return apiRequest<T>(path, options, true);
     }
-    // Refresh also failed — the session is truly dead, send back to login
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("user");
-    window.location.href = "/login";
-    throw new Error("Session expired. Please sign in again.");
+
+    // Only treat this as a session timeout if the user was actually signed
+    // in (had a token to begin with). Otherwise this 401 is just a plain
+    // auth failure on a public endpoint (e.g. wrong password on /login) —
+    // let it fall through and surface the server's own error message.
+    if (token) {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+      emitSessionExpired();
+      throw new Error("Session expired. Please sign in again.");
+    }
   }
 
   const data = await res.json().catch(() => ({}));

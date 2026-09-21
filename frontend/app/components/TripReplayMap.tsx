@@ -49,22 +49,22 @@ export default function TripReplayMap({ tripId }: { tripId: string }) {
 
     return (
         <div>
-            <p className="text-xs text-gray-400 mb-2">
+            <p className="text-xs text-teal-600 mb-2">
                 Full GPS route for this trip — drag the slider below to scrub through it.
             </p>
-            <div className="bg-white rounded-lg overflow-hidden mb-3">
+            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden mb-3">
                 <div className="h-[400px] w-full">
                     <GoogleMap mapContainerStyle={containerStyle} center={center} zoom={13}>
                         {/* The full path, drawn as a line */}
                         <Polyline
                             path={polylinePath}
-                            options={{ strokeColor: "#4ade80", strokeWeight: 4, strokeOpacity: 0.8 }}
+                            options={{ strokeColor: "#2dd4bf", strokeWeight: 4, strokeOpacity: 0.8 }}
                         />
 
                         {/* Start marker */}
                         <OverlayView position={polylinePath[0]} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
                             <div style={{ transform: "translate(-50%, -100%)" }}>
-                                <div className="w-6 h-6 rounded-full bg-green-500 border-2 border-white shadow flex items-center justify-center">
+                                <div className="w-6 h-6 rounded-full bg-teal-500 border-2 border-white shadow flex items-center justify-center">
                                     <FaCircle size={8} color="white" />
                                 </div>
                             </div>
@@ -93,14 +93,14 @@ export default function TripReplayMap({ tripId }: { tripId: string }) {
             </div>
 
             {/* Scrubber */}
-            <div className="bg-white rounded-lg p-4">
+            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-4">
                 <input
                     type="range"
                     min={0}
                     max={path.length - 1}
                     value={scrubIndex}
                     onChange={(e) => setScrubIndex(Number(e.target.value))}
-                    className="w-full accent-green-500"
+                    className="w-full accent-teal-500"
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-2">
                     <span>{new Date(current.recordedAt).toLocaleTimeString()}</span>

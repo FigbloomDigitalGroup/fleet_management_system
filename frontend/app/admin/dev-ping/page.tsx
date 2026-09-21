@@ -2,7 +2,8 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { apiRequest } from "../../lib/api";
-import { VehicleRecord } from "../../types/auth";
+import { CompanyRecord, VehicleRecord } from "../../types/auth";
+import { usePageHeader } from "../../components/DashboardShell";
 
 export default function DevPingPage() {
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
@@ -14,12 +15,29 @@ export default function DevPingPage() {
   const [isSending, setIsSending] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [startPoint, setStartPoint] = useState<{ lat: string; lng: string } | null>(null);
 
   useEffect(() => {
     apiRequest<VehicleRecord[]>("/api/vehicles").then((data) => {
       setVehicles(data);
       if (data.length > 0) setVehicleId(data[0]._id);
     });
+  }, []);
+
+  // Default the ping coordinates to the company's daily starting point (once
+  // it loads), so test pings land inside a geofence and actually show up on
+  // the live map, instead of a hardcoded spot that may be outside any zone.
+  useEffect(() => {
+    apiRequest<CompanyRecord>("/api/companies/me")
+      .then((company) => {
+        if (company.dailyStartPoint) {
+          const point = { lat: String(company.dailyStartPoint.lat), lng: String(company.dailyStartPoint.lng) };
+          setStartPoint(point);
+          setLatitude(point.lat);
+          setLongitude(point.lng);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   async function sendPing(e: FormEvent) {
@@ -50,33 +68,35 @@ export default function DevPingPage() {
     }
   }
 
+  // Presets 1 and 5 represent the vehicle sitting at its base — use the
+  // company's actual starting point when one is set, so it lands inside a
+  // geofence instead of the old hardcoded demo coordinates.
+  const baseLat = startPoint?.lat ?? "-1.2921";
+  const baseLng = startPoint?.lng ?? "36.8219";
+
   const presets = [
-    { label: "1. Stationary", lat: "-1.2921", lng: "36.8219", speed: "0", fuel: "" },
+    { label: "1. Stationary", lat: baseLat, lng: baseLng, speed: "0", fuel: "" },
     { label: "2. Start moving", lat: "-1.2935", lng: "36.8225", speed: "45", fuel: "" },
     { label: "3. Speeding", lat: "-1.2950", lng: "36.8240", speed: "95", fuel: "" },
     { label: "4. Stop", lat: "-1.2965", lng: "36.8255", speed: "0", fuel: "" },
-    { label: "5. Fuel A (full)", lat: "-1.2921", lng: "36.8219", speed: "40", fuel: "50" },
+    { label: "5. Fuel A (full)", lat: baseLat, lng: baseLng, speed: "40", fuel: "50" },
     { label: "6. Fuel B (anomaly)", lat: "-1.2925", lng: "36.8222", speed: "40", fuel: "35" },
     { label: "7. Off-route", lat: "-1.3100", lng: "36.8400", speed: "40", fuel: "" },
   ];
 
+  usePageHeader("Send Test Ping", "Simulates a GPS device sending a location update — for testing only.");
+
   return (
     <div className="max-w-xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Send Test Ping</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Simulates a GPS device sending a location update — for testing only.
-        </p>
-      </div>
 
-      <div className="bg-white rounded-lg p-5">
+      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
         <form onSubmit={sendPing} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Vehicle</label>
             <select
               value={vehicleId}
               onChange={(e) => setVehicleId(e.target.value)}
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
             >
               {vehicles.map((v) => (
                 <option key={v._id} value={v._id}>
@@ -93,7 +113,7 @@ export default function DevPingPage() {
                 type="text"
                 value={latitude}
                 onChange={(e) => setLatitude(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
               />
             </div>
             <div>
@@ -102,7 +122,7 @@ export default function DevPingPage() {
                 type="text"
                 value={longitude}
                 onChange={(e) => setLongitude(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
               />
             </div>
             <div>
@@ -111,7 +131,7 @@ export default function DevPingPage() {
                 type="text"
                 value={speedKph}
                 onChange={(e) => setSpeedKph(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
               />
             </div>
           </div>
@@ -125,7 +145,7 @@ export default function DevPingPage() {
               value={fuelLevelLiters}
               onChange={(e) => setFuelLevelLiters(e.target.value)}
               placeholder="e.g. 50"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
             />
           </div>
 
@@ -143,7 +163,7 @@ export default function DevPingPage() {
                     setSpeedKph(p.speed);
                     setFuelLevelLiters(p.fuel);
                   }}
-                  className="text-xs px-3 py-1.5 rounded-md border border-gray-300 text-gray-600 hover:border-green-400 hover:text-green-600"
+                  className="text-xs px-3 py-1.5 rounded-md border border-gray-300 text-gray-600 hover:border-teal-400 hover:text-teal-600"
                 >
                   {p.label}
                 </button>

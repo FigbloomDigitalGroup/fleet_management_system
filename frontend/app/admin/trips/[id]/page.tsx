@@ -7,6 +7,7 @@ import { apiRequest } from "../../../lib/api";
 import { TripRecord } from "../../../types/auth";
 import FullPageLoading from "../../../components/FullPageLoading";
 import TripReplayMap from "../../../components/TripReplayMap";
+import { usePageHeader } from "../../../components/DashboardShell";
 
 export default function AdminTripDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +24,11 @@ export default function AdminTripDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  usePageHeader(
+    trip ? `Trip — ${trip.vehicleId?.plateNumber || "Unknown vehicle"}` : "Trip",
+    trip ? new Date(trip.startTime).toLocaleString() : undefined
+  );
+
   if (loading) return <FullPageLoading label="Loading trip" />;
   if (error) return <p className="text-sm text-red-600">{error}</p>;
   if (!trip) return null;
@@ -33,25 +39,19 @@ export default function AdminTripDetailPage() {
         <FiArrowLeft size={14} /> Back
       </button>
 
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Trip — {trip.vehicleId?.plateNumber || "Unknown vehicle"}
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">{new Date(trip.startTime).toLocaleString()}</p>
-        </div>
+      <div className="mb-8 flex justify-end">
         <span
           className={`text-xs px-3 py-1.5 rounded-full border font-medium ${trip.endTime
               ? "bg-gray-100 text-gray-500 border-gray-200"
-              : "bg-green-50 text-green-600 border-green-200"
+              : "bg-teal-50 text-teal-600 border-teal-200"
             }`}
         >
           {trip.endTime ? "completed" : "in progress"}
         </span>
       </div>
 
-      <div className="bg-white rounded-lg p-5 max-w-xl">
-        <p className="text-xs text-gray-400 mb-3">Key details recorded for this trip</p>
+      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 max-w-xl">
+        <p className="text-xs text-teal-600 mb-3">Key details recorded for this trip</p>
         <dl className="grid grid-cols-2 gap-5 text-sm">
           <div>
             <dt className="text-gray-500">Vehicle</dt>

@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 //import AuthContext from "./context/AuthContext";
 import { AuthProvider } from "./context/AuthContext";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
+const jakartaSansDisplay = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-display",
   weight: ["500", "600", "700"],
 });
 
-const inter = Inter({
+const jakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-body",
+  weight: ["400", "500", "600", "700"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -32,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className={`${jakartaSansDisplay.variable} ${jakartaSans.variable} ${jetbrainsMono.variable}`}>
       <body>
         <AuthProvider>{children}</AuthProvider>
       </body>

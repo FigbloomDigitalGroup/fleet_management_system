@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useRef, useState, FormEvent } from "react";
 import { apiRequest } from "../lib/api";
 import { AlertRecord, VehicleRecord } from "../types/auth";
 import FullPageLoading from "./FullPageLoading";
@@ -28,6 +28,13 @@ export default function AlertsList() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // load() is also called on a poll interval below — these refs let it read
+  // the current vehicleId and first-load status without being redeclared
+  // (and the interval re-armed) on every render.
+  const vehicleIdRef = useRef(vehicleId);
+  vehicleIdRef.current = vehicleId;
+  const hasLoadedOnce = useRef(false);
+
   async function load() {
     try {
       const [alertData, vehicleData] = await Promise.all([
@@ -36,16 +43,22 @@ export default function AlertsList() {
       ]);
       setAlerts(alertData);
       setVehicles(vehicleData);
-      if (vehicleData.length > 0 && !vehicleId) setVehicleId(vehicleData[0]._id);
+      if (vehicleData.length > 0 && !vehicleIdRef.current) setVehicleId(vehicleData[0]._id);
+      setError(null);
     } catch (err: any) {
-      setError(err.message);
+      // A background poll hiccup shouldn't blank out an already-visible
+      // page — only surface the error if we never loaded successfully.
+      if (!hasLoadedOnce.current) setError(err.message);
     } finally {
+      hasLoadedOnce.current = true;
       setLoading(false);
     }
   }
 
   useEffect(() => {
     load();
+    const interval = setInterval(load, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   async function handleResolve(id: string) {
@@ -90,8 +103,8 @@ export default function AlertsList() {
   return (
     <div className="grid lg:grid-cols-3 gap-6">
       {/* Alerts list */}
-      <div className="lg:col-span-2 bg-white rounded-lg overflow-hidden">
-        <p className="text-xs text-gray-400 px-5 pt-4">
+      <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+        <p className="text-xs text-teal-600 px-5 pt-4">
           Speeding, geofence, and offline alerts raised across your fleet.
         </p>
         <table className="w-full text-sm mt-2">
@@ -118,7 +131,7 @@ export default function AlertsList() {
                     {a.vehicleId?.plateNumber || "—"}
                   </td>
                   <td className="px-5 py-3 text-gray-600">{a.type.replace(/_/g, " ")}</td>
-                  <td className="px-5 py-3 text-gray-600">{a.message}</td>
+                  <td className="px-5 py-3 text-xs text-teal-600">{a.message}</td>
                   <td className="px-5 py-3">
                     <span
                       className={`text-xs px-2 py-1 rounded-full border ${a.resolved
@@ -134,7 +147,7 @@ export default function AlertsList() {
                       <button
                         onClick={() => handleResolve(a._id)}
                         disabled={resolvingId === a._id}
-                        className="text-xs text-green-600 hover:underline disabled:opacity-50"
+                        className="text-xs text-teal-600 hover:underline disabled:opacity-50"
                       >
                         Mark resolved
                       </button>
@@ -148,16 +161,16 @@ export default function AlertsList() {
       </div>
 
       {/* Send alert form */}
-      <div className="bg-white rounded-lg p-5 h-fit">
+      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 h-fit">
         <h3 className="text-sm font-medium text-gray-700">Send an alert</h3>
-        <p className="text-xs text-gray-400 mt-0.5 mb-4">Manually notify the team about a vehicle issue.</p>
+        <p className="text-xs text-teal-600 mt-0.5 mb-4">Manually notify the team about a vehicle issue.</p>
         <form onSubmit={handleSendAlert} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Vehicle</label>
             <select
               value={vehicleId}
               onChange={(e) => setVehicleId(e.target.value)}
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
             >
               {vehicles.length === 0 && <option value="">No vehicles yet</option>}
               {vehicles.map((v) => (
@@ -173,7 +186,7 @@ export default function AlertsList() {
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
             >
               {ALERT_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
@@ -191,7 +204,7 @@ export default function AlertsList() {
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Describe what's happening…"
               rows={3}
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
             />
           </div>
 

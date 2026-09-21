@@ -9,6 +9,15 @@ export const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Limits password reset requests: max 5 tries per 15 minutes, per IP address
+export const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  message: { error: "Too many reset requests. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 
 
 

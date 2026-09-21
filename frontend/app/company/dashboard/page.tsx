@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { apiRequest } from "../../lib/api";
-import { useAuth } from "../../context/AuthContext";
 import StatCard from "../../components/StatCard";
 import BarChartCard from "../../components/BarChartCard";
 import DonutChartCard from "../../components/DonutChartCard";
 import FullPageLoading from "@/app/components/FullPageLoading";
+import LiveMapWidget from "../../components/LiveMapWidget";
 import { usePageHeader } from "../../components/DashboardShell";
 import {
   CompanyRecord,
@@ -40,7 +40,7 @@ function CircleStat({
   const progress = (Math.max(0, Math.min(100, percentage)) / 100) * circumference;
 
   return (
-    <div className="bg-white rounded-lg p-4 h-full flex flex-col items-center justify-center">
+    <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-4 h-full flex flex-col items-center justify-center">
       <div className="relative w-40 h-40">
         <svg className="w-40 h-40 -rotate-90" viewBox="0 0 80 80" aria-label={`${percentage}% ${label}`}>
           <circle cx="40" cy="40" r={radius} fill="none" stroke="#e5e7eb" strokeWidth="14" />
@@ -60,14 +60,12 @@ function CircleStat({
         </span>
       </div>
       <span className="mt-2 text-sm text-gray-600">{label}</span>
-      {description && <span className="text-xs text-gray-400 text-center">{description}</span>}
+      {description && <span className="text-xs text-teal-600 text-center">{description}</span>}
     </div>
   );
 }
 
 export default function CompanyDashboard() {
-  const { user } = useAuth();
-
   const [company, setCompany] = useState<CompanyRecord | null>(null);
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
@@ -76,7 +74,28 @@ export default function CompanyDashboard() {
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  usePageHeader("Dashboard", `Signed in as ${user?.email}`);
+  const vehicleCounts = {
+    total: vehicles.length,
+    active: vehicles.filter((v) => v.status === "active").length,
+    idle: vehicles.filter((v) => v.status === "idle").length,
+    offline: vehicles.filter((v) => v.status === "offline").length,
+    maintenance: vehicles.filter((v) => v.status === "maintenance").length,
+  };
+  const unresolvedAlertCount = alerts.filter((a) => !a.resolved).length;
+
+  const statsNode = useMemo(
+    () => (
+      <div className="grid grid-cols-2 gap-3 h-full">
+        <StatCard label="Total vehicles" value={vehicleCounts.total} accent="blue" description="All vehicles on your account" />
+        <StatCard label="Drivers" value={drivers.length} accent="green" description="Drivers registered to your fleet" />
+        <StatCard label="Admins" value={admins.length} accent="green" description="Admin users on your account" />
+        <StatCard label="Unresolved alerts" value={unresolvedAlertCount} accent="orange" description="Alerts still awaiting review" />
+      </div>
+    ),
+    [vehicleCounts.total, drivers.length, admins.length, unresolvedAlertCount]
+  );
+
+  usePageHeader("Dashboard", "Everything your fleet needs, in one place.", statsNode);
 
   useEffect(() => {
     async function loadAll() {
@@ -106,16 +125,7 @@ export default function CompanyDashboard() {
 
   if (loading) return <FullPageLoading />;
 
-const vehicleCounts = {
-  total: vehicles.length,
-  active: vehicles.filter((v) => v.status === "active").length,
-  idle: vehicles.filter((v) => v.status === "idle").length,
-  offline: vehicles.filter((v) => v.status === "offline").length,
-  maintenance: vehicles.filter((v) => v.status === "maintenance").length,
-};
-
   const activePct = vehicleCounts.total ? Math.round((vehicleCounts.active / vehicleCounts.total) * 100) : 0;
-  const unresolvedAlerts = alerts.filter((a) => !a.resolved);
 
   // Build a simple "trips per day, last 7 days" chart from the trips list already fetched
   const last7Days = Array.from({ length: 7 }).map((_, i) => {
@@ -133,14 +143,6 @@ const vehicleCounts = {
 
   return (
     <div>
-      {/* Top stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <StatCard label="Total vehicles" value={vehicleCounts.total} accent="blue" description="All vehicles on your account" />
-        <StatCard label="Drivers" value={drivers.length} accent="green" description="Drivers registered to your fleet" />
-        <StatCard label="Admins" value={admins.length} accent="green" description="Admin users on your account" />
-        <StatCard label="Unresolved alerts" value={unresolvedAlerts.length} accent="orange" description="Alerts still awaiting review" />
-      </div>
-
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
         <div className="lg:col-span-2">
@@ -154,7 +156,7 @@ const vehicleCounts = {
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <CircleStat percentage={activePct} label="Fleet active" color="#16a34a" description="Vehicles currently on the move" />
+          <CircleStat percentage={activePct} label="Fleet active" color="#2dd4bf" description="Vehicles currently on the move" />
           <CircleStat
             percentage={vehicleCounts.total ? Math.round((vehicleCounts.offline / vehicleCounts.total) * 100) : 0}
             label="Offline"
@@ -171,7 +173,7 @@ const vehicleCounts = {
       title="Fleet status breakdown"
       description="How your vehicles are distributed across statuses"
       data={[
-        { name: "Active", value: vehicleCounts.active, color: "#4ade80" },
+        { name: "Active", value: vehicleCounts.active, color: "#2dd4bf" },
         { name: "Idle", value: vehicleCounts.idle, color: "#fb923c" },
         { name: "Offline", value: vehicleCounts.offline, color: "#9ca3af" },
         { name: "Maintenance", value: vehicleCounts.maintenance, color: "#f87171" },
@@ -180,7 +182,7 @@ const vehicleCounts = {
   </div>
   <StatusDetailsCard
     items={[
-      { label: "Active", value: vehicleCounts.active, color: "#4ade80", description: "Currently moving, sending live GPS updates" },
+      { label: "Active", value: vehicleCounts.active, color: "#2dd4bf", description: "Currently moving, sending live GPS updates" },
       { label: "Idle", value: vehicleCounts.idle, color: "#fb923c", description: "Engine on or stationary, not actively driving" },
       { label: "Offline", value: vehicleCounts.offline, color: "#9ca3af", description: "No signal received recently from this vehicle" },
       { label: "Maintenance", value: vehicleCounts.maintenance, color: "#f87171", description: "Taken out of service for repair or servicing" },
@@ -192,12 +194,12 @@ const vehicleCounts = {
       <div>
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Recent alerts</h2>
-          <Link href="/company/alerts" className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700">
+          <Link href="/company/alerts" className="rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-teal-700">
             View all
           </Link>
         </div>
-        <p className="text-xs text-gray-400 mb-3">The 5 most recent alerts across your fleet</p>
-        <div className="bg-white rounded-lg overflow-hidden">
+        <p className="text-xs text-teal-600 mb-3">The 5 most recent alerts across your fleet</p>
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
           {alerts.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">No alerts yet.</p>
           ) : (
@@ -227,6 +229,8 @@ const vehicleCounts = {
           )}
         </div>
       </div>
+
+      <LiveMapWidget />
     </div>
   );
 }

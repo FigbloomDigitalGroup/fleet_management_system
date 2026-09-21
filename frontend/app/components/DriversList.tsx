@@ -54,7 +54,7 @@ export default function DriversList({ canAdd = false }: { canAdd?: boolean }) {
   return (
     <div className={canAdd ? "grid lg:grid-cols-3 gap-4" : ""}>
 
-      <div className={`${canAdd ? "lg:col-span-2" : ""} bg-white rounded-lg overflow-hidden`}>
+      <div className={`${canAdd ? "lg:col-span-2" : ""} bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden`}>
         {loading && <p className="text-sm text-gray-500 p-5">Loading…</p>}
         {error && <p className="text-sm text-red-600 p-5">{error}</p>}
         {!loading && !error && (
@@ -79,7 +79,7 @@ export default function DriversList({ canAdd = false }: { canAdd?: boolean }) {
                     <td className="px-5 py-3 font-medium text-gray-900">{d.fullName}</td>
                     <td className="px-5 py-3 text-gray-600">{d.email}</td>
                     <td className="px-5 py-3">
-                      <span className="text-xs px-2 py-1 rounded-full border bg-green-50 text-green-600 border-green-200">
+                      <span className="text-xs px-2 py-1 rounded-full border bg-teal-50 text-teal-600 border-teal-200">
                         {d.status}
                       </span>
                     </td>
@@ -93,9 +93,9 @@ export default function DriversList({ canAdd = false }: { canAdd?: boolean }) {
 
    
       {canAdd && (
-        <div className="bg-white rounded-lg p-5 h-fit">
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 h-fit">
           <h3 className="text-sm font-medium text-gray-700">Add a driver</h3>
-          <p className="text-xs text-gray-400 mt-0.5 mb-4">Creates a driver login they can use on their phone.</p>
+          <p className="text-xs text-teal-600 mt-0.5 mb-4">Creates a driver login they can use on their phone.</p>
           <form onSubmit={handleAddDriver} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Full name</label>
@@ -104,7 +104,7 @@ export default function DriversList({ canAdd = false }: { canAdd?: boolean }) {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
               />
             </div>
             <div>
@@ -114,7 +114,7 @@ export default function DriversList({ canAdd = false }: { canAdd?: boolean }) {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
               />
             </div>
             <div>
@@ -124,7 +124,7 @@ export default function DriversList({ canAdd = false }: { canAdd?: boolean }) {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
               />
             </div>
 
@@ -238,12 +238,12 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
 
   return (
     <div className={canAdd ? "grid lg:grid-cols-3 gap-4" : ""}>
-      <div className={`${canAdd ? "lg:col-span-2" : ""} bg-white rounded-lg overflow-hidden`}>
+      <div className={`${canAdd ? "lg:col-span-2" : ""} bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden`}>
         {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
         {error && <p className="text-sm text-red-600 p-5">{error}</p>}
         {!loading && !error && (
           <>
-            <p className="text-xs text-gray-400 px-5 pt-4">
+            <p className="text-xs text-teal-600 px-5 pt-4">
               Everyone with driver access on your account and the vehicle they're currently on.
             </p>
             <table className="w-full text-sm mt-2">
@@ -274,7 +274,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                             value={assigned?._id || ""}
                             disabled={assigningId === d._id}
                             onChange={(e) => handleAssignVehicle(d._id, e.target.value)}
-                            className="text-sm border border-gray-300 rounded-md px-2 py-1 outline-none focus:border-green-600"
+                            className="text-sm border border-gray-300 rounded-md px-2 py-1 outline-none focus:border-teal-600"
                           >
                             <option value="">No vehicle</option>
                             {vehicles.map((v) => (
@@ -300,9 +300,9 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
       </div>
 
       {canAdd && (
-        <div className="bg-white rounded-lg p-5 h-fit">
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 h-fit">
           <h3 className="text-sm font-medium text-gray-700">Add a driver</h3>
-          <p className="text-xs text-gray-400 mt-0.5 mb-4">Creates a driver login they can use on their phone.</p>
+          <p className="text-xs text-teal-600 mt-0.5 mb-4">Creates a driver login they can use on their phone.</p>
           <form onSubmit={handleAddDriver} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Full name</label>
@@ -311,7 +311,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
               />
             </div>
             <div>
@@ -321,7 +321,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
               />
             </div>
             <div>
@@ -331,7 +331,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
               />
             </div>
 

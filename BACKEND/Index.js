@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import cron from "node-cron";
 import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import companyRoutes from "./routes/companyRoutes.js";
@@ -13,10 +14,11 @@ import alertRoutes from "./routes/alertRoutes.js";
 import  trackingRoutes from "./routes/trackingRoutes.js";
 import routeRoutes from "./routes/routeRoutes.js";
 import geofenceRoutes from "./routes/geofenceRoutes.js";
+import agentRoutes from "./routes/agentRoutes.js";
+import { runAiAnomalyScan } from "./services/aiAnomalyDetector.js";
 
 
 import cors from "cors";
-
 const app = express();
 
 const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:3000")
@@ -33,7 +35,6 @@ app.use(
 
 
 app.use(express.json());
-
 app.get("/health", (req, res) => {
   res.json({ status: "ok", server: "running" })
 });
@@ -50,6 +51,7 @@ app.use("/api/alerts", alertRoutes);
 app.use("/api/tracking", trackingRoutes);
 app.use("/api/routes", routeRoutes);
 app.use("/api/geofences", geofenceRoutes);
+app.use("/api/agent", agentRoutes);
 
 
 
@@ -63,5 +65,16 @@ connectDB().then(() => {
   app.listen(PORT, () => {
     console.log(`Server running: http://localhost:${PORT}`);
   });
-});
 
+  // AI anomaly agent — runs every 15 minutes, independent of the real-time
+  // fixed-threshold checks in trackingController.js.
+  cron.schedule("*/15 * * * *", () => {
+    runAiAnomalyScan()
+      .then((log) =>
+        console.log(
+          `[agent] scan complete — ${log.vehiclesScanned} vehicle(s), ${log.anomaliesFound} anomaly/anomalies (${log.status})`
+        )
+      )
+      .catch((err) => console.error("[agent] scan crashed:", err));
+  });
+});

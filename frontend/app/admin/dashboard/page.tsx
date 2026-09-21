@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { apiRequest } from "../../lib/api";
-import { useAuth } from "../../context/AuthContext";
 import StatCard from "../../components/StatCard";
 import CircleStat from "../../components/CircleStat";
 import BarChartCard from "../../components/BarChartCard";
@@ -19,15 +18,34 @@ import StatusDetailsCard from "@/app/components/StatusDetailsCard";
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
-
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
   const [trips, setTrips] = useState<TripRecord[]>([]);
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  usePageHeader("Fleet overview", `Signed in as ${user?.email}`);
+  const vehicleCounts = {
+    total: vehicles.length,
+    active: vehicles.filter((v) => v.status === "active").length,
+    idle: vehicles.filter((v) => v.status === "idle").length,
+    offline: vehicles.filter((v) => v.status === "offline").length,
+    maintenance: vehicles.filter((v) => v.status === "maintenance").length,
+  };
+  const unresolvedAlertCount = alerts.filter((a) => !a.resolved).length;
+
+  const statsNode = useMemo(
+    () => (
+      <div className="grid grid-cols-2 gap-3 h-full">
+        <StatCard label="Total vehicles" value={vehicleCounts.total} accent="blue" description="All vehicles on your account" />
+        <StatCard label="Drivers" value={drivers.length} accent="green" description="Drivers registered to your fleet" />
+        <StatCard label="Active now" value={vehicleCounts.active} accent="green" description="Vehicles currently moving" />
+        <StatCard label="Unresolved alerts" value={unresolvedAlertCount} accent="orange" description="Alerts still awaiting review" />
+      </div>
+    ),
+    [vehicleCounts.total, drivers.length, vehicleCounts.active, unresolvedAlertCount]
+  );
+
+  usePageHeader("Fleet overview", "Real-time visibility across your entire fleet.", statsNode);
 
   useEffect(() => {
     async function loadAll() {
@@ -53,18 +71,9 @@ export default function AdminDashboard() {
 
   if (loading) return <FullPageLoading label="Loading dashboard" />;
 
-  const vehicleCounts = {
-    total: vehicles.length,
-    active: vehicles.filter((v) => v.status === "active").length,
-    idle: vehicles.filter((v) => v.status === "idle").length,
-    offline: vehicles.filter((v) => v.status === "offline").length,
-    maintenance: vehicles.filter((v) => v.status === "maintenance").length,
-  };
-
   const activePct = vehicleCounts.total ? Math.round((vehicleCounts.active / vehicleCounts.total) * 100) : 0;
   const assignedDrivers = vehicles.filter((v) => v.driverId).length;
   const assignedPct = drivers.length ? Math.round((assignedDrivers / drivers.length) * 100) : 0;
-  const unresolvedAlerts = alerts.filter((a) => !a.resolved);
 
   const last7Days = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date();
@@ -78,14 +87,6 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      {/* Top stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <StatCard label="Total vehicles" value={vehicleCounts.total} accent="blue" description="All vehicles on your account" />
-        <StatCard label="Drivers" value={drivers.length} accent="green" description="Drivers registered to your fleet" />
-        <StatCard label="Active now" value={vehicleCounts.active} accent="green" description="Vehicles currently moving" />
-        <StatCard label="Unresolved alerts" value={unresolvedAlerts.length} accent="orange" description="Alerts still awaiting review" />
-      </div>
-
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
         <div className="lg:col-span-2">
@@ -99,8 +100,8 @@ export default function AdminDashboard() {
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <CircleStat percentage={activePct} label="Fleet active" color="#16a34a" description="Vehicles currently on the move" />
-          <CircleStat percentage={assignedPct} label="Drivers assigned" color="#16a34a" description="Drivers with a vehicle assigned" />
+          <CircleStat percentage={activePct} label="Fleet active" color="#2dd4bf" description="Vehicles currently on the move" />
+          <CircleStat percentage={assignedPct} label="Drivers assigned" color="#0d9488" description="Drivers with a vehicle assigned" />
         </div>
       </div>
     
@@ -111,7 +112,7 @@ export default function AdminDashboard() {
       title="Fleet status breakdown"
       description="How your vehicles are distributed across statuses"
       data={[
-        { name: "Active", value: vehicleCounts.active, color: "#4ade80" },
+        { name: "Active", value: vehicleCounts.active, color: "#2dd4bf" },
         { name: "Idle", value: vehicleCounts.idle, color: "#fb923c" },
         { name: "Offline", value: vehicleCounts.offline, color: "#9ca3af" },
         { name: "Maintenance", value: vehicleCounts.maintenance, color: "#f87171" },
@@ -120,7 +121,7 @@ export default function AdminDashboard() {
   </div>
 <StatusDetailsCard
   items={[
-    { label: "Active", value: vehicleCounts.active, color: "#4ade80", description: "Currently moving, sending live GPS updates" },
+    { label: "Active", value: vehicleCounts.active, color: "#2dd4bf", description: "Currently moving, sending live GPS updates" },
     { label: "Idle", value: vehicleCounts.idle, color: "#fb923c", description: "Engine on or stationary, not actively driving" },
     { label: "Offline", value: vehicleCounts.offline, color: "#9ca3af", description: "No signal received recently from this vehicle" },
     { label: "Maintenance", value: vehicleCounts.maintenance, color: "#f87171", description: "Taken out of service for repair or servicing" },
@@ -132,12 +133,12 @@ export default function AdminDashboard() {
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Recent alerts</h2>
-          <Link href="/admin/alerts" className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700">
+          <Link href="/admin/alerts" className="rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-teal-700">
             View all
           </Link>
         </div>
-        <p className="text-xs text-gray-400 mb-3">The 5 most recent alerts across your fleet</p>
-        <div className="bg-white rounded-lg overflow-hidden">
+        <p className="text-xs text-teal-600 mb-3">The 5 most recent alerts across your fleet</p>
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
           {alerts.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">No alerts yet.</p>
           ) : (
@@ -170,12 +171,12 @@ export default function AdminDashboard() {
       <div>
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Recent trips</h2>
-          <Link href="/admin/trips" className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700">
+          <Link href="/admin/trips" className="rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-teal-700">
             View all
           </Link>
         </div>
-        <p className="text-xs text-gray-400 mb-3">The 5 most recently started trips</p>
-        <div className="bg-white rounded-lg overflow-hidden">
+        <p className="text-xs text-teal-600 mb-3">The 5 most recently started trips</p>
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
           {trips.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">No trips recorded yet.</p>
           ) : (

@@ -3,13 +3,19 @@ import Vehicle from "../models/Vehicle.js";
 import { tenantScope } from "../middleware/auth.js";
 import LocationPing from "../models/LocationPing.js";
 
-// List trips for the requester's tenant, newest first
+// List trips for the requester's tenant, newest first. Optionally narrowed
+// to a single vehicle via ?vehicleId= — still constrained to vehicles the
+// requester's tenant actually owns, even if a foreign id is passed.
 export async function listTrips(req, res) {
   try {
     const vehicles = await Vehicle.find(tenantScope(req)).select("_id");
     const vehicleIds = vehicles.map((v) => v._id);
 
-    const trips = await Trip.find({ vehicleId: { $in: vehicleIds } })
+    const scopedVehicleIds = req.query.vehicleId
+      ? vehicleIds.filter((v) => String(v) === req.query.vehicleId)
+      : vehicleIds;
+
+    const trips = await Trip.find({ vehicleId: { $in: scopedVehicleIds } })
       .populate("vehicleId", "plateNumber")
       .populate("driverId", "fullName")
       .sort({ startTime: -1 })
@@ -57,7 +63,22 @@ export async function getTripPath(req, res) {
   }
 }
 
+export async function listMyTrips(req, res) {
+  try {
+    const vehicle = await Vehicle.findOne({ driverId: req.user.id });
+    if (!vehicle) return res.json([]);
 
+    const trips = await Trip.find({ vehicleId: vehicle._id })
+      .populate("vehicleId", "plateNumber")
+      .sort({ startTime: -1 })
+      .limit(50);
+
+    return res.json(trips);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to fetch your trips" });
+  }
+}
 
 
 

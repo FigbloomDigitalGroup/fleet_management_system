@@ -2,7 +2,7 @@ export default function CircleStat({
   percentage,
   label,
   description,
-  color = "#16a34a",
+  color = "#0d9488",
 }: {
   percentage: number;
   label: string;
@@ -14,7 +14,7 @@ export default function CircleStat({
   const offset = circumference - (percentage / 100) * circumference;
 
   return (
-    <div className="bg-white rounded-lg p-5 h-full flex flex-col items-center justify-center">
+    <div className="bg-white rounded-2xl p-5 h-full flex flex-col items-center justify-center shadow-sm ring-1 ring-black/5">
       <svg width="160" height="160" viewBox="0 0 100 100">
         <circle cx="50" cy="50" r={radius} fill="none" stroke="#e5e7eb" strokeWidth="16" />
         <circle
@@ -34,7 +34,7 @@ export default function CircleStat({
         </text>
       </svg>
       <p className="text-sm text-gray-600 mt-2">{label}</p>
-      {description && <p className="text-xs text-gray-400 mt-0.5 text-center">{description}</p>}
+      {description && <p className="text-xs text-teal-600 mt-0.5 text-center">{description}</p>}
     </div>
   );
 }

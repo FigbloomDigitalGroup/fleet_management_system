@@ -12,14 +12,14 @@ export default function FullPageLoading({ label = "Loading" }: { label?: string 
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
       <span className="flex items-center gap-2 text-xl font-bold text-gray-900 mb-4">
-        <FaCog aria-hidden="true" className="animate-spin [animation-direction:reverse] text-indigo-400" />
+        <FaCog aria-hidden="true" className="animate-spin [animation-direction:reverse] text-teal-400" />
         FIGBLOOM FLEET
       </span>
       <div className="flex items-end gap-2">
         {dots.map((dot, i) => (
           <span
             key={i}
-            className="loading-dot rounded-full bg-indigo-400"
+            className="loading-dot rounded-full bg-teal-400"
             style={{
               width: dot.size,
               height: dot.size,
