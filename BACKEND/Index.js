@@ -19,7 +19,6 @@ import { runAiAnomalyScan } from "./services/aiAnomalyDetector.js";
 
 
 import cors from "cors";
-
 const app = express();
 
 const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:3000")
@@ -36,7 +35,6 @@ app.use(
 
 
 app.use(express.json());
-
 app.get("/health", (req, res) => {
   res.json({ status: "ok", server: "running" })
 });

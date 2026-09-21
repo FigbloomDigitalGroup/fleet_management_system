@@ -1,7 +1,14 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import Company from "../models/Company.js";
 import User from "../models/User.js";
+
+const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+function hashResetToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
 
 function signAccessToken(user) {
   return jwt.sign(
@@ -165,6 +172,72 @@ export async function refresh(req, res) {
     return res.json({ accessToken });
   } catch (err) {
     return res.status(401).json({ error: "Invalid or expired refresh token" });
+  }
+}
+
+// Starts a password reset — always responds the same way whether or not the
+// email exists, so this endpoint can't be used to check which emails are
+// registered. Email delivery isn't wired up yet, so the reset link is only
+// logged server-side for now; a verify-by-email step will replace this log.
+export async function forgotPassword(req, res) {
+  try {
+    const email = req.body.email?.trim().toLowerCase();
+    if (!email) {
+      return res.status(400).json({ error: "email is required" });
+    }
+
+    const user = await User.findOne({ email });
+    if (user) {
+      const token = crypto.randomBytes(32).toString("hex");
+      user.resetPasswordTokenHash = hashResetToken(token);
+      user.resetPasswordExpires = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+      await user.save();
+
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      const resetLink = `${frontendUrl}/reset-password?email=${encodeURIComponent(email)}&token=${token}`;
+      console.log(`[password reset] ${email} -> ${resetLink}`);
+    }
+
+    return res.json({ message: "If an account exists for that email, a reset link has been generated." });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to process the request" });
+  }
+}
+
+// Completes a password reset from a token issued by forgotPassword.
+export async function resetPassword(req, res) {
+  try {
+    const email = req.body.email?.trim().toLowerCase();
+    const { token, newPassword } = req.body;
+
+    if (!email || !token || !newPassword) {
+      return res.status(400).json({ error: "email, token, and newPassword are required" });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: "Password must be at least 8 characters" });
+    }
+
+    const user = await User.findOne({ email });
+    if (
+      !user ||
+      !user.resetPasswordTokenHash ||
+      !user.resetPasswordExpires ||
+      user.resetPasswordExpires.getTime() < Date.now() ||
+      user.resetPasswordTokenHash !== hashResetToken(token)
+    ) {
+      return res.status(400).json({ error: "This reset link is invalid or has expired" });
+    }
+
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordTokenHash = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    return res.json({ message: "Password updated. You can now sign in." });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to reset password" });
   }
 }
 

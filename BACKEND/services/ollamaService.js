@@ -47,3 +47,4 @@ export async function askOllama(prompt) {
     throw new Error(`Ollama returned non-JSON output: ${raw.slice(0, 200)}`);
   }
 }
+

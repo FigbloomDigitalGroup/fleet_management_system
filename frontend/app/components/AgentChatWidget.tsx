@@ -78,7 +78,7 @@ export default function AgentChatWidget() {
             ))}
             {sending && (
               <div className="flex justify-start">
-                <div className="rounded-xl bg-gray-100 px-3 py-2 text-xs text-gray-500">Thinking…</div>
+                <div className="rounded-xl bg-gray-100 px-3 py-2 text-xs text-gray-500">Frolicking…</div>
               </div>
             )}
             {error && <p className="text-xs text-red-600">{error}</p>}

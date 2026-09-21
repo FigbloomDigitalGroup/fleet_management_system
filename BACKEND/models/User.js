@@ -12,6 +12,8 @@ const userSchema = new mongoose.Schema(
     },
     companyId: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null },
     status: { type: String, default: "active" },
+    resetPasswordTokenHash: { type: String, default: null },
+    resetPasswordExpires: { type: Date, default: null },
   },
   { timestamps: true }
 );
