@@ -11,6 +11,7 @@ const DRIVER_VISIBLE_TYPES = [
   "geofence_entry",
   "geofence_exit",
   "ai_pattern_anomaly",
+  "sos",
 ];
 
 export async function listAlerts(req, res) {

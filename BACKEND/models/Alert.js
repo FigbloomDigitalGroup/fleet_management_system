@@ -16,6 +16,7 @@ const alertSchema = new mongoose.Schema(
         "route_deviation",
         "fuel_anomaly",
         "ai_pattern_anomaly",
+        "sos",
       ],
       required: true,
     },

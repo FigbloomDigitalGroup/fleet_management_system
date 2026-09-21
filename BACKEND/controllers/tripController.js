@@ -3,13 +3,19 @@ import Vehicle from "../models/Vehicle.js";
 import { tenantScope } from "../middleware/auth.js";
 import LocationPing from "../models/LocationPing.js";
 
-// List trips for the requester's tenant, newest first
+// List trips for the requester's tenant, newest first. Optionally narrowed
+// to a single vehicle via ?vehicleId= — still constrained to vehicles the
+// requester's tenant actually owns, even if a foreign id is passed.
 export async function listTrips(req, res) {
   try {
     const vehicles = await Vehicle.find(tenantScope(req)).select("_id");
     const vehicleIds = vehicles.map((v) => v._id);
 
-    const trips = await Trip.find({ vehicleId: { $in: vehicleIds } })
+    const scopedVehicleIds = req.query.vehicleId
+      ? vehicleIds.filter((v) => String(v) === req.query.vehicleId)
+      : vehicleIds;
+
+    const trips = await Trip.find({ vehicleId: { $in: scopedVehicleIds } })
       .populate("vehicleId", "plateNumber")
       .populate("driverId", "fullName")
       .sort({ startTime: -1 })

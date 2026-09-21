@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useRef, useState, FormEvent } from "react";
 import { apiRequest } from "../lib/api";
 import { AlertRecord, VehicleRecord } from "../types/auth";
 import FullPageLoading from "./FullPageLoading";
@@ -28,6 +28,13 @@ export default function AlertsList() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // load() is also called on a poll interval below — these refs let it read
+  // the current vehicleId and first-load status without being redeclared
+  // (and the interval re-armed) on every render.
+  const vehicleIdRef = useRef(vehicleId);
+  vehicleIdRef.current = vehicleId;
+  const hasLoadedOnce = useRef(false);
+
   async function load() {
     try {
       const [alertData, vehicleData] = await Promise.all([
@@ -36,16 +43,22 @@ export default function AlertsList() {
       ]);
       setAlerts(alertData);
       setVehicles(vehicleData);
-      if (vehicleData.length > 0 && !vehicleId) setVehicleId(vehicleData[0]._id);
+      if (vehicleData.length > 0 && !vehicleIdRef.current) setVehicleId(vehicleData[0]._id);
+      setError(null);
     } catch (err: any) {
-      setError(err.message);
+      // A background poll hiccup shouldn't blank out an already-visible
+      // page — only surface the error if we never loaded successfully.
+      if (!hasLoadedOnce.current) setError(err.message);
     } finally {
+      hasLoadedOnce.current = true;
       setLoading(false);
     }
   }
 
   useEffect(() => {
     load();
+    const interval = setInterval(load, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   async function handleResolve(id: string) {

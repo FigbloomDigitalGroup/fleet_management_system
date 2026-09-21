@@ -11,6 +11,7 @@ import { FiBell } from "react-icons/fi";
 import { FaCog } from "react-icons/fa";
 import AlertToastStack, { ToastAlert } from "./AlertToast";
 import AgentChatWidget from "./AgentChatWidget";
+import SessionExpiredModal from "./SessionExpiredModal";
 
 interface NavItem {
   label: string;
@@ -134,6 +135,7 @@ export default function DashboardShell({
   return (
     <div className="h-screen overflow-hidden bg-blue-50 flex">
       <AlertToastStack toasts={toasts} onDismiss={dismissToast} />
+      <SessionExpiredModal />
       {(user?.role === "ADMIN" || user?.role === "COMPANY_OWNER") && <AgentChatWidget />}
 
       {/* SIDEBAR */}

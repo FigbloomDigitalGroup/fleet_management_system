@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { apiRequest } from "../../../lib/api";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import ZoneStatusBadge from "@/app/components/ZoneStatusBadge";
+import VehicleTripsMap from "@/app/components/VehicleTripsMap";
 import { usePageHeader } from "@/app/components/DashboardShell";
 import { CompanyRecord, GeofenceRecord, VehicleRecord } from "../../../types/auth";
 
@@ -99,6 +100,12 @@ export default function CompanyVehicleDetailPage() {
           </div>
         </dl>
         <p className="text-xs text-teal-600 mt-4">Status changes and starting points are managed by your fleet Admin.</p>
+      </div>
+
+      <div className="mt-4 max-w-xl bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+        <h3 className="text-sm font-medium text-gray-700">Recent trips</h3>
+        <p className="text-xs text-teal-600 mt-0.5 mb-3">Routes this vehicle has traveled recently</p>
+        <VehicleTripsMap vehicleId={vehicle._id} basePath="/company/trips" />
       </div>
     </div>
   );
