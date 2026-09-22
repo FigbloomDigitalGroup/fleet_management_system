@@ -13,6 +13,9 @@ const ALERT_TYPES = [
   { value: "unauthorized_movement", label: "Unauthorized movement" },
   { value: "device_offline", label: "Device offline" },
   { value: "maintenance_due", label: "Maintenance due" },
+  { value: "harsh_braking", label: "Harsh braking" },
+  { value: "harsh_acceleration", label: "Harsh acceleration" },
+  { value: "excessive_idling", label: "Excessive idling" },
 ];
 
 export default function AlertsList() {

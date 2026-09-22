@@ -85,7 +85,7 @@ main .space-y-4 > :not([hidden]) ~ :not([hidden]) {
 }
 
 .font-display {
-    font-family: var(--font-display), sans-serif;
+    font-family: var(--font-body), sans-serif;
 }
 
 .font-mono {

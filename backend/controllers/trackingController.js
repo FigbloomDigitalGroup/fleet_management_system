@@ -10,6 +10,9 @@ import { distanceKm, isInsideGeofence } from "../lib/geo.js";
 const SPEEDING_LIMIT_KPH = 80;
 const TRIP_IDLE_TIMEOUT_MINUTES = 5;
 const FUEL_ANOMALY_THRESHOLD_PCT = 50;
+const HARSH_BRAKING_KPH_PER_SEC = 8; // deceleration rate considered harsh braking
+const HARSH_ACCELERATION_KPH_PER_SEC = 6; // acceleration rate considered harsh acceleration
+const EXCESSIVE_IDLE_MINUTES = 10; // continuous idle time considered excessive
 
 // Distance in km from a point to the nearest segment of a route's waypoints
 function distanceToRouteKm(lat, lng, waypoints) {
@@ -69,6 +72,33 @@ if (!vehicle.driverId) {
 }
 await vehicle.save();
 
+// 2b. Excessive idling — only meaningful with a driver assigned (unassigned
+// + moving is already handled above as unauthorized_movement). De-duplicated
+// per idle streak by checking for an existing alert since the vehicle last
+// moved, so this doesn't fire again on every subsequent ping.
+if (vehicle.driverId && !isMoving) {
+  const lastMovingPing = await LocationPing.findOne({ vehicleId, speedKph: { $gt: 2 } }).sort({ recordedAt: -1 });
+  const idleStartedAt = lastMovingPing ? new Date(lastMovingPing.recordedAt) : vehicle.createdAt;
+  const idleMinutes = (Date.now() - idleStartedAt.getTime()) / 60000;
+
+  if (idleMinutes >= EXCESSIVE_IDLE_MINUTES) {
+    const alreadyAlerted = await Alert.findOne({
+      vehicleId,
+      type: "excessive_idling",
+      createdAt: { $gte: idleStartedAt },
+    });
+
+    if (!alreadyAlerted) {
+      await Alert.create({
+        companyId: vehicle.companyId,
+        vehicleId,
+        type: "excessive_idling",
+        message: `Vehicle has been idling for over ${EXCESSIVE_IDLE_MINUTES} minutes.`,
+      });
+    }
+  }
+}
+
 
     // 3. Trip start/end logic
     let openTrip = await Trip.findOne({ vehicleId, endTime: { $exists: false } }).sort({ startTime: -1 });
@@ -122,6 +152,33 @@ await vehicle.save();
         type: "speeding",
         message: `Vehicle recorded at ${speedKph} km/h, exceeding the ${speedLimit} km/h limit.`,
       });
+    }
+
+    // 4b. Harsh braking / harsh acceleration — derived from the speed delta
+    // between this ping and the previous one (the tracker only reports
+    // position/speed, same as the mobile app — no accelerometer hardware).
+    if (previousPing && speedKph !== undefined && speedKph !== null && previousPing.speedKph != null) {
+      const deltaSeconds = (ping.recordedAt.getTime() - new Date(previousPing.recordedAt).getTime()) / 1000;
+
+      if (deltaSeconds >= 1 && deltaSeconds <= 30) {
+        const ratePerSec = (speedKph - previousPing.speedKph) / deltaSeconds;
+
+        if (ratePerSec <= -HARSH_BRAKING_KPH_PER_SEC) {
+          await Alert.create({
+            companyId: vehicle.companyId,
+            vehicleId,
+            type: "harsh_braking",
+            message: `Harsh braking detected: dropped from ${previousPing.speedKph} km/h to ${speedKph} km/h in ${deltaSeconds.toFixed(0)}s.`,
+          });
+        } else if (ratePerSec >= HARSH_ACCELERATION_KPH_PER_SEC) {
+          await Alert.create({
+            companyId: vehicle.companyId,
+            vehicleId,
+            type: "harsh_acceleration",
+            message: `Harsh acceleration detected: rose from ${previousPing.speedKph} km/h to ${speedKph} km/h in ${deltaSeconds.toFixed(0)}s.`,
+          });
+        }
+      }
     }
 
     // 5. Route deviation detection — only runs if this vehicle has an assigned route
