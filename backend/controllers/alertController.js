@@ -12,6 +12,9 @@ const DRIVER_VISIBLE_TYPES = [
   "geofence_exit",
   "ai_pattern_anomaly",
   "sos",
+  "harsh_braking",
+  "harsh_acceleration",
+  "excessive_idling",
 ];
 
 export async function listAlerts(req, res) {

@@ -4,12 +4,6 @@ import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import { AuthProvider } from "./context/AuthContext";
 import "./globals.css";
 
-const jakartaSansDisplay = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["500", "600", "700"],
-});
-
 const jakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-body",
@@ -33,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${jakartaSansDisplay.variable} ${jakartaSans.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className={`${jakartaSans.variable} ${jetbrainsMono.variable}`}>
       <body>
         <AuthProvider>{children}</AuthProvider>
       </body>
