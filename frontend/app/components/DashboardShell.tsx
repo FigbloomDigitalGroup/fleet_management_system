@@ -133,7 +133,7 @@ export default function DashboardShell({
   }, [alertsHref]);
 
   return (
-    <div className="h-screen overflow-hidden bg-blue-50 flex">
+    <div className="h-screen overflow-hidden bg-white flex">
       <AlertToastStack toasts={toasts} onDismiss={dismissToast} />
       <SessionExpiredModal />
       {(user?.role === "ADMIN" || user?.role === "COMPANY_OWNER") && <AgentChatWidget />}
@@ -152,6 +152,8 @@ export default function DashboardShell({
           {navItems.map((item) => {
             const active = pathname === item.href;
             const Icon = item.icon;
+            const isAgent = item.label === "AI Agent";
+            const isAlerts = item.label === "Alerts";
             return (
               <Link
                 key={item.href}
@@ -161,8 +163,20 @@ export default function DashboardShell({
                   : "text-white hover:bg-blue-900"
                   }`}
               >
-                <Icon size={14} />
-                {item.label}
+                {isAgent ? (
+                  <span className="relative inline-flex h-4 w-4 shrink-0 items-center justify-center">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400 opacity-50" />
+                    <Icon size={14} className="relative" />
+                  </span>
+                ) : (
+                  <Icon size={14} className="shrink-0" />
+                )}
+                <span className="flex-1">{item.label}</span>
+                {isAlerts && alertCount > 0 && (
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-medium text-white">
+                    {alertCount > 99 ? "99+" : alertCount}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -173,8 +187,12 @@ export default function DashboardShell({
       {/* MAIN CONTENT */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* FLOATING HEADER — holds the current page's title, pinned above the scroll */}
-        <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between bg-white px-6 py-4">
-          <div>{companyName && <p className="text-xs font-medium text-gray-400">{companyName}</p>}</div>
+        <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between bg-blue-50 px-6 py-4">
+          <div>
+            {companyName && (
+              <span className="rounded-full bg-teal-600 px-3 py-1 text-xs font-medium text-white">{companyName}</span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             {alertsHref && (
               <Link

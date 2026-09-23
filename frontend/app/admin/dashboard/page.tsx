@@ -8,10 +8,10 @@ import StatCard from "../../components/StatCard";
 import CircleStat from "../../components/CircleStat";
 import BarChartCard from "../../components/BarChartCard";
 import DonutChartCard from "../../components/DonutChartCard";
+import LineChartCard from "../../components/LineChartCard";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import { usePageHeader } from "../../components/DashboardShell";
-import { VehicleRecord, DriverRecord, TripRecord, AlertRecord } from "../../types/auth";
-import StatusDetailsCard from "@/app/components/StatusDetailsCard";
+import { VehicleRecord, DriverRecord, TripRecord, AlertRecord, AgentSummary } from "../../types/auth";
 
 //const FleetMap = dynamic<{ compact?: boolean }>(() => import("../../components/FleetMap"), { ssr: false });
 
@@ -22,6 +22,7 @@ export default function AdminDashboard() {
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
   const [trips, setTrips] = useState<TripRecord[]>([]);
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
+  const [agentSummary, setAgentSummary] = useState<AgentSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   const vehicleCounts = {
@@ -67,6 +68,12 @@ export default function AdminDashboard() {
       }
     }
     loadAll();
+  }, []);
+
+  useEffect(() => {
+    apiRequest<AgentSummary>("/api/agent/summary")
+      .then(setAgentSummary)
+      .catch(() => {});
   }, []);
 
   if (loading) return <FullPageLoading label="Loading dashboard" />;
@@ -119,14 +126,23 @@ export default function AdminDashboard() {
       ]}
     />
   </div>
-<StatusDetailsCard
-  items={[
-    { label: "Active", value: vehicleCounts.active, color: "#2dd4bf", description: "Currently moving, sending live GPS updates" },
-    { label: "Idle", value: vehicleCounts.idle, color: "#fb923c", description: "Engine on or stationary, not actively driving" },
-    { label: "Offline", value: vehicleCounts.offline, color: "#9ca3af", description: "No signal received recently from this vehicle" },
-    { label: "Maintenance", value: vehicleCounts.maintenance, color: "#f87171", description: "Taken out of service for repair or servicing" },
-  ]}
-/>
+<div className="flex-1">
+  <LineChartCard
+    title="Agent activity — last 7 days"
+    description="Vehicle checks and anomalies found for your fleet, per day"
+    data={
+      agentSummary?.dailyActivity.map((d) => ({
+        name: d.label,
+        vehicleChecks: d.vehicleChecks,
+        anomalies: d.anomalies,
+      })) ?? []
+    }
+    lines={[
+      { dataKey: "vehicleChecks", label: "Vehicle checks", color: "#2dd4bf" },
+      { dataKey: "anomalies", label: "Anomalies", color: "#f97316" },
+    ]}
+  />
+</div>
 </div>
 
       {/* Recent alerts */}

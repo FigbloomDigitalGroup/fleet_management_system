@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { redirectPathForRole } from "../lib/roleRedirect";
 import { FaCog } from "react-icons/fa";
 import BackgroundSlideshow from "../components/BackgroundSlideshow";
+import RobotCheckbox from "../components/RobotCheckbox";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -16,6 +17,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isHuman, setIsHuman] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -84,7 +86,7 @@ export default function LoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
+                placeholder="Your email"
                 className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
               />
             </div>
@@ -106,7 +108,7 @@ export default function LoginPage() {
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Your password"
                   className="w-full px-3.5 py-2.5 pr-16 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                 />
                 <button
@@ -119,6 +121,8 @@ export default function LoginPage() {
               </div>
             </div>
 
+            <RobotCheckbox checked={isHuman} onChange={setIsHuman} />
+
             {error && (
               <div className="text-sm px-3.5 py-2.5 rounded-md bg-red-50 text-red-600 border border-red-200" role="alert">
                 {error}
@@ -127,7 +131,7 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isHuman}
               className="w-full py-2.5 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
             >
               {isSubmitting ? "Signing in…" : "Sign in"}

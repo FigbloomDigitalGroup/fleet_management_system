@@ -3,6 +3,7 @@
 import { useState, FormEvent } from "react";
 import { FaCog } from "react-icons/fa";
 import BackgroundSlideshow from "../components/BackgroundSlideshow";
+import RobotCheckbox from "../components/RobotCheckbox";
 import { apiRequest } from "../lib/api";
 
 export default function ForgotPasswordPage() {
@@ -10,6 +11,7 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isHuman, setIsHuman] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -86,10 +88,12 @@ export default function ForgotPasswordPage() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@company.com"
+                  placeholder="Your email"
                   className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                 />
               </div>
+
+              <RobotCheckbox checked={isHuman} onChange={setIsHuman} />
 
               {error && (
                 <div className="text-sm px-3.5 py-2.5 rounded-md bg-red-50 text-red-600 border border-red-200" role="alert">
@@ -99,7 +103,7 @@ export default function ForgotPasswordPage() {
 
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !isHuman}
                 className="w-full py-2.5 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
               >
                 {isSubmitting ? "Sending…" : "Send reset link"}
