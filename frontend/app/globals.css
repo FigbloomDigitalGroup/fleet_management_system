@@ -36,6 +36,12 @@ textarea::placeholder {
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 10px rgba(15, 23, 42, 0.06);
 }
 
+/* Only the plain white cards pick up the site-wide tint — cards with an
+   intentional accent color (e.g. StatCard's `background` prop) keep it. */
+.rounded-2xl.ring-black\/5.bg-white {
+    background-color: var(--color-blue-50);
+}
+
 /*
  * Tighter spacing rhythm across the dashboard shell (scoped to `main`, the
  * DashboardShell content area — landing/login/register keep their own

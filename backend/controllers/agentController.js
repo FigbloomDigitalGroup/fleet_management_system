@@ -27,13 +27,18 @@ export async function getAgentSummary(req, res) {
     const vehicles = await Vehicle.find({ companyId }).select("_id");
     const vehicleIds = new Set(vehicles.map((v) => String(v._id)));
 
-    const recentScans = await AgentScanLog.find().sort({ runAt: -1 }).limit(200);
-    const lastScan = recentScans[0] || null;
+    // A 7-day window, not just "the last 200 scans" — that only covered
+    // roughly 2 days at the agent's 15-min cadence, too short to chart a
+    // week of activity.
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const recentScans = await AgentScanLog.find({ runAt: { $gte: sevenDaysAgo } }).sort({ runAt: -1 });
+    const lastScan = recentScans[0] || (await AgentScanLog.findOne().sort({ runAt: -1 }));
 
     let scansCoveringFleet = 0;
     let vehicleChecksLogged = 0;
     let anomaliesFound = 0;
     const recentFindings = [];
+    const dailyBuckets = new Map(); // "YYYY-MM-DD" -> { vehicleChecks, anomalies }
 
     for (const scan of recentScans) {
       const relevant = scan.details.filter((d) => vehicleIds.has(String(d.vehicleId)));
@@ -41,8 +46,16 @@ export async function getAgentSummary(req, res) {
 
       scansCoveringFleet += 1;
       vehicleChecksLogged += relevant.length;
+
+      const dayKey = scan.runAt.toISOString().slice(0, 10);
+      const bucket = dailyBuckets.get(dayKey) || { vehicleChecks: 0, anomalies: 0 };
+      bucket.vehicleChecks += relevant.length;
+
       relevant.forEach((d) => {
-        if (d.anomaly) anomaliesFound += 1;
+        if (d.anomaly) {
+          anomaliesFound += 1;
+          bucket.anomalies += 1;
+        }
         recentFindings.push({
           runAt: scan.runAt,
           vehicleId: d.vehicleId,
@@ -51,9 +64,27 @@ export async function getAgentSummary(req, res) {
           reason: d.reason,
         });
       });
+
+      dailyBuckets.set(dayKey, bucket);
     }
 
     recentFindings.sort((a, b) => new Date(b.runAt).getTime() - new Date(a.runAt).getTime());
+
+    // Last 7 calendar days, oldest to newest, zero-filled so the chart shows
+    // a continuous week even on days with no matching activity.
+    const dailyActivity = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dayKey = d.toISOString().slice(0, 10);
+      const bucket = dailyBuckets.get(dayKey) || { vehicleChecks: 0, anomalies: 0 };
+      dailyActivity.push({
+        date: dayKey,
+        label: d.toLocaleDateString(undefined, { weekday: "short" }),
+        vehicleChecks: bucket.vehicleChecks,
+        anomalies: bucket.anomalies,
+      });
+    }
 
     return res.json({
       lastScanAt: lastScan?.runAt ?? null,
@@ -62,6 +93,7 @@ export async function getAgentSummary(req, res) {
       vehicleChecksLogged,
       anomaliesFound,
       recentFindings: recentFindings.slice(0, 10),
+      dailyActivity,
     });
   } catch (err) {
     console.error(err);

@@ -4,7 +4,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GoogleMap, OverlayView, Circle, useJsApiLoader } from "@react-google-maps/api";
 import { IoCarSportSharp } from "react-icons/io5";
-import { FaFlagCheckered } from "react-icons/fa";
+import { ImLocation2 } from "react-icons/im";
 import { apiRequest } from "../lib/api";
 import { usePulseColor } from "../lib/usePulseColor";
 import { isOutsideGeofences } from "../lib/geofence";
@@ -114,7 +114,7 @@ function StartPointMarker({ variant }: { variant: "saved" | "preview" }) {
         className="w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow"
         style={{ background: color }}
       >
-        <FaFlagCheckered size={12} color="white" />
+        <ImLocation2 size={12} color="white" />
       </div>
     </div>
   );

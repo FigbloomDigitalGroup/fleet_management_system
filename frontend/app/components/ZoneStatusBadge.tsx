@@ -1,3 +1,4 @@
+import { FaLocationPinLock } from "react-icons/fa6";
 import { GeofenceRecord } from "../types/auth";
 import { isOutsideGeofences } from "../lib/geofence";
 
@@ -6,7 +7,7 @@ interface LastLocation {
   longitude: number;
 }
 
-const badgeClass = "text-xs px-2 py-1 rounded-full border font-medium whitespace-nowrap";
+const badgeClass = "inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border font-medium whitespace-nowrap";
 
 // Shows whether a vehicle's last known position falls inside one of the
 // company's geofence zones ("In zone") or not ("Out of zone") — used
@@ -30,7 +31,10 @@ export default function ZoneStatusBadge({
   const outside = isOutsideGeofences(lastLocation.latitude, lastLocation.longitude, geofences);
 
   return outside ? (
-    <span className={`${badgeClass} bg-red-50 text-red-600 border-red-200`}>Out of zone</span>
+    <span className={`${badgeClass} bg-red-50 text-red-600 border-red-200`}>
+      <FaLocationPinLock size={10} />
+      Out of zone
+    </span>
   ) : (
     <span className={`${badgeClass} bg-teal-50 text-teal-600 border-teal-200`}>In zone</span>
   );
