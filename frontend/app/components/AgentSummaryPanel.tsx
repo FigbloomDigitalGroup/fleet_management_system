@@ -5,6 +5,7 @@ import { FiCpu } from "react-icons/fi";
 import { apiRequest } from "../lib/api";
 import { usePageHeader } from "./DashboardShell";
 import StatCard from "./StatCard";
+import LineChartCard from "./LineChartCard";
 import FullPageLoading from "./FullPageLoading";
 import { AgentSummary } from "../types/auth";
 
@@ -90,6 +91,23 @@ export default function AgentSummaryPanel() {
               : "It runs automatically every 15 minutes and will check in here once it does."}
           </p>
         </div>
+      </div>
+
+      {/* Activity trend */}
+      <div className="mb-4">
+        <LineChartCard
+          title="Agent activity — last 7 days"
+          description="Vehicle checks and anomalies found for your fleet, per day"
+          data={summary.dailyActivity.map((d) => ({
+            name: d.label,
+            vehicleChecks: d.vehicleChecks,
+            anomalies: d.anomalies,
+          }))}
+          lines={[
+            { dataKey: "vehicleChecks", label: "Vehicle checks", color: "#2dd4bf" },
+            { dataKey: "anomalies", label: "Anomalies", color: "#f97316" },
+          ]}
+        />
       </div>
 
       {/* Recent findings */}

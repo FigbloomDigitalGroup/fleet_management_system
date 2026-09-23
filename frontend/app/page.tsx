@@ -8,6 +8,9 @@ import {
   FaMapMarkerAlt,
   FaBell,
   FaChartLine,
+  FaMapMarkedAlt,
+  FaTachometerAlt,
+  FaShieldAlt,
 } from "react-icons/fa";
 import { useState } from "react";
 
@@ -66,9 +69,14 @@ export default function LandingPage() {
             <FaCog aria-hidden="true" />
             FIGBLOOM FLEET
           </span>
-          <a href="/login" className="text-sm text-white hover:text-gray-200 bg-orange-500 hover:bg-orange-600 px-5 py-2.5 font-medium rounded-full">
-            Sign in
-          </a>
+          <div className="flex items-center gap-3">
+            <a href="/login" className="text-sm text-gray-700 hover:text-gray-900 px-5 py-2.5 font-medium">
+              Sign in
+            </a>
+            <a href="/register" className="text-sm text-white hover:text-gray-200 bg-orange-500 hover:bg-orange-600 px-5 py-2.5 font-medium rounded-full">
+              Get started
+            </a>
+          </div>
         </nav>
       </header>
 
@@ -126,7 +134,7 @@ export default function LandingPage() {
 
       {/* FEATURE ICONS — now react-icons instead of image files */}
       <section className="max-w-6xl mx-auto px-6 py-20">
-        <div className="grid sm:grid-cols-3 gap-8">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
           <div className="text-center">
             <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-blue-50 text-blue-950 flex items-center justify-center">
               <FaMapMarkerAlt size={22} />
@@ -147,6 +155,27 @@ export default function LandingPage() {
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Fleet analytics</h3>
             <p className="text-sm text-gray-500">Track trips, mileage, and driver activity with clear reports.</p>
+          </div>
+          <div className="text-center">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
+              <FaMapMarkedAlt size={22} />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Geofencing</h3>
+            <p className="text-sm text-gray-500">Draw zones and get notified the moment a vehicle enters or leaves one.</p>
+          </div>
+          <div className="text-center">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-yellow-50 text-yellow-600 flex items-center justify-center">
+              <FaTachometerAlt size={22} />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Driver behavior</h3>
+            <p className="text-sm text-gray-500">Catch harsh braking, harsh acceleration, and excessive idling automatically.</p>
+          </div>
+          <div className="text-center">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
+              <FaShieldAlt size={22} />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">SOS emergency alerts</h3>
+            <p className="text-sm text-gray-500">Drivers can send an emergency alert straight to your dashboard in one tap.</p>
           </div>
         </div>
       </section>
@@ -205,14 +234,37 @@ export default function LandingPage() {
             Your trips and your record, in your pocket.
           </h2>
           <p className="text-sm text-gray-600">
-            Soon, the FIGBLOOM FLEET mobile app will let you check in on your assigned vehicle, log
-            trips as you drive and send an SOS alert the moment something goes wrong. Built
-            for the road, not a desk.
+            The FIGBLOOM FLEET driver app lets you check in on your assigned vehicle, review
+            your trip history, and send an SOS alert the moment something goes wrong — straight
+            to your fleet admin's dashboard. Built for the road, not a desk.
           </p>
         </div>
 
         <div className="w-full aspect-video bg-gray-100 overflow-hidden">
           <img src="/noelsch-audi-a3-2095801_1920.jpg" alt="Driver mobile app" className="w-full h-full object-cover" />
+        </div>
+      </section>
+
+      {/* TRIP REPLAY */}
+      <section className="bg-gray-900 py-20">
+        <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+          <div className="order-2 md:order-1 w-full aspect-video bg-gray-100 overflow-hidden">
+            <img src="/dariuszsankowski-navigation-1048294_1920.jpg" alt="Trip replay route map" className="w-full h-full object-cover" />
+          </div>
+
+          <div className="order-1 md:order-2 text-white">
+            <span className="text-sm uppercase tracking-wide text-blue-200 font-bold mb-3 block">
+              Trip replay
+            </span>
+            <h2 className="text-3xl font-bold mb-4 leading-tight">
+              Every route, saved and ready to review.
+            </h2>
+            <p className="text-sm text-blue-50/90">
+              Play back any past trip on a map, point by point, with speed and time at every
+              step. See a snapshot of a vehicle's recent routes right from its own page, or
+              open the full replay to scrub through exactly what happened.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -259,6 +311,7 @@ export default function LandingPage() {
               <li>Live GPS tracking</li>
               <li>Trip history & reports</li>
               <li>Speeding & idle alerts</li>
+              <li>Geofence zones & entry/exit alerts</li>
               <li>Email support</li>
             </ul>
 
@@ -283,6 +336,8 @@ export default function LandingPage() {
               <li>Everything in Basic</li>
               <li>Route deviation alerts</li>
               <li>Fuel anomaly detection</li>
+              <li>Driver behavior alerts (harsh braking, idling)</li>
+              <li>AI fleet assistant chat</li>
               <li>Priority support</li>
             </ul>
 
@@ -337,6 +392,7 @@ export default function LandingPage() {
               <li>• Learns each vehicle's normal driving pattern over time</li>
               <li>• Flags anomalies fixed speed limits alone can't catch</li>
               <li>• Runs continuously in the background, no setup required</li>
+              <li>• Ask it questions about your fleet in plain English, anytime</li>
             </ul>
           </div>
 
@@ -420,7 +476,9 @@ export default function LandingPage() {
                 <ul className="space-y-2 text-sm text-gray-500">
                   <li><a href="#" className="hover:text-gray-800">Live tracking</a></li>
                   <li><a href="#" className="hover:text-gray-800">Alerts</a></li>
+                  <li><a href="#" className="hover:text-gray-800">Geofencing</a></li>
                   <li><a href="#" className="hover:text-gray-800">Analytics</a></li>
+                  <li><a href="#" className="hover:text-gray-800">AI assistant</a></li>
                   <li><a href="/register" className="hover:text-gray-800">Get started</a></li>
                 </ul>
               </div>

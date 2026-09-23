@@ -114,6 +114,13 @@ export interface AgentFinding {
   reason: string;
 }
 
+export interface AgentDailyActivity {
+  date: string;
+  label: string;
+  vehicleChecks: number;
+  anomalies: number;
+}
+
 export interface AgentSummary {
   lastScanAt: string | null;
   lastScanStatus: "success" | "failed" | null;
@@ -121,5 +128,6 @@ export interface AgentSummary {
   vehicleChecksLogged: number;
   anomaliesFound: number;
   recentFindings: AgentFinding[];
+  dailyActivity: AgentDailyActivity[];
 }
 
