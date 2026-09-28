@@ -1,6 +1,6 @@
 "use client";
 
-import { FaFlagCheckered } from "react-icons/fa";
+import { MdDepartureBoard } from "react-icons/md";
 import { FiX } from "react-icons/fi";
 
 interface LatLng {
@@ -35,7 +35,7 @@ export default function StartPointPanel({
         onClick={onReopen}
         className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-blue-950 px-4 py-2 text-xs font-medium text-white shadow-lg transition-colors hover:bg-blue-900"
       >
-        <FaFlagCheckered size={12} />
+        <MdDepartureBoard size={14} />
         Set driver starting point
       </button>
     );

@@ -263,6 +263,51 @@ if (vehicle.driverId && !isMoving) {
   }
 }
 
+// Closes out trips whose vehicle has simply gone quiet — a real tracker (or
+// the dev-ping live simulator) often stops sending pings entirely once a
+// vehicle parks, rather than continuing to report speed=0. The trip-closing
+// logic above only runs reactively when a new ping arrives, so without this
+// sweep those trips would stay open forever and never show up anywhere that
+// only lists completed trips (e.g. VehicleTripsMap). Runs on a schedule from
+// Index.js, independent of any single vehicle's ping stream.
+export async function closeStaleTrips() {
+  const openTrips = await Trip.find({ endTime: { $exists: false } });
+  let closedCount = 0;
+
+  for (const trip of openTrips) {
+    const lastPing = await LocationPing.findOne({ vehicleId: trip.vehicleId }).sort({ recordedAt: -1 });
+    if (!lastPing) continue;
+
+    const minutesSinceLastPing = (Date.now() - new Date(lastPing.recordedAt).getTime()) / 60000;
+    if (minutesSinceLastPing < TRIP_IDLE_TIMEOUT_MINUTES) continue;
+
+    const tripPings = await LocationPing.find({
+      vehicleId: trip.vehicleId,
+      recordedAt: { $gte: trip.startTime },
+    }).sort({ recordedAt: 1 });
+
+    let totalDistance = 0;
+    for (let i = 1; i < tripPings.length; i++) {
+      totalDistance += distanceKm(
+        tripPings[i - 1].latitude,
+        tripPings[i - 1].longitude,
+        tripPings[i].latitude,
+        tripPings[i].longitude
+      );
+    }
+
+    const finalPing = tripPings[tripPings.length - 1] || lastPing;
+    trip.endTime = finalPing.recordedAt;
+    trip.endLat = finalPing.latitude;
+    trip.endLng = finalPing.longitude;
+    trip.distanceKm = Math.round(totalDistance * 10) / 10;
+    await trip.save();
+    closedCount += 1;
+  }
+
+  return closedCount;
+}
+
 export async function getLiveLocations(req, res) {
   try {
     const vehicles = await Vehicle.find(tenantScope(req)).select("plateNumber status");

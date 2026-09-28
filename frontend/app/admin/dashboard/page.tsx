@@ -46,7 +46,7 @@ export default function AdminDashboard() {
     [vehicleCounts.total, drivers.length, vehicleCounts.active, unresolvedAlertCount]
   );
 
-  usePageHeader("Fleet overview", "Real-time visibility across your entire fleet.", statsNode);
+  usePageHeader("Fleet Overview", "Real-time visibility across your entire fleet.", statsNode);
 
   useEffect(() => {
     async function loadAll() {
@@ -162,9 +162,9 @@ export default function AdminDashboard() {
               <tbody>
                 {alerts.slice(0, 5).map((a) => (
                   <tr key={a._id} className="border-t border-gray-100 first:border-t-0">
-                    <td className="px-5 py-3 font-medium text-gray-900">{a.vehicleId?.plateNumber || "—"}</td>
+                    <td className="px-5 py-3 text-xs font-bold text-gray-900">{a.vehicleId?.plateNumber || "—"}</td>
                     <td className="px-5 py-3 text-gray-600">{a.type.replace(/_/g, " ")}</td>
-                    <td className="px-5 py-3 text-gray-500">{new Date(a.createdAt).toLocaleString()}</td>
+                    <td className="px-5 py-3 text-xs text-gray-500">{new Date(a.createdAt).toLocaleString()}</td>
                     <td className="px-5 py-3">
                       <span
                         className={`text-xs px-2 py-1 rounded-full border ${a.resolved
@@ -200,9 +200,9 @@ export default function AdminDashboard() {
               <tbody>
                 {trips.slice(0, 5).map((t) => (
                   <tr key={t._id} className="border-t border-gray-100 first:border-t-0">
-                    <td className="px-5 py-3 font-medium text-gray-900">{t.vehicleId?.plateNumber || "—"}</td>
+                    <td className="px-5 py-3 text-xs font-bold text-gray-900">{t.vehicleId?.plateNumber || "—"}</td>
                     <td className="px-5 py-3 text-gray-600">{t.driverId?.fullName || "Unassigned"}</td>
-                    <td className="px-5 py-3 text-gray-500">{new Date(t.startTime).toLocaleString()}</td>
+                    <td className="px-5 py-3 text-xs text-gray-500">{new Date(t.startTime).toLocaleString()}</td>
                     <td className="px-5 py-3 text-gray-600">
                       {t.distanceKm ? `${t.distanceKm.toFixed(1)} km` : "—"}
                     </td>

@@ -140,6 +140,41 @@ export async function updateStartPoint(req, res) {
   }
 }
 
+// COMPANY_OWNER — self-serve upgrade/downgrade between Trial, Basic and Pro.
+// Enterprise is sales-assisted (see the landing page's "Contact sales"), so
+// it isn't offered through this endpoint. Real payment processing isn't
+// wired up yet — this just records the chosen plan and payment method.
+const SELF_SERVE_PLANS = ["trial", "basic", "pro"];
+const PAYMENT_METHODS = ["mpesa", "paystack"];
+
+export async function updateMyPlan(req, res) {
+  try {
+    if (!req.user.companyId) {
+      return res.status(400).json({ error: "This account is not linked to a company" });
+    }
+
+    const { subscriptionPlan, paymentMethod } = req.body;
+    if (!SELF_SERVE_PLANS.includes(subscriptionPlan)) {
+      return res.status(400).json({ error: `subscriptionPlan must be one of: ${SELF_SERVE_PLANS.join(", ")}` });
+    }
+    if (subscriptionPlan !== "trial" && !PAYMENT_METHODS.includes(paymentMethod)) {
+      return res.status(400).json({ error: `paymentMethod must be one of: ${PAYMENT_METHODS.join(", ")}` });
+    }
+
+    const company = await Company.findByIdAndUpdate(
+      req.user.companyId,
+      { subscriptionPlan, paymentMethod: subscriptionPlan === "trial" ? null : paymentMethod },
+      { new: true }
+    );
+    if (!company) return res.status(404).json({ error: "Company not found" });
+
+    return res.json(company);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to update plan" });
+  }
+}
+
 
 
 

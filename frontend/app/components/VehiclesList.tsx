@@ -133,7 +133,7 @@ export default function VehiclesList({
                     <td className="px-5 py-3">
                       <Link
                         href={`${basePath}/${v._id}`}
-                        className="inline-block w-28 cursor-pointer rounded-md bg-blue-950 px-3 py-1.5 text-center text-[12px] font-medium text-white"
+                        className="inline-block w-28 cursor-pointer rounded-md bg-blue-950 px-3 py-1.5 text-center text-[11px] font-bold text-white"
                       >
                         {v.plateNumber}
                       </Link>

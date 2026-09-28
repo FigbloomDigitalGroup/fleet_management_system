@@ -4,7 +4,7 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { redirectPathForRole } from "../lib/roleRedirect";
-import { FaCog } from "react-icons/fa";
+import { FaCog, FaGooglePlay } from "react-icons/fa";
 import BackgroundSlideshow from "../components/BackgroundSlideshow";
 import RobotCheckbox from "../components/RobotCheckbox";
 
@@ -61,6 +61,20 @@ export default function RegisterPage() {
                             Register your vehicle company to get started. Admins and drivers
                             are added by whoever manages their account, then sign in directly.
                         </p>
+
+                        <div className="mt-5">
+                            <p className="text-xs text-gray-300 mb-2">Drivers — get the app</p>
+                            <a
+                                href="#"
+                                className="inline-flex items-center gap-3 bg-black hover:bg-gray-900 text-white px-4 py-2 rounded-xl transition-colors"
+                            >
+                                <FaGooglePlay size={22} />
+                                <span className="text-left">
+                                    <span className="block text-[9px] uppercase tracking-wide text-gray-300">Get it on</span>
+                                    <span className="block text-sm font-semibold leading-tight">Google Play</span>
+                                </span>
+                            </a>
+                        </div>
                     </div>
 
                     <p className="text-sm text-gray-200">
@@ -75,7 +89,7 @@ export default function RegisterPage() {
             {/* RIGHT — Form panel */}
             <div className="lg:w-1/2 flex items-center justify-center p-8">
                 <div className="w-full max-w-sm">
-                    <h2 className="text-5xl font-extrabold text-blue-950 mb-2">Create your account</h2>
+                    <h2 className="text-5xl font-extrabold text-teal-950 mb-2">Create your account</h2>
                     <p className="text-sm text-gray-500 mb-8">Register your vehicle company.</p>
 
                     <form onSubmit={handleSubmit} className="space-y-5">

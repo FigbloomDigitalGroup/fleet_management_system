@@ -19,7 +19,7 @@ export default function CompanyLiveMapPage() {
 
   return (
     <div>
-      <FleetMap savedStartPoint={company?.dailyStartPoint ?? null} />
+      <FleetMap basePath="/company/vehicles" savedStartPoint={company?.dailyStartPoint ?? null} />
     </div>
   );
 }

@@ -97,7 +97,7 @@ export default function CompanyDashboard() {
     [vehicleCounts.total, drivers.length, admins.length, unresolvedAlertCount]
   );
 
-  usePageHeader("Dashboard", "Everything your fleet needs, in one place.", statsNode);
+  usePageHeader("Fleet Overview", "Everything your fleet needs, in one place.", statsNode);
 
   useEffect(() => {
     async function loadAll() {
@@ -224,11 +224,11 @@ export default function CompanyDashboard() {
               <tbody>
                 {alerts.slice(0, 5).map((a) => (
                   <tr key={a._id} className="border-t border-gray-100 first:border-t-0">
-                    <td className="px-5 py-3 font-medium text-gray-900">
+                    <td className="px-5 py-3 text-xs font-bold text-gray-900">
                       {a.vehicleId?.plateNumber || "—"}
                     </td>
                     <td className="px-5 py-3 text-gray-600">{a.type.replace(/_/g, " ")}</td>
-                    <td className="px-5 py-3 text-gray-500">{new Date(a.createdAt).toLocaleString()}</td>
+                    <td className="px-5 py-3 text-xs text-gray-500">{new Date(a.createdAt).toLocaleString()}</td>
                     <td className="px-5 py-3">
                       <span
                         className={`text-xs px-2 py-1 rounded-full border ${a.resolved

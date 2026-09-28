@@ -60,6 +60,8 @@ export default function DashboardShell({
   const { user, logout } = useAuth();
   const alertsHref = navItems.find((item) => item.label === "Alerts")?.href;
   const activeNavLabel = navItems.find((item) => item.href === pathname)?.label;
+  const isOverviewPage =
+    pathname === "/admin/dashboard" || pathname === "/company/dashboard" || pathname === "/platform/dashboard";
   const [header, setHeader] = useState<PageHeaderValue | null>(null);
   const headerContextValue = useMemo(() => ({ header, setHeader }), [header]);
   const bannerTitle = header?.title ?? activeNavLabel ?? title;
@@ -139,7 +141,7 @@ export default function DashboardShell({
       {(user?.role === "ADMIN" || user?.role === "COMPANY_OWNER") && <AgentChatWidget />}
 
       {/* SIDEBAR */}
-      <aside className="h-screen w-48 shrink-0 overflow-y-auto bg-blue-950 flex flex-col text-white">
+      <aside className="h-screen w-48 shrink-0 overflow-y-auto bg-teal-950 flex flex-col text-white">
         <div className="px-4 py-4">
           <span className="flex items-center gap-2 text-sm font-bold text-white">
             <FaCog aria-hidden="true" />
@@ -159,8 +161,8 @@ export default function DashboardShell({
                 key={item.href}
                 href={item.href}
                 className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs font-medium transition-colors ${active
-                  ? "bg-blue-900 text-white"
-                  : "text-white hover:bg-blue-900"
+                  ? "bg-teal-900 text-white"
+                  : "text-white hover:bg-teal-900"
                   }`}
               >
                 {isAgent ? (
@@ -230,6 +232,13 @@ export default function DashboardShell({
                   <span key={i} className={`h-2 w-2 bg-white ${i % 3 === 0 ? "rounded-full" : "rotate-45"}`} />
                 ))}
               </div>
+              {isOverviewPage && (
+                <FaCog
+                  className="spin-slow pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 text-white/20"
+                  size={72}
+                  aria-hidden="true"
+                />
+              )}
               <div className="relative max-w-md">
                 <h2 className="text-xl font-bold text-white">{bannerTitle}</h2>
                 {bannerSubtitle && <p className="mt-1 text-sm text-white/80">{bannerSubtitle}</p>}

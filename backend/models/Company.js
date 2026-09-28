@@ -10,6 +10,9 @@ const companySchema = new mongoose.Schema(
       default: "pending",
     },
     subscriptionPlan: { type: String, default: "trial" },
+    // Selected checkout method — real charging isn't wired up yet, this just
+    // records what the company picked during the upgrade flow.
+    paymentMethod: { type: String, enum: ["mpesa", "paystack", null], default: null },
     // Where drivers should start their day — must fall inside one of the
     // company's geofence zones (enforced in companyController.updateStartPoint).
     dailyStartPoint: {

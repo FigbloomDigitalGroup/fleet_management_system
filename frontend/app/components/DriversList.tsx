@@ -284,7 +284,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                             ))}
                           </select>
                         ) : (
-                          <span className="text-blue-950">
+                          <span className="text-xs font-bold text-blue-950">
                             {assigned ? assigned.plateNumber : "No vehicle"}
                           </span>
                         )}

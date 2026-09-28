@@ -46,7 +46,7 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
           ) : (
             trips.map((t) => (
               <tr key={t._id} className="border-t border-gray-100">
-                <td className="px-5 py-3 font-medium text-teal-600 hover:underline">
+                <td className="px-5 py-3 text-xs font-bold text-teal-600 hover:underline">
                   <Link href={`${basePath}/${t._id}`}>{t.vehicleId?.plateNumber || "View trip"}</Link>
                 </td>
                 <td className="px-5 py-3 text-gray-600">{t.driverId?.fullName || "Unassigned"}</td>

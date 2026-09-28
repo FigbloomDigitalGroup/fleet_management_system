@@ -11,6 +11,7 @@ import {
   FaMapMarkedAlt,
   FaTachometerAlt,
   FaShieldAlt,
+  FaGooglePlay,
 } from "react-icons/fa";
 import { useState } from "react";
 
@@ -65,7 +66,7 @@ export default function LandingPage() {
 
       <header className="sticky top-0 z-50 bg-white">
         <nav className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-          <span className="flex items-center gap-2 text-xl font-bold text-blue-950">
+          <span className="flex items-center gap-2 text-xl font-bold text-teal-950">
             <FaCog aria-hidden="true" />
             FIGBLOOM FLEET
           </span>
@@ -106,7 +107,7 @@ export default function LandingPage() {
 
               {/* Right: 3-step tracking process, animated in */}
               <div className="bg-none p-6">
-                <span className="text-xs uppercase tracking-wide text-blue-200 font-bold mb-4 block">
+                <span className="text-xs uppercase tracking-wide text-teal-200 font-bold mb-4 block">
                   How it works
                 </span>
                 <div className="space-y-5">
@@ -136,7 +137,7 @@ export default function LandingPage() {
       <section className="max-w-6xl mx-auto px-6 py-20">
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
           <div className="text-center">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-blue-50 text-blue-950 flex items-center justify-center">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-teal-50 text-teal-950 flex items-center justify-center">
               <FaMapMarkerAlt size={22} />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Live tracking</h3>
@@ -182,7 +183,7 @@ export default function LandingPage() {
 
       <section className="max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center">
         <div>
-          <span className="text-sm uppercase tracking-wide text-blue-950 font-bold mb-3 block">
+          <span className="text-sm uppercase tracking-wide text-teal-950 font-bold mb-3 block">
             We are a company
           </span>
           <h2 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
@@ -203,20 +204,20 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="bg-gray-900 py-20">
+      <section className="bg-gradient-to-br from-teal-950 via-teal-900 to-cyan-900 py-20">
         <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
           <div className="order-2 md:order-1 w-full aspect-video bg-gray-100 overflow-hidden">
             <img src="/as_photography-digital-marketing-1725340_1920.jpg" alt="Fleet admin dashboard" className="w-full h-full object-cover" />
           </div>
 
           <div className="order-1 md:order-2 text-white">
-            <span className="text-sm uppercase tracking-wide text-blue-200 font-bold mb-3 block">
+            <span className="text-sm uppercase tracking-wide text-teal-200 font-bold mb-3 block">
               I am a company admin
             </span>
             <h2 className="text-3xl font-bold mb-4 leading-tight">
               Run the fleet from one screen.
             </h2>
-            <p className="text-sm text-blue-50/90">
+            <p className="text-sm text-teal-50/90">
               Add vehicles, assign drivers and watch every trip unfold live on the map. When
               something needs your attention such as a vehicle idling too long or straying off
               route, you will know before it becomes a problem.
@@ -227,17 +228,23 @@ export default function LandingPage() {
 
       <section className="max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center">
         <div>
-          <span className="text-sm uppercase tracking-wide text-blue-950 font-bold mb-3 block">
+          <span className="text-sm uppercase tracking-wide text-teal-950 font-bold mb-3 block">
             I am a driver
           </span>
           <h2 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
             Your trips and your record, in your pocket.
           </h2>
-          <p className="text-sm text-gray-600">
-            The FIGBLOOM FLEET driver app lets you check in on your assigned vehicle, review
-            your trip history, and send an SOS alert the moment something goes wrong — straight
-            to your fleet admin's dashboard. Built for the road, not a desk.
+          <p className="text-sm text-gray-600 mb-4">
+            The FIGBLOOM FLEET driver app is built for the road, not a desk — everything a
+            driver needs, in one pocket-sized app.
           </p>
+          <ul className="text-sm text-gray-600 space-y-2">
+            <li>• One-tap SOS — sends an emergency alert straight to your fleet admin's dashboard</li>
+            <li>• See your assigned vehicle's status and zone at a glance</li>
+            <li>• Review your trip history anytime</li>
+            <li>• Get real-time alerts for your vehicle as they happen</li>
+            <li>• Reset your password right from the app if you ever get locked out</li>
+          </ul>
         </div>
 
         <div className="w-full aspect-video bg-gray-100 overflow-hidden">
@@ -245,21 +252,57 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* GET THE APP */}
+      <section className="bg-gradient-to-br from-teal-950 via-teal-900 to-cyan-900 py-20">
+        <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+          <div className="order-2 md:order-1 flex justify-center">
+            <img
+              src="/driver-app-phone.jpg"
+              alt="FIGBLOOM FLEET driver app on a phone"
+              className="w-full max-w-sm rounded-2xl shadow-2xl object-cover"
+            />
+          </div>
+
+          <div className="order-1 md:order-2 text-white">
+            <span className="text-sm uppercase tracking-wide text-teal-300 font-bold mb-3 block">
+              Driver app
+            </span>
+            <h2 className="text-3xl font-bold mb-4 leading-tight">
+              Take FIGBLOOM FLEET on the road.
+            </h2>
+            <p className="text-sm text-teal-50/90 mb-8">
+              Download the driver app to check in on your vehicle, review your trips, and send
+              an SOS alert in one tap — right from your pocket.
+            </p>
+            <a
+              href="#"
+              className="inline-flex items-center gap-3 bg-black hover:bg-gray-900 text-white px-5 py-3 rounded-xl transition-colors"
+            >
+              <FaGooglePlay size={28} />
+              <span className="text-left">
+                <span className="block text-[10px] uppercase tracking-wide text-gray-300">Get it on</span>
+                <span className="block text-lg font-semibold leading-tight">Google Play</span>
+              </span>
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* TRIP REPLAY */}
-      <section className="bg-gray-900 py-20">
+      <section className="bg-gradient-to-br from-teal-950 via-teal-900 to-cyan-900 py-20">
         <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
           <div className="order-2 md:order-1 w-full aspect-video bg-gray-100 overflow-hidden">
             <img src="/dariuszsankowski-navigation-1048294_1920.jpg" alt="Trip replay route map" className="w-full h-full object-cover" />
           </div>
 
           <div className="order-1 md:order-2 text-white">
-            <span className="text-sm uppercase tracking-wide text-blue-200 font-bold mb-3 block">
+            <span className="text-sm uppercase tracking-wide text-teal-200 font-bold mb-3 block">
               Trip replay
             </span>
             <h2 className="text-3xl font-bold mb-4 leading-tight">
               Every route, saved and ready to review.
             </h2>
-            <p className="text-sm text-blue-50/90">
+            <p className="text-sm text-teal-50/90">
               Play back any past trip on a map, point by point, with speed and time at every
               step. See a snapshot of a vehicle's recent routes right from its own page, or
               open the full replay to scrub through exactly what happened.
@@ -271,7 +314,7 @@ export default function LandingPage() {
       {/* PRICING */}
       <section className="max-w-6xl mx-auto px-6 py-20">
         <div className="text-center mb-12">
-          <span className="text-sm uppercase tracking-wide text-blue-950 font-bold mb-3 block">
+          <span className="text-sm uppercase tracking-wide text-teal-950 font-bold mb-3 block">
             Pricing
           </span>
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Plans that grow with your fleet</h2>
@@ -373,22 +416,22 @@ export default function LandingPage() {
       </section >
 
       {/* AI ASSISTANT */}
-      <section className="bg-gray-900 py-20">
+      <section className="bg-gradient-to-br from-teal-950 via-teal-900 to-cyan-900 py-20">
         <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
           <div className="text-white">
-            <span className="text-sm uppercase tracking-wide text-blue-200 font-bold mb-3 block">
+            <span className="text-sm uppercase tracking-wide text-teal-200 font-bold mb-3 block">
               AI-Powered Insights
             </span>
             <h2 className="text-3xl font-bold mb-4 leading-tight">
               An assistant watching your fleet, beyond fixed rules.
             </h2>
-            <p className="text-sm text-blue-50/90 mb-6">
+            <p className="text-sm text-teal-50/90 mb-6">
               Speeding limits and geofences catch the obvious. Our AI layer looks deeper —
               reviewing driving patterns for each vehicle to flag unusual behavior that a
               fixed threshold would miss, like erratic speed changes or activity outside
               a driver's normal routine.
             </p>
-            <ul className="text-sm text-blue-50/90 space-y-2">
+            <ul className="text-sm text-teal-50/90 space-y-2">
               <li>• Learns each vehicle's normal driving pattern over time</li>
               <li>• Flags anomalies fixed speed limits alone can't catch</li>
               <li>• Runs continuously in the background, no setup required</li>
@@ -405,7 +448,7 @@ export default function LandingPage() {
       {/* FAQ */}
       <section className="max-w-3xl mx-auto px-6 py-20">
         <div className="text-center mb-12">
-          <span className="text-sm uppercase tracking-wide text-blue-950 font-bold mb-3 block">
+          <span className="text-sm uppercase tracking-wide text-teal-950 font-bold mb-3 block">
             FAQ
           </span>
           <h2 className="text-3xl font-bold text-gray-900">Common questions</h2>
@@ -433,7 +476,7 @@ export default function LandingPage() {
       </section >
 
       <div>
-        <section className="bg-gray-900 py-16">
+        <section className="bg-gradient-to-br from-teal-950 via-teal-900 to-cyan-900 py-16">
           <div className="max-w-4xl mx-auto px-6 text-center">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
               Ready to see your fleet in real time?
@@ -451,7 +494,7 @@ export default function LandingPage() {
           <div className="max-w-6xl mx-auto px-6 py-14">
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
               <div>
-                <span className="flex items-center gap-2 text-lg font-bold text-blue-950 mb-3">
+                <span className="flex items-center gap-2 text-lg font-bold text-teal-950 mb-3">
                   <FaCog aria-hidden="true" />
                   FIGBLOOM FLEET
                 </span>
