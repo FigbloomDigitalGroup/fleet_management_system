@@ -62,6 +62,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function logout() {
+    const refreshToken = localStorage.getItem("refreshToken");
+    if (refreshToken) {
+      // Best-effort — revoke the refresh token server-side so it can't be
+      // replayed later. Sign-out proceeds locally either way.
+      apiRequest("/api/auth/logout", {
+        method: "POST",
+        body: JSON.stringify({ refreshToken }),
+      }).catch(() => {});
+    }
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");

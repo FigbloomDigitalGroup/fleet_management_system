@@ -20,6 +20,11 @@ async function refreshAccessToken(): Promise<string | null> {
 
     const data = await res.json();
     localStorage.setItem("accessToken", data.accessToken);
+    // Refresh tokens rotate on every use — the old one is now invalid, so the
+    // new one must replace it or the next refresh will fail.
+    if (data.refreshToken) {
+      localStorage.setItem("refreshToken", data.refreshToken);
+    }
     return data.accessToken;
   } catch {
     return null;

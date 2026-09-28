@@ -20,6 +20,7 @@ export interface CompanyRecord {
   slug: string;
   status: "active" | "suspended" | "pending";
   subscriptionPlan: string;
+  paymentMethod?: "mpesa" | "paystack" | null;
   createdAt: string;
   userCount?: number;
   dailyStartPoint?: {

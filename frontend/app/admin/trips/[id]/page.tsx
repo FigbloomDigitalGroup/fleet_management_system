@@ -55,7 +55,7 @@ export default function AdminTripDetailPage() {
         <dl className="grid grid-cols-2 gap-5 text-sm">
           <div>
             <dt className="text-gray-500">Vehicle</dt>
-            <dd className="text-gray-900 font-medium mt-0.5">{trip.vehicleId?.plateNumber || "—"}</dd>
+            <dd className="text-xs font-bold text-gray-900 mt-0.5">{trip.vehicleId?.plateNumber || "—"}</dd>
           </div>
           <div>
             <dt className="text-gray-500">Driver</dt>

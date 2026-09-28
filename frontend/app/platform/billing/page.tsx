@@ -11,8 +11,14 @@ interface BillingCompany {
   name: string;
   status: string;
   subscriptionPlan: string;
+  paymentMethod?: "mpesa" | "paystack" | null;
   createdAt: string;
 }
+
+const paymentMethodLabels: Record<string, string> = {
+  mpesa: "M-Pesa",
+  paystack: "Paystack",
+};
 
 const planStyles: Record<string, string> = {
   trial: "bg-gray-100 text-gray-600 border-gray-200",
@@ -93,6 +99,7 @@ export default function BillingPage() {
               <th className="text-left px-5 py-3 font-medium">Company</th>
               <th className="text-left px-5 py-3 font-medium">Status</th>
               <th className="text-left px-5 py-3 font-medium">Plan</th>
+              <th className="text-left px-5 py-3 font-medium">Payment method</th>
               <th className="text-left px-5 py-3 font-medium">Change plan</th>
             </tr>
           </thead>
@@ -105,6 +112,9 @@ export default function BillingPage() {
                   <span className={`text-xs px-2 py-1 rounded-full border ${planStyles[c.subscriptionPlan]}`}>
                     {c.subscriptionPlan}
                   </span>
+                </td>
+                <td className="px-5 py-3 text-gray-600">
+                  {c.paymentMethod ? paymentMethodLabels[c.paymentMethod] : "—"}
                 </td>
                 <td className="px-5 py-3">
                   <select

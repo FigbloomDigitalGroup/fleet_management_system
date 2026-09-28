@@ -3,9 +3,9 @@ import Company from "../models/Company.js";
 // PLATFORM_ADMIN only — overview of all companies' subscription plans
 export async function getBillingOverview(req, res) {
   try {
-    const companies = await Company.find().select("name status subscriptionPlan createdAt").sort({
-      createdAt: -1,
-    });
+    const companies = await Company.find()
+      .select("name status subscriptionPlan paymentMethod createdAt")
+      .sort({ createdAt: -1 });
 
     const planCounts = companies.reduce((acc, c) => {
       acc[c.subscriptionPlan] = (acc[c.subscriptionPlan] || 0) + 1;
