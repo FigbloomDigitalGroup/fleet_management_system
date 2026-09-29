@@ -21,6 +21,7 @@ export interface CompanyRecord {
   status: "active" | "suspended" | "pending";
   subscriptionPlan: string;
   paymentMethod?: "mpesa" | "paystack" | null;
+  totalRevenue?: number;
   createdAt: string;
   userCount?: number;
   dailyStartPoint?: {
@@ -29,6 +30,14 @@ export interface CompanyRecord {
     geofenceId?: string;
     updatedAt?: string;
   } | null;
+}
+
+export interface CompanyStats {
+  totalDistanceKm: number;
+  estimatedExpenses: number | null;
+  totalRevenue: number;
+  vehicleCount: number;
+  monthsSinceJoining: number;
 }
 
 export interface AdminRecord {
@@ -46,6 +55,7 @@ export interface VehicleRecord {
   make?: string;
   model?: string;
   deviceId?: string;
+  vehicleType?: "car" | "van" | "truck";
   status: "active" | "idle" | "offline" | "maintenance";
   driverId?: { _id: string; fullName: string; email: string } | null;
   startGeofenceId?: { _id: string; name: string } | null;

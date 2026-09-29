@@ -13,6 +13,7 @@ import LiveMapWidget from "../../components/LiveMapWidget";
 import { usePageHeader } from "../../components/DashboardShell";
 import {
   CompanyRecord,
+  CompanyStats,
   VehicleRecord,
   DriverRecord,
   AdminRecord,
@@ -21,7 +22,7 @@ import {
   AgentSummary,
 } from "../../types/auth";
 
-const FleetMap = dynamic<{ compact?: boolean }>(() => import("../../components/FleetMap"), { ssr: false });
+//const FleetMap = dynamic<{ compact?: boolean }>(() => import("../../components/FleetMap"), { ssr: false });
 
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -74,6 +75,7 @@ export default function CompanyDashboard() {
   const [trips, setTrips] = useState<TripRecord[]>([]);
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [agentSummary, setAgentSummary] = useState<AgentSummary | null>(null);
+  const [companyStats, setCompanyStats] = useState<CompanyStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   const vehicleCounts = {
@@ -131,6 +133,12 @@ export default function CompanyDashboard() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    apiRequest<CompanyStats>("/api/companies/me/stats")
+      .then(setCompanyStats)
+      .catch(() => {});
+  }, []);
+
   if (loading) return <FullPageLoading />;
 
   const activePct = vehicleCounts.total ? Math.round((vehicleCounts.active / vehicleCounts.total) * 100) : 0;
@@ -151,6 +159,28 @@ export default function CompanyDashboard() {
 
   return (
     <div>
+      {/* Distance, expenses & revenue */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+        <StatCard
+          label="Total distance covered"
+          value={`${companyStats?.totalDistanceKm ?? 0} km`}
+          accent="blue"
+          description="All recorded trips, all time"
+        />
+        <StatCard
+          label="Expenses"
+          value={companyStats?.estimatedExpenses === null ? "Custom plan" : `$${companyStats?.estimatedExpenses ?? 0}`}
+          accent="orange"
+          description="Estimated total spent since joining"
+        />
+        <StatCard
+          label="Revenue"
+          value={`$${companyStats?.totalRevenue ?? 0}`}
+          accent="green"
+          description="Self-reported — update it from Billing"
+        />
+      </div>
+
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
         <div className="lg:col-span-2">

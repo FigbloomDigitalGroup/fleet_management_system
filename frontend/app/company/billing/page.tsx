@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { FaRoute, FaWallet, FaMoneyBillWave } from "react-icons/fa";
 import { apiRequest } from "../../lib/api";
 import FullPageLoading from "@/app/components/FullPageLoading";
-import { CompanyRecord } from "../../types/auth";
+import { CompanyRecord, CompanyStats } from "../../types/auth";
 import { usePageHeader } from "../../components/DashboardShell";
 import PlanCheckoutModal, { SelfServePlan } from "../../components/PlanCheckoutModal";
 
@@ -59,9 +60,13 @@ const PLAN_CARDS: {
 
 export default function CompanyBillingPage() {
   const [company, setCompany] = useState<CompanyRecord | null>(null);
+  const [stats, setStats] = useState<CompanyStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [checkoutPlan, setCheckoutPlan] = useState<SelfServePlan | null>(null);
+  const [revenueInput, setRevenueInput] = useState("");
+  const [editingRevenue, setEditingRevenue] = useState(false);
+  const [savingRevenue, setSavingRevenue] = useState(false);
 
   useEffect(() => {
     apiRequest<CompanyRecord>("/api/companies/me")
@@ -69,6 +74,32 @@ export default function CompanyBillingPage() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    apiRequest<CompanyStats>("/api/companies/me/stats")
+      .then(setStats)
+      .catch(() => {});
+  }, []);
+
+  async function saveRevenue() {
+    const value = Number(revenueInput);
+    if (Number.isNaN(value) || value < 0) return;
+
+    setSavingRevenue(true);
+    try {
+      const updated = await apiRequest<CompanyRecord>("/api/companies/me/revenue", {
+        method: "PATCH",
+        body: JSON.stringify({ totalRevenue: value }),
+      });
+      setCompany(updated);
+      setStats((s) => (s ? { ...s, totalRevenue: value } : s));
+      setEditingRevenue(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingRevenue(false);
+    }
+  }
 
   usePageHeader("Billing", "Your subscription details");
 
@@ -109,6 +140,83 @@ export default function CompanyBillingPage() {
           <p className="text-sm font-medium text-gray-900 mt-0.5">
             {new Date(company.createdAt).toLocaleDateString()}
           </p>
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Expenses &amp; revenue</h2>
+        <p className="text-xs text-teal-600 mb-4">
+          Distance and expenses are calculated automatically. Revenue is entered by you.
+        </p>
+
+        <div className="grid sm:grid-cols-3 gap-5">
+          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
+            <span className="shrink-0 rounded-xl bg-blue-50 p-2.5 text-blue-600">
+              <FaRoute size={18} />
+            </span>
+            <div>
+              <p className="text-xs text-gray-500">Total distance covered</p>
+              <p className="text-lg font-bold text-gray-900">{stats?.totalDistanceKm ?? 0} km</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
+            <span className="shrink-0 rounded-xl bg-orange-50 p-2.5 text-orange-600">
+              <FaWallet size={18} />
+            </span>
+            <div>
+              <p className="text-xs text-gray-500">Estimated expenses</p>
+              <p className="text-lg font-bold text-gray-900">
+                {stats?.estimatedExpenses === null ? "Custom plan" : `$${stats?.estimatedExpenses ?? 0}`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
+            <span className="shrink-0 rounded-xl bg-teal-50 p-2.5 text-teal-600">
+              <FaMoneyBillWave size={18} />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-gray-500">Revenue</p>
+              {editingRevenue ? (
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <input
+                    type="number"
+                    min={0}
+                    autoFocus
+                    value={revenueInput}
+                    onChange={(e) => setRevenueInput(e.target.value)}
+                    className="w-24 px-2 py-1 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600"
+                  />
+                  <button
+                    onClick={saveRevenue}
+                    disabled={savingRevenue}
+                    className="text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-md px-2 py-1 disabled:opacity-50"
+                  >
+                    {savingRevenue ? "..." : "Save"}
+                  </button>
+                  <button
+                    onClick={() => setEditingRevenue(false)}
+                    className="text-xs font-medium text-gray-500 hover:text-gray-700 px-1"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    setRevenueInput(String(stats?.totalRevenue ?? company.totalRevenue ?? 0));
+                    setEditingRevenue(true);
+                  }}
+                  className="text-left"
+                >
+                  <p className="text-lg font-bold text-gray-900 hover:underline">
+                    ${stats?.totalRevenue ?? company.totalRevenue ?? 0}
+                  </p>
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

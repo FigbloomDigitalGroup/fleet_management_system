@@ -2,14 +2,19 @@ import Vehicle from "../models/Vehicle.js";
 import Geofence from "../models/Geofence.js";
 import { tenantScope } from "../middleware/auth.js";
 
+const VEHICLE_TYPES = ["car", "van", "truck"];
+
 export async function createVehicle(req, res) {
   try {
-    const { plateNumber, make, model, deviceId } = req.body;
+    const { plateNumber, make, model, deviceId, vehicleType } = req.body;
     if (!plateNumber) return res.status(400).json({ error: "plateNumber is required" });
+    if (vehicleType !== undefined && !VEHICLE_TYPES.includes(vehicleType)) {
+      return res.status(400).json({ error: `vehicleType must be one of: ${VEHICLE_TYPES.join(", ")}` });
+    }
 
     const companyId = req.user.role === "PLATFORM_ADMIN" ? req.body.companyId : req.user.companyId;
 
-    const vehicle = await Vehicle.create({ companyId, plateNumber, make, model, deviceId });
+    const vehicle = await Vehicle.create({ companyId, plateNumber, make, model, deviceId, vehicleType });
     return res.status(201).json(vehicle);
   } catch (err) {
     console.error(err);
@@ -51,7 +56,7 @@ export async function updateVehicle(req, res) {
     const existing = await Vehicle.findOne({ _id: req.params.id, ...tenantScope(req) });
     if (!existing) return res.status(404).json({ error: "Vehicle not found" });
 
-    const { plateNumber, make, model, deviceId, status, driverId, startGeofenceId } = req.body;
+    const { plateNumber, make, model, deviceId, status, driverId, startGeofenceId, vehicleType } = req.body;
     const update = {};
     if (plateNumber !== undefined) update.plateNumber = plateNumber;
     if (make !== undefined) update.make = make;
@@ -59,6 +64,12 @@ export async function updateVehicle(req, res) {
     if (deviceId !== undefined) update.deviceId = deviceId;
     if (status !== undefined) update.status = status;
     if (driverId !== undefined) update.driverId = driverId || null;
+    if (vehicleType !== undefined) {
+      if (!VEHICLE_TYPES.includes(vehicleType)) {
+        return res.status(400).json({ error: `vehicleType must be one of: ${VEHICLE_TYPES.join(", ")}` });
+      }
+      update.vehicleType = vehicleType;
+    }
 
     if (startGeofenceId !== undefined) {
       if (!startGeofenceId) {

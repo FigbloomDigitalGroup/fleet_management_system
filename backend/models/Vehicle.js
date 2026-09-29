@@ -7,6 +7,7 @@ const vehicleSchema = new mongoose.Schema(
     make: { type: String },
     model: { type: String },
     deviceId: { type: String, unique: true, sparse: true },
+    vehicleType: { type: String, enum: ["car", "van", "truck"], default: "car" },
     status: { type: String, enum: ["active", "idle", "offline", "maintenance"], default: "offline" },
     driverId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     // Overrides the company's default daily starting point (Company.dailyStartPoint)
@@ -23,3 +24,10 @@ const vehicleSchema = new mongoose.Schema(
 vehicleSchema.index({ companyId: 1, plateNumber: 1 }, { unique: true });
 
 export default mongoose.model("Vehicle", vehicleSchema);
+
+
+
+
+
+
+
