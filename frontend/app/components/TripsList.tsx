@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { FaRoute } from "react-icons/fa";
 import { apiRequest } from "../lib/api";
 import { TripRecord } from "../types/auth";
 import FullPageLoading from "./FullPageLoading";
@@ -34,12 +35,13 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
             <th className="text-left px-5 py-3 font-medium">Start</th>
             <th className="text-left px-5 py-3 font-medium">Status</th>
             <th className="text-left px-5 py-3 font-medium">Distance</th>
+            <th className="text-left px-5 py-3 font-medium">Replay</th>
           </tr>
         </thead>
         <tbody>
           {trips.length === 0 ? (
             <tr>
-              <td colSpan={5} className="px-5 py-8 text-center text-gray-400">
+              <td colSpan={6} className="px-5 py-8 text-center text-gray-400">
                 No trips recorded yet.
               </td>
             </tr>
@@ -63,6 +65,15 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
                 </td>
                 <td className="px-5 py-3 text-gray-600">
                   {t.distanceKm ? `${t.distanceKm.toFixed(1)} km` : "—"}
+                </td>
+                <td className="px-5 py-3">
+                  <Link
+                    href={`${basePath}/${t._id}`}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-teal-600 hover:text-teal-700 hover:underline"
+                  >
+                    <FaRoute size={12} />
+                    Click to view trip replay
+                  </Link>
                 </td>
               </tr>
             ))

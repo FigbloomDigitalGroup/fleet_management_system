@@ -38,6 +38,7 @@ export default function VehiclesList({
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
   const [deviceId, setDeviceId] = useState("");
+  const [vehicleType, setVehicleType] = useState("car");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -71,12 +72,13 @@ export default function VehiclesList({
     try {
       await apiRequest("/api/vehicles", {
         method: "POST",
-        body: JSON.stringify({ plateNumber, make, model, deviceId: deviceId || undefined }),
+        body: JSON.stringify({ plateNumber, make, model, deviceId: deviceId || undefined, vehicleType }),
       });
       setPlateNumber("");
       setMake("");
       setModel("");
       setDeviceId("");
+      setVehicleType("car");
       await loadAll();
     } catch (err: any) {
       setFormError(err.message || "Failed to add vehicle");
@@ -227,6 +229,18 @@ export default function VehiclesList({
               placeholder="Hiace"
               className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
             />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Vehicle type</label>
+            <select
+              value={vehicleType}
+              onChange={(e) => setVehicleType(e.target.value)}
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+            >
+              <option value="car">Car</option>
+              <option value="van">Van</option>
+              <option value="truck">Truck</option>
+            </select>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">

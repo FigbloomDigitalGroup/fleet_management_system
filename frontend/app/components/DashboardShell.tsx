@@ -5,10 +5,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/api";
-import { CompanyRecord, AlertRecord } from "../types/auth";
+import { CompanyRecord, AlertRecord, GeofenceRecord } from "../types/auth";
+import { isOutsideGeofences } from "../lib/geofence";
 import { IconType } from "react-icons";
 import { FiBell } from "react-icons/fi";
-import { FaCog } from "react-icons/fa";
+import { FaCog, FaMapMarkerAlt } from "react-icons/fa";
+import { FaLocationPinLock } from "react-icons/fa6";
 import AlertToastStack, { ToastAlert } from "./AlertToast";
 import AgentChatWidget from "./AgentChatWidget";
 import SessionExpiredModal from "./SessionExpiredModal";
@@ -134,6 +136,47 @@ export default function DashboardShell({
     };
   }, [alertsHref]);
 
+  // Fleet in-zone / out-of-zone counts — shown in the header on every page,
+  // for ADMIN and COMPANY_OWNER only (same scope as the company name pill).
+  // A vehicle only counts once it has a live location; with no geofences set
+  // up yet there's nothing to be "in" or "out" of, so the chips stay hidden.
+  const [zoneCounts, setZoneCounts] = useState<{ inZone: number; outOfZone: number } | null>(null);
+
+  useEffect(() => {
+    if (user?.role !== "COMPANY_OWNER" && user?.role !== "ADMIN") return;
+    let cancelled = false;
+
+    async function loadZoneCounts() {
+      try {
+        const [vehicles, geofences] = await Promise.all([
+          apiRequest<{ lastLocation: { latitude: number; longitude: number } | null }[]>("/api/tracking/live"),
+          apiRequest<GeofenceRecord[]>("/api/geofences"),
+        ]);
+        if (cancelled) return;
+
+        if (geofences.length === 0) {
+          setZoneCounts(null);
+          return;
+        }
+
+        const withLocation = vehicles.filter((v) => v.lastLocation);
+        const outOfZone = withLocation.filter((v) =>
+          isOutsideGeofences(v.lastLocation!.latitude, v.lastLocation!.longitude, geofences)
+        ).length;
+        setZoneCounts({ inZone: withLocation.length - outOfZone, outOfZone });
+      } catch {
+        if (!cancelled) setZoneCounts(null);
+      }
+    }
+
+    loadZoneCounts();
+    const interval = setInterval(loadZoneCounts, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [user?.role]);
+
   return (
     <div className="h-screen overflow-hidden bg-white flex">
       <AlertToastStack toasts={toasts} onDismiss={dismissToast} />
@@ -190,12 +233,43 @@ export default function DashboardShell({
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* FLOATING HEADER — holds the current page's title, pinned above the scroll */}
         <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between bg-blue-50 px-6 py-4">
-          <div>
+          <div className="flex min-w-0 flex-1 items-center gap-4">
             {companyName && (
-              <span className="rounded-full bg-teal-600 px-3 py-1 text-xs font-medium text-white">{companyName}</span>
+              <span className="shrink-0 rounded-full bg-teal-600 px-3 py-1 text-xs font-medium text-white">
+                {companyName}
+              </span>
             )}
+
+            {/* Promo banner — fills most of the blank space between the
+                company pill and the header's right-side controls */}
+            <div
+              className="relative h-10 w-3/4 max-w-2xl shrink overflow-hidden rounded-full bg-cover bg-center shadow-sm"
+              style={{ backgroundImage: "url(/schwoaze-highway-3392100_1920.jpg)" }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-950/90 via-blue-950/70 to-teal-700/60" />
+              <div className="relative flex h-full items-center gap-2 px-4">
+                <span className="rounded-full bg-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                  Special offer
+                </span>
+                <span className="truncate text-xs font-medium text-white">
+                  FIGBLOOM FLEET — upgrade to Pro this month and save on every vehicle.
+                </span>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {zoneCounts && (
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 border border-teal-200 px-3 py-1.5 text-xs font-medium text-teal-600">
+                  <FaMapMarkerAlt size={11} />
+                  {zoneCounts.inZone} in zone
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600">
+                  <FaLocationPinLock size={11} />
+                  {zoneCounts.outOfZone} out of zone
+                </span>
+              </div>
+            )}
             {alertsHref && (
               <Link
                 href={alertsHref}

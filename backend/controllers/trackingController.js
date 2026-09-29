@@ -310,11 +310,17 @@ export async function closeStaleTrips() {
 
 export async function getLiveLocations(req, res) {
   try {
-    const vehicles = await Vehicle.find(tenantScope(req)).select("plateNumber status");
+    const vehicles = await Vehicle.find(tenantScope(req)).select("plateNumber status vehicleType");
     const results = await Promise.all(
       vehicles.map(async (v) => {
         const lastPing = await LocationPing.findOne({ vehicleId: v._id }).sort({ recordedAt: -1 });
-        return { vehicleId: v._id, plateNumber: v.plateNumber, status: v.status, lastLocation: lastPing || null };
+        return {
+          vehicleId: v._id,
+          plateNumber: v.plateNumber,
+          status: v.status,
+          vehicleType: v.vehicleType,
+          lastLocation: lastPing || null,
+        };
       })
     );
     return res.json(results);

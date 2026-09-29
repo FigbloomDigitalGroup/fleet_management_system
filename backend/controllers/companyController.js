@@ -1,6 +1,8 @@
 import Company from "../models/Company.js";
 import User from "../models/User.js";
 import Geofence from "../models/Geofence.js";
+import Vehicle from "../models/Vehicle.js";
+import Trip from "../models/Trip.js";
 import { isInsideGeofence } from "../lib/geo.js";
 
 // PLATFORM_ADMIN only — list every company on the platform
@@ -172,6 +174,82 @@ export async function updateMyPlan(req, res) {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update plan" });
+  }
+}
+
+// Per-vehicle monthly price for each self-serve plan — mirrors the pricing
+// shown on the landing page and the billing checkout flow. Enterprise has no
+// fixed price (it's sales-negotiated), so expenses can't be estimated for it.
+const PLAN_PRICE_PER_VEHICLE = { trial: 0, basic: 29, pro: 49, enterprise: null };
+const MS_PER_MONTH = 30 * 24 * 60 * 60 * 1000;
+
+// COMPANY_OWNER / ADMIN — read-only overview numbers for the dashboard and
+// billing page. Distance is summed straight from recorded trips; expenses are
+// an estimate (plan price × vehicle count × months since joining) since there
+// is no real billing-history ledger yet; revenue is whatever the company last
+// entered themselves (see updateMyRevenue) — none of this touches or
+// recalculates any existing trip/vehicle/alert data, it's read-only.
+export async function getMyCompanyStats(req, res) {
+  try {
+    if (!req.user.companyId) {
+      return res.status(400).json({ error: "This account is not linked to a company" });
+    }
+
+    const company = await Company.findById(req.user.companyId);
+    if (!company) return res.status(404).json({ error: "Company not found" });
+
+    const vehicleIds = await Vehicle.find({ companyId: company._id }).distinct("_id");
+    const vehicleCount = vehicleIds.length;
+
+    const [distanceResult] = await Trip.aggregate([
+      { $match: { vehicleId: { $in: vehicleIds } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$distanceKm", 0] } } } },
+    ]);
+    const totalDistanceKm = Math.round((distanceResult?.total || 0) * 10) / 10;
+
+    const monthsSinceJoining = Math.max(1, Math.ceil((Date.now() - company.createdAt.getTime()) / MS_PER_MONTH));
+    const pricePerVehicle = PLAN_PRICE_PER_VEHICLE[company.subscriptionPlan];
+    const estimatedExpenses =
+      pricePerVehicle === null || pricePerVehicle === undefined
+        ? null
+        : Math.round(pricePerVehicle * vehicleCount * monthsSinceJoining);
+
+    return res.json({
+      totalDistanceKm,
+      estimatedExpenses,
+      totalRevenue: company.totalRevenue,
+      vehicleCount,
+      monthsSinceJoining,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to fetch company stats" });
+  }
+}
+
+// COMPANY_OWNER — set the company's self-reported all-time revenue figure.
+export async function updateMyRevenue(req, res) {
+  try {
+    if (!req.user.companyId) {
+      return res.status(400).json({ error: "This account is not linked to a company" });
+    }
+
+    const { totalRevenue } = req.body;
+    if (typeof totalRevenue !== "number" || Number.isNaN(totalRevenue) || totalRevenue < 0) {
+      return res.status(400).json({ error: "totalRevenue must be a number >= 0" });
+    }
+
+    const company = await Company.findByIdAndUpdate(
+      req.user.companyId,
+      { totalRevenue },
+      { new: true }
+    );
+    if (!company) return res.status(404).json({ error: "Company not found" });
+
+    return res.json(company);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to update revenue" });
   }
 }
 

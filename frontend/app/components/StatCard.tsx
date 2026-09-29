@@ -5,6 +5,9 @@ import {
   FaExclamationTriangle,
   FaTools,
   FaUsers,
+  FaWallet,
+  FaMoneyBillWave,
+  FaRoute,
 } from "react-icons/fa";
 import { IoCarSportSharp } from "react-icons/io5";
 
@@ -179,6 +182,9 @@ function getStatIcon(label: string) {
 
   if (normalizedLabel === "scans covering your fleet") return ScanEyeIcon;
   if (normalizedLabel === "anomalies found") return AnomalyFoundIcon;
+  if (normalizedLabel === "total distance covered") return FaRoute;
+  if (normalizedLabel === "expenses") return FaWallet;
+  if (normalizedLabel === "revenue") return FaMoneyBillWave;
   if (normalizedLabel === "total vehicles") return TwoCarsIcon;
   if (normalizedLabel.includes("vehicle")) return IoCarSportSharp;
   if (normalizedLabel === "drivers") return DriverIdIcon;
