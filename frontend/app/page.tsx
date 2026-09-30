@@ -48,6 +48,21 @@ const STEPS = [
   { n: 3, title: "Track live, get alerted", text: "Watch your fleet move in real time, and get notified the moment something needs attention." },
 ];
 
+// Slugs match backend/models/Company.js's industry enum — image files go in
+// public/industries/<slug>.jpg, dropped in later once available.
+const INDUSTRIES = [
+  { slug: "logistics_courier", name: "Logistics & courier", description: "Prove on-time delivery and optimize routes." },
+  { slug: "public_transport", name: "Public transport", description: "Route compliance, passenger safety, speed governance." },
+  { slug: "school_transport", name: "School transport", description: "Know when the bus arrives, and who's on board." },
+  { slug: "construction", name: "Construction & equipment", description: "Track machinery and trucks across job sites." },
+  { slug: "taxi_ride_hailing", name: "Taxi & ride-hailing", description: "Driver accountability and route verification." },
+  { slug: "security_cash_transit", name: "Security & cash-in-transit", description: "High-value cargo protection and panic alerts." },
+  { slug: "agriculture", name: "Agriculture", description: "Track tractors and trucks across farms and routes." },
+  { slug: "government_municipal", name: "Government & municipal", description: "Fuel accountability, no unauthorized use." },
+  { slug: "oil_gas", name: "Oil & gas distribution", description: "Tanker tracking and theft prevention." },
+  { slug: "rental_car", name: "Rental car", description: "Know where rentals are, enforce geofenced limits." },
+];
+
 export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
@@ -308,6 +323,36 @@ export default function LandingPage() {
               open the full replay to scrub through exactly what happened.
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* INDUSTRIES WE SERVE */}
+      <section className="max-w-6xl mx-auto px-6 py-20">
+        <div className="text-center mb-12">
+          <span className="text-sm uppercase tracking-wide text-teal-950 font-bold mb-3 block">
+            Industries we serve
+          </span>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Built for every kind of fleet</h2>
+          <p className="text-sm text-gray-600 max-w-xl mx-auto">
+            Whatever you move, protect, or manage on wheels — FIGBLOOM FLEET adapts to how your
+            business actually works.
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
+          {INDUSTRIES.map((industry) => (
+            <div key={industry.slug}>
+              <div className="w-full aspect-square bg-gray-100 overflow-hidden rounded-lg mb-3">
+                <img
+                  src={`/industries/${industry.slug}.jpg`}
+                  alt={industry.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-1">{industry.name}</h3>
+              <p className="text-xs text-gray-500">{industry.description}</p>
+            </div>
+          ))}
         </div>
       </section>
 

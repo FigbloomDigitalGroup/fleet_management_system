@@ -22,6 +22,7 @@ export interface CompanyRecord {
   subscriptionPlan: string;
   paymentMethod?: "mpesa" | "paystack" | null;
   totalRevenue?: number;
+  industry?: string;
   createdAt: string;
   userCount?: number;
   dailyStartPoint?: {
@@ -55,7 +56,7 @@ export interface VehicleRecord {
   make?: string;
   model?: string;
   deviceId?: string;
-  vehicleType?: "car" | "van" | "truck";
+  vehicleType?: string;
   status: "active" | "idle" | "offline" | "maintenance";
   driverId?: { _id: string; fullName: string; email: string } | null;
   startGeofenceId?: { _id: string; name: string } | null;

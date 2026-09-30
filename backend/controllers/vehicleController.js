@@ -2,7 +2,20 @@ import Vehicle from "../models/Vehicle.js";
 import Geofence from "../models/Geofence.js";
 import { tenantScope } from "../middleware/auth.js";
 
-const VEHICLE_TYPES = ["car", "van", "truck"];
+const VEHICLE_TYPES = [
+  "car",
+  "van",
+  "truck",
+  "bus",
+  "motorcycle",
+  "tractor",
+  "excavator",
+  "crane",
+  "dump_truck",
+  "tanker",
+  "armored_vehicle",
+  "trailer",
+];
 
 export async function createVehicle(req, res) {
   try {

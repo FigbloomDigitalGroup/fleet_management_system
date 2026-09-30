@@ -4,6 +4,7 @@ import { useEffect, useState, FormEvent } from "react";
 import Link from "next/link";
 import { apiRequest } from "../lib/api";
 import { VehicleRecord, DriverRecord, GeofenceRecord } from "../types/auth";
+import { VEHICLE_TYPES } from "../lib/vehicleTypes";
 import Skeleton from "./Skeleton";
 import ZoneStatusBadge from "./ZoneStatusBadge";
 
@@ -237,9 +238,11 @@ export default function VehiclesList({
               onChange={(e) => setVehicleType(e.target.value)}
               className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
             >
-              <option value="car">Car</option>
-              <option value="van">Van</option>
-              <option value="truck">Truck</option>
+              {VEHICLE_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
             </select>
           </div>
           <div>

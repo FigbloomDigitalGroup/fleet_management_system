@@ -46,9 +46,23 @@ async function issueRefreshToken(user) {
 }
 
 // Registers a new Vehicle Company + its first user (COMPANY_OWNER)
+const INDUSTRIES = [
+  "logistics_courier",
+  "public_transport",
+  "school_transport",
+  "construction",
+  "taxi_ride_hailing",
+  "security_cash_transit",
+  "agriculture",
+  "government_municipal",
+  "oil_gas",
+  "rental_car",
+  "other",
+];
+
 export async function registerCompany(req, res) {
   try {
-    const { companyName, ownerName, email, password } = req.body;
+    const { companyName, ownerName, email, password, industry } = req.body;
     const normalizedEmail = email?.trim().toLowerCase();
 
     if (!companyName || !ownerName || !normalizedEmail || !password) {
@@ -56,6 +70,9 @@ export async function registerCompany(req, res) {
     }
     if (password.length < 8) {
       return res.status(400).json({ error: "Password must be at least 8 characters" });
+    }
+    if (industry !== undefined && !INDUSTRIES.includes(industry)) {
+      return res.status(400).json({ error: `industry must be one of: ${INDUSTRIES.join(", ")}` });
     }
 
     const existing = await User.findOne({ email: normalizedEmail });
@@ -65,7 +82,12 @@ export async function registerCompany(req, res) {
 
     const slug = companyName.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
-    const company = await Company.create({ name: companyName, slug, status: "pending" });
+    const company = await Company.create({
+      name: companyName,
+      slug,
+      status: "pending",
+      industry: industry || "other",
+    });
 
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await User.create({
