@@ -7,12 +7,14 @@ import { redirectPathForRole } from "../lib/roleRedirect";
 import { FaCog, FaGooglePlay } from "react-icons/fa";
 import BackgroundSlideshow from "../components/BackgroundSlideshow";
 import RobotCheckbox from "../components/RobotCheckbox";
+import { INDUSTRIES } from "../lib/industries";
 
 export default function RegisterPage() {
     const { register } = useAuth();
     const router = useRouter();
 
     const [companyName, setCompanyName] = useState("");
+    const [industry, setIndustry] = useState("");
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -31,7 +33,7 @@ export default function RegisterPage() {
 
         setIsSubmitting(true);
         try {
-            const user = await register({ companyName, ownerName: fullName, email, password });
+            const user = await register({ companyName, industry: industry || undefined, ownerName: fullName, email, password });
             router.push(redirectPathForRole(user.role));
         } catch (err: any) {
             setError(err.message || "Unable to create your account. Please try again.");
@@ -106,6 +108,25 @@ export default function RegisterPage() {
                                 placeholder="Your company name"
                                 className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                             />
+                        </div>
+
+                        <div>
+                            <label htmlFor="industry" className="block text-sm font-medium text-gray-700 mb-1.5">
+                                Industry
+                            </label>
+                            <select
+                                id="industry"
+                                value={industry}
+                                onChange={(e) => setIndustry(e.target.value)}
+                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                            >
+                                <option value="">Select your industry</option>
+                                {INDUSTRIES.map((i) => (
+                                    <option key={i.value} value={i.value}>
+                                        {i.label}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
                         <div>

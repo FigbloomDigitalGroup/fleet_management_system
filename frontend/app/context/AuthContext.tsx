@@ -7,6 +7,7 @@ import { User, LoginResponse } from "../types/auth";
 
 interface RegisterPayload {
   companyName: string;
+  industry?: string;
   ownerName: string;
   email: string;
   password: string;

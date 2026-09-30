@@ -7,7 +7,28 @@ const vehicleSchema = new mongoose.Schema(
     make: { type: String },
     model: { type: String },
     deviceId: { type: String, unique: true, sparse: true },
-    vehicleType: { type: String, enum: ["car", "van", "truck"], default: "car" },
+    // One shared list covering every industry this platform serves (logistics,
+    // school/public transport, construction, security, agriculture, oil & gas,
+    // rental, etc.) — every company picks from the same list regardless of
+    // their industry, rather than a per-industry restricted subset.
+    vehicleType: {
+      type: String,
+      enum: [
+        "car",
+        "van",
+        "truck",
+        "bus",
+        "motorcycle",
+        "tractor",
+        "excavator",
+        "crane",
+        "dump_truck",
+        "tanker",
+        "armored_vehicle",
+        "trailer",
+      ],
+      default: "car",
+    },
     status: { type: String, enum: ["active", "idle", "offline", "maintenance"], default: "offline" },
     driverId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     // Overrides the company's default daily starting point (Company.dailyStartPoint)

@@ -6,6 +6,7 @@ import { FaRoute, FaWallet, FaMoneyBillWave } from "react-icons/fa";
 import { apiRequest } from "../../lib/api";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import { CompanyRecord, CompanyStats } from "../../types/auth";
+import { industryLabel } from "../../lib/industries";
 import { usePageHeader } from "../../components/DashboardShell";
 import PlanCheckoutModal, { SelfServePlan } from "../../components/PlanCheckoutModal";
 
@@ -132,6 +133,10 @@ export default function CompanyBillingPage() {
             <p className="text-sm font-medium text-gray-900 mt-0.5">
               {company.paymentMethod ? paymentMethodLabels[company.paymentMethod] : "None on file"}
             </p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Industry</p>
+            <p className="text-sm font-medium text-gray-900 mt-0.5">{industryLabel(company.industry)}</p>
           </div>
         </div>
 
