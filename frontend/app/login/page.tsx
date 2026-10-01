@@ -4,9 +4,16 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { redirectPathForRole } from "../lib/roleRedirect";
-import { FaCog, FaGooglePlay } from "react-icons/fa";
+import { FaGooglePlay } from "react-icons/fa";
 import BackgroundSlideshow from "../components/BackgroundSlideshow";
 import RobotCheckbox from "../components/RobotCheckbox";
+import BrandIcon from "../components/BrandIcon";
+
+const STEPS = [
+  { n: 1, title: "Register your company", text: "Create your account in minutes and set up your company profile." },
+  { n: 2, title: "Add vehicles & drivers", text: "Register each vehicle, assign a driver, and set up alerts or zones." },
+  { n: 3, title: "Track live, get alerted", text: "Watch your fleet move in real time, and get notified the moment something needs attention." },
+];
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -46,12 +53,27 @@ export default function LoginPage() {
         {/* wrap all existing content in a relative div so it sits above the overlay */}
         <div className="relative z-20 flex flex-col justify-between h-full">
           <span className="flex items-center gap-2 text-xl font-bold text-white">
-            <FaCog aria-hidden="true" />
+            <BrandIcon variant="light" className="h-6 w-6" />
             FIGBLOOM FLEET
           </span>
 
-          <div className="flex-1 flex items-center justify-center py-16">
-            {/* ...keep the existing svg exactly as it is... */}
+          <div className="flex-1 flex flex-col justify-center py-16">
+            <span className="text-xs uppercase tracking-wide text-teal-300 font-bold mb-5 block">
+              How it works
+            </span>
+            <div className="space-y-5">
+              {STEPS.map((step) => (
+                <div key={step.n} className="flex gap-4">
+                  <div className="shrink-0 w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center text-sm font-bold">
+                    {step.n}
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold text-sm">{step.title}</h3>
+                    <p className="text-gray-300 text-xs mt-1">{step.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div>

@@ -4,10 +4,11 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { redirectPathForRole } from "../lib/roleRedirect";
-import { FaCog, FaGooglePlay } from "react-icons/fa";
+import { FaGooglePlay } from "react-icons/fa";
 import BackgroundSlideshow from "../components/BackgroundSlideshow";
 import RobotCheckbox from "../components/RobotCheckbox";
-import { INDUSTRIES } from "../lib/industries";
+import BrandIcon from "../components/BrandIcon";
+import { INDUSTRIES, INDUSTRIES_WITH_IMAGES } from "../lib/industries";
 
 export default function RegisterPage() {
     const { register } = useAuth();
@@ -49,7 +50,7 @@ export default function RegisterPage() {
 
                 <div className="relative z-20 flex flex-col justify-between h-full">
                     <span className="flex items-center gap-2 text-xl font-bold text-white">
-                        <FaCog aria-hidden="true" />
+                        <BrandIcon variant="light" className="h-6 w-6" />
                         FIGBLOOM FLEET
                     </span>
 
@@ -127,6 +128,25 @@ export default function RegisterPage() {
                                     </option>
                                 ))}
                             </select>
+
+                            <div className="mt-2.5 grid grid-cols-4 gap-1.5">
+                                {INDUSTRIES_WITH_IMAGES.map((slug) => (
+                                    <button
+                                        type="button"
+                                        key={slug}
+                                        onClick={() => setIndustry(slug)}
+                                        title={INDUSTRIES.find((i) => i.value === slug)?.label}
+                                        className={`aspect-square overflow-hidden rounded-md ring-1 transition-all ${industry === slug ? "ring-2 ring-teal-600" : "ring-gray-200 hover:ring-teal-400"
+                                            }`}
+                                    >
+                                        <img
+                                            src={`/industries/${slug}.jpg`}
+                                            alt=""
+                                            className="h-full w-full object-cover"
+                                        />
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         <div>
