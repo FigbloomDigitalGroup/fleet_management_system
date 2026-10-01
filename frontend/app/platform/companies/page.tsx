@@ -6,6 +6,7 @@ import { apiRequest } from "../../lib/api";
 import { CompanyRecord } from "../../types/auth";
 import Skeleton from "../../components/Skeleton";
 import { usePageHeader } from "../../components/DashboardShell";
+import { industryLabel } from "../../lib/industries";
 
 const statusStyles: Record<string, string> = {
   active: "bg-teal-50 text-teal-600 border-teal-200",
@@ -52,6 +53,7 @@ export default function CompaniesPage() {
                 <th className="text-left px-5 py-3 font-medium">Company</th>
                 <th className="text-left px-5 py-3 font-medium">Status</th>
                 <th className="text-left px-5 py-3 font-medium">Plan</th>
+                <th className="text-left px-5 py-3 font-medium">Industry</th>
                 <th className="text-left px-5 py-3 font-medium">Users</th>
                 <th className="text-left px-5 py-3 font-medium">Registered</th>
               </tr>
@@ -59,7 +61,7 @@ export default function CompaniesPage() {
             <tbody>
               {companies.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-gray-400">
+                  <td colSpan={6} className="px-5 py-8 text-center text-gray-400">
                     No companies registered yet.
                   </td>
                 </tr>
@@ -80,6 +82,7 @@ export default function CompaniesPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3 text-gray-600">{c.subscriptionPlan}</td>
+                    <td className="px-5 py-3 text-gray-600">{industryLabel(c.industry)}</td>
                     <td className="px-5 py-3 text-gray-600">{c.userCount ?? "-"}</td>
                     <td className="px-5 py-3 text-gray-500">
                       {new Date(c.createdAt).toLocaleDateString()}
