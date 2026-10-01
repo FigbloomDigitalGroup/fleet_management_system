@@ -1,5 +1,6 @@
 import express from "express";
 import { authenticate, authorize } from "../middleware/auth.js";
+import { handleSpreadsheetUpload } from "../middleware/upload.js";
 import {
   loginLimiter,
   forgotPasswordLimiter,
@@ -9,6 +10,7 @@ import {
 import {
   registerCompany,
   createUserUnderCompany,
+  bulkImportDrivers,
   login,
   refresh,
   logout,
@@ -30,6 +32,14 @@ router.post(
   authenticate,
   authorize("COMPANY_OWNER", "PLATFORM_ADMIN", "ADMIN"),
   createUserUnderCompany
+);
+
+router.post(
+  "/users/bulk-import",
+  authenticate,
+  authorize("COMPANY_OWNER", "PLATFORM_ADMIN", "ADMIN"),
+  handleSpreadsheetUpload,
+  bulkImportDrivers
 );
 
 export default router;

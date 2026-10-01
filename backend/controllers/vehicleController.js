@@ -1,6 +1,9 @@
 import Vehicle from "../models/Vehicle.js";
 import Geofence from "../models/Geofence.js";
 import { tenantScope } from "../middleware/auth.js";
+import { parseSpreadsheetRows } from "../lib/spreadsheet.js";
+
+const MAX_IMPORT_ROWS = 500;
 
 const VEHICLE_TYPES = [
   "car",
@@ -38,9 +41,97 @@ export async function createVehicle(req, res) {
   }
 }
 
+// Bulk-creates vehicles from an uploaded .xlsx/.csv file — same validation
+// rules as createVehicle, applied per row, so one bad row doesn't block the
+// rest. Expected columns (case/spacing-insensitive): plateNumber (required),
+// make, model, vehicleType, deviceId.
+export async function bulkImportVehicles(req, res) {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+    let rows;
+    try {
+      rows = await parseSpreadsheetRows(req.file.buffer, req.file.originalname);
+    } catch (err) {
+      return res.status(400).json({ error: "Could not read that file — make sure it's a valid .xlsx or .csv" });
+    }
+
+    if (rows.length === 0) return res.status(400).json({ error: "The file has no data rows" });
+    if (rows.length > MAX_IMPORT_ROWS) {
+      return res.status(400).json({ error: `Too many rows — max ${MAX_IMPORT_ROWS} per import` });
+    }
+
+    const companyId = req.user.role === "PLATFORM_ADMIN" ? req.body.companyId : req.user.companyId;
+
+    const results = [];
+    let createdCount = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowNumber = i + 2; // header is row 1
+      const plateNumber = row.platenumber || row.plate || "";
+      const make = row.make || undefined;
+      const model = row.model || undefined;
+      const deviceId = row.deviceid || row.device || undefined;
+      let vehicleType = row.vehicletype || row.type || undefined;
+
+      if (!plateNumber) {
+        results.push({ row: rowNumber, plateNumber: "", status: "failed", error: "plateNumber is required" });
+        continue;
+      }
+      if (vehicleType) {
+        vehicleType = String(vehicleType).trim().toLowerCase().replace(/\s+/g, "_");
+        if (!VEHICLE_TYPES.includes(vehicleType)) {
+          results.push({
+            row: rowNumber,
+            plateNumber,
+            status: "failed",
+            error: `vehicleType must be one of: ${VEHICLE_TYPES.join(", ")}`,
+          });
+          continue;
+        }
+      }
+      if (!companyId) {
+        results.push({ row: rowNumber, plateNumber, status: "failed", error: "companyId is required" });
+        continue;
+      }
+
+      try {
+        await Vehicle.create({ companyId, plateNumber, make, model, deviceId, vehicleType });
+        results.push({ row: rowNumber, plateNumber, status: "created" });
+        createdCount++;
+      } catch (err) {
+        if (err.code === 11000) {
+          results.push({
+            row: rowNumber,
+            plateNumber,
+            status: "failed",
+            error: "A vehicle with this plate number or device ID already exists",
+          });
+        } else {
+          results.push({ row: rowNumber, plateNumber, status: "failed", error: "Could not save this row" });
+        }
+      }
+    }
+
+    return res.status(201).json({ createdCount, failedCount: results.length - createdCount, results });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to import vehicles" });
+  }
+}
+
 export async function listVehicles(req, res) {
   try {
-    const vehicles = await Vehicle.find(tenantScope(req))
+    const scope = tenantScope(req);
+    // PLATFORM_ADMIN isn't tied to one company (tenantScope returns {} for
+    // them), so let them optionally narrow to a single company's vehicles —
+    // e.g. from that company's detail page.
+    if (req.user.role === "PLATFORM_ADMIN" && req.query.companyId) {
+      scope.companyId = req.query.companyId;
+    }
+
+    const vehicles = await Vehicle.find(scope)
       .populate("driverId", "fullName email")
       .populate("startGeofenceId", "name")
       .sort({ createdAt: -1 });
@@ -75,7 +166,12 @@ export async function updateVehicle(req, res) {
     if (make !== undefined) update.make = make;
     if (model !== undefined) update.model = model;
     if (deviceId !== undefined) update.deviceId = deviceId;
-    if (status !== undefined) update.status = status;
+    if (status !== undefined) {
+      update.status = status;
+      // Marks this as a deliberate admin choice so tracking pings leave it
+      // alone until the vehicle is seen moving again (see ingestLocation).
+      update.statusManuallySet = true;
+    }
     if (driverId !== undefined) update.driverId = driverId || null;
     if (vehicleType !== undefined) {
       if (!VEHICLE_TYPES.includes(vehicleType)) {

@@ -5,8 +5,14 @@ import Company from "../models/Company.js";
 import User from "../models/User.js";
 import RefreshToken from "../models/RefreshToken.js";
 import { sendPasswordResetEmail } from "../lib/mailer.js";
+import { parseSpreadsheetRows } from "../lib/spreadsheet.js";
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const MAX_IMPORT_ROWS = 500;
+
+function generateTempPassword() {
+  return crypto.randomBytes(9).toString("base64").replace(/[+/=]/g, "").slice(0, 12);
+}
 
 function hashResetToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -151,6 +157,86 @@ export async function createUserUnderCompany(req, res) {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to create user" });
+  }
+}
+
+// Bulk-creates DRIVER accounts from an uploaded .xlsx/.csv file — same
+// validation rules as createUserUnderCompany, applied per row. Expected
+// columns (case/spacing-insensitive): fullName, email, password (optional —
+// a temporary one is generated and returned if left blank).
+export async function bulkImportDrivers(req, res) {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+    let rows;
+    try {
+      rows = await parseSpreadsheetRows(req.file.buffer, req.file.originalname);
+    } catch (err) {
+      return res.status(400).json({ error: "Could not read that file — make sure it's a valid .xlsx or .csv" });
+    }
+
+    if (rows.length === 0) return res.status(400).json({ error: "The file has no data rows" });
+    if (rows.length > MAX_IMPORT_ROWS) {
+      return res.status(400).json({ error: `Too many rows — max ${MAX_IMPORT_ROWS} per import` });
+    }
+
+    const companyId = req.user.role === "PLATFORM_ADMIN" ? req.body.companyId : req.user.companyId;
+
+    const results = [];
+    let createdCount = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowNumber = i + 2; // header is row 1
+      const fullName = row.fullname || row.name || "";
+      const email = String(row.email || "").trim().toLowerCase();
+      let password = row.password ? String(row.password) : "";
+      let generatedPassword = null;
+
+      if (!fullName) {
+        results.push({ row: rowNumber, email, status: "failed", error: "fullName is required" });
+        continue;
+      }
+      if (!email) {
+        results.push({ row: rowNumber, email, status: "failed", error: "email is required" });
+        continue;
+      }
+      if (!password) {
+        password = generateTempPassword();
+        generatedPassword = password;
+      } else if (password.length < 8) {
+        results.push({ row: rowNumber, email, status: "failed", error: "password must be at least 8 characters" });
+        continue;
+      }
+      if (!companyId) {
+        results.push({ row: rowNumber, email, status: "failed", error: "companyId is required" });
+        continue;
+      }
+
+      const existing = await User.findOne({ email });
+      if (existing) {
+        results.push({ row: rowNumber, email, status: "failed", error: "An account with this email already exists" });
+        continue;
+      }
+
+      try {
+        const passwordHash = await bcrypt.hash(password, 10);
+        await User.create({ email, passwordHash, fullName, role: "DRIVER", companyId });
+        results.push({ row: rowNumber, email, status: "created", generatedPassword });
+        createdCount++;
+      } catch (err) {
+        if (err.code === 11000) {
+          results.push({ row: rowNumber, email, status: "failed", error: "An account with this email already exists" });
+        } else {
+          results.push({ row: rowNumber, email, status: "failed", error: "Could not save this row" });
+        }
+      }
+    }
+
+    return res.status(201).json({ createdCount, failedCount: results.length - createdCount, results });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to import drivers" });
   }
 }
 
