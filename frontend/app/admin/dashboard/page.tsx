@@ -11,7 +11,9 @@ import DonutChartCard from "../../components/DonutChartCard";
 import LineChartCard from "../../components/LineChartCard";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import { usePageHeader } from "../../components/DashboardShell";
-import { VehicleRecord, DriverRecord, TripRecord, AlertRecord, AgentSummary } from "../../types/auth";
+import { VehicleRecord, DriverRecord, TripRecord, AlertRecord, AgentSummary, DailyStatPoint } from "../../types/auth";
+import LiveMapPreview from "../../components/LiveMapPreview";
+import MapMetricsCard from "../../components/MapMetricsCard";
 
 //const FleetMap = dynamic<{ compact?: boolean }>(() => import("../../components/FleetMap"), { ssr: false });
 
@@ -23,6 +25,7 @@ export default function AdminDashboard() {
   const [trips, setTrips] = useState<TripRecord[]>([]);
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [agentSummary, setAgentSummary] = useState<AgentSummary | null>(null);
+  const [dailyStats, setDailyStats] = useState<DailyStatPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
   const vehicleCounts = {
@@ -68,12 +71,25 @@ export default function AdminDashboard() {
       }
     }
     loadAll();
+    const interval = setInterval(loadAll, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     apiRequest<AgentSummary>("/api/agent/summary")
       .then(setAgentSummary)
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    function loadDailyStats() {
+      apiRequest<DailyStatPoint[]>("/api/companies/me/stats/daily")
+        .then(setDailyStats)
+        .catch(() => {});
+    }
+    loadDailyStats();
+    const interval = setInterval(loadDailyStats, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) return <FullPageLoading label="Loading dashboard" />;
@@ -94,6 +110,16 @@ export default function AdminDashboard() {
 
   return (
     <div>
+      {/* Live Map preview + Map metrics card — share the row instead of each
+          spanning the full width on their own. The map's title/button float
+          over it (see LiveMapPreview) instead of sitting above it, so both
+          cards use the row's full height edge to edge. Shown first, right
+          after the Fleet Overview hero + stat cards above. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 h-80">
+        <LiveMapPreview href="/admin/live-map" />
+        <MapMetricsCard active={vehicleCounts.active} total={vehicleCounts.total} dailyStats={dailyStats} />
+      </div>
+
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
         <div className="lg:col-span-2">
@@ -111,7 +137,7 @@ export default function AdminDashboard() {
           <CircleStat percentage={assignedPct} label="Drivers assigned" color="#0d9488" description="Drivers with a vehicle assigned" />
         </div>
       </div>
-    
+
       {/* Fleet status breakdown */}
 <div className="mb-4 flex flex-col lg:flex-row gap-3">
   <div className="flex-1">
@@ -149,7 +175,7 @@ export default function AdminDashboard() {
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Recent alerts</h2>
-          <Link href="/admin/alerts" className="rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-teal-700">
+          <Link href="/admin/alerts" className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
             View all
           </Link>
         </div>
@@ -187,7 +213,7 @@ export default function AdminDashboard() {
       <div>
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Recent trips</h2>
-          <Link href="/admin/trips" className="rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-teal-700">
+          <Link href="/admin/trips" className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
             View all
           </Link>
         </div>

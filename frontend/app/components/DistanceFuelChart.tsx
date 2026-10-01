@@ -1,0 +1,74 @@
+"use client";
+
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
+
+interface DailyPoint {
+  date: string;
+  distanceKm: number;
+  fuelConsumedLiters: number;
+}
+
+function dayLabel(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString(undefined, { weekday: "short" });
+}
+
+// Distance and fuel are different units, so they each get their own Y axis
+// (left = km, right = L) instead of sharing one scale, which would make
+// whichever number is naturally larger drown out the other.
+export default function DistanceFuelChart({ data }: { data: DailyPoint[] }) {
+  const chartData = data.map((d) => ({ name: dayLabel(d.date), distanceKm: d.distanceKm, fuelConsumedLiters: d.fuelConsumedLiters }));
+
+  return (
+    <div className="h-full">
+      <div className="mb-2 flex flex-wrap gap-2">
+        <span className="flex items-center gap-1.5 rounded-full bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-500">
+          <span className="h-2 w-2 rounded-full bg-teal-400" aria-hidden="true" />
+          Distance (km)
+        </span>
+        <span className="flex items-center gap-1.5 rounded-full bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-500">
+          <span className="h-2 w-2 rounded-full bg-orange-400" aria-hidden="true" />
+          Fuel consumed (L)
+        </span>
+      </div>
+      <ResponsiveContainer width="100%" height={180}>
+        <AreaChart data={chartData}>
+          <defs>
+            <linearGradient id="distanceFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#2dd4bf" stopOpacity={0.35} />
+              <stop offset="95%" stopColor="#2dd4bf" stopOpacity={0.02} />
+            </linearGradient>
+            <linearGradient id="fuelFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#fb923c" stopOpacity={0.35} />
+              <stop offset="95%" stopColor="#fb923c" stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+          <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+          <YAxis yAxisId="distance" hide />
+          <YAxis yAxisId="fuel" orientation="right" hide />
+          <Tooltip
+            contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12 }}
+            formatter={((value: number, key: string) =>
+              key === "distanceKm" ? [`${value} km`, "Distance"] : [`${value} L`, "Fuel consumed"]) as any}
+          />
+          <Area
+            yAxisId="distance"
+            type="monotone"
+            dataKey="distanceKm"
+            stroke="#2dd4bf"
+            strokeWidth={2.5}
+            fill="url(#distanceFill)"
+          />
+          <Area
+            yAxisId="fuel"
+            type="monotone"
+            dataKey="fuelConsumedLiters"
+            stroke="#fb923c"
+            strokeWidth={2.5}
+            fill="url(#fuelFill)"
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}

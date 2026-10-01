@@ -9,11 +9,12 @@ import BarChartCard from "../../components/BarChartCard";
 import DonutChartCard from "../../components/DonutChartCard";
 import LineChartCard from "../../components/LineChartCard";
 import FullPageLoading from "@/app/components/FullPageLoading";
-import LiveMapWidget from "../../components/LiveMapWidget";
+import LiveMapPreview from "../../components/LiveMapPreview";
+import MapMetricsCard from "../../components/MapMetricsCard";
 import { usePageHeader } from "../../components/DashboardShell";
 import {
-  CompanyRecord,
   CompanyStats,
+  DailyStatPoint,
   VehicleRecord,
   DriverRecord,
   AdminRecord,
@@ -68,7 +69,6 @@ function CircleStat({
 }
 
 export default function CompanyDashboard() {
-  const [company, setCompany] = useState<CompanyRecord | null>(null);
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
   const [admins, setAdmins] = useState<AdminRecord[]>([]);
@@ -76,6 +76,7 @@ export default function CompanyDashboard() {
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [agentSummary, setAgentSummary] = useState<AgentSummary | null>(null);
   const [companyStats, setCompanyStats] = useState<CompanyStats | null>(null);
+  const [dailyStats, setDailyStats] = useState<DailyStatPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
   const vehicleCounts = {
@@ -104,15 +105,13 @@ export default function CompanyDashboard() {
   useEffect(() => {
     async function loadAll() {
       try {
-        const [companyData, vehicleData, driverData, adminData, tripData, alertData] = await Promise.all([
-          apiRequest<CompanyRecord>("/api/companies/me"),
+        const [vehicleData, driverData, adminData, tripData, alertData] = await Promise.all([
           apiRequest<VehicleRecord[]>("/api/vehicles"),
           apiRequest<DriverRecord[]>("/api/users/drivers"),
           apiRequest<AdminRecord[]>("/api/users/admins"),
           apiRequest<TripRecord[]>("/api/trips"),
           apiRequest<AlertRecord[]>("/api/alerts"),
         ]);
-        setCompany(companyData);
         setVehicles(vehicleData);
         setDrivers(driverData);
         setAdmins(adminData);
@@ -125,6 +124,8 @@ export default function CompanyDashboard() {
       }
     }
     loadAll();
+    const interval = setInterval(loadAll, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -137,6 +138,17 @@ export default function CompanyDashboard() {
     apiRequest<CompanyStats>("/api/companies/me/stats")
       .then(setCompanyStats)
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    function loadDailyStats() {
+      apiRequest<DailyStatPoint[]>("/api/companies/me/stats/daily")
+        .then(setDailyStats)
+        .catch(() => {});
+    }
+    loadDailyStats();
+    const interval = setInterval(loadDailyStats, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) return <FullPageLoading />;
@@ -159,7 +171,8 @@ export default function CompanyDashboard() {
 
   return (
     <div>
-      {/* Distance, expenses & revenue */}
+      {/* Distance, expenses & revenue — shown first, right after the
+          Fleet Overview hero + stat cards above. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <StatCard
           label="Total distance covered"
@@ -174,11 +187,20 @@ export default function CompanyDashboard() {
           description="Estimated total spent since joining"
         />
         <StatCard
-          label="Revenue"
-          value={`$${companyStats?.totalRevenue ?? 0}`}
-          accent="green"
-          description="Self-reported — update it from Billing"
+          label="Fuel consumption"
+          value={`${companyStats?.totalFuelConsumedLiters ?? 0} L`}
+          accent="orange"
+          description="Estimated from fuel sensor readings, all time"
         />
+      </div>
+
+      {/* Map metrics card + Live Map preview — share the row instead of each
+          spanning the full width on their own. The map's title/button float
+          over it (see LiveMapPreview) instead of sitting above it, so both
+          cards use the row's full height edge to edge. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 h-80">
+        <LiveMapPreview href="/company/live-map" />
+        <MapMetricsCard active={vehicleCounts.active} total={vehicleCounts.total} dailyStats={dailyStats} />
       </div>
 
       {/* Charts row */}
@@ -241,7 +263,7 @@ export default function CompanyDashboard() {
       <div>
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Recent alerts</h2>
-          <Link href="/company/alerts" className="rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-teal-700">
+          <Link href="/company/alerts" className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
             View all
           </Link>
         </div>
@@ -276,8 +298,6 @@ export default function CompanyDashboard() {
           )}
         </div>
       </div>
-
-      <LiveMapWidget />
     </div>
   );
 }

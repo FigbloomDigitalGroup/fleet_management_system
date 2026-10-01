@@ -179,11 +179,8 @@ export default function FleetMap({
     return () => clearInterval(interval);
   }, []);
 
-  // Vehicles only ever appear on the map once at least one geofence zone
-  // exists — there's nothing meaningful to plot a fleet against otherwise.
-  const hasZones = geofences.length > 0;
   const withLocation = vehicles.filter((v) => v.lastLocation);
-  const visibleVehicles = hasZones ? withLocation : [];
+  const visibleVehicles = withLocation;
   const center =
     visibleVehicles.length > 0
       ? { lat: visibleVehicles[0].lastLocation!.latitude, lng: visibleVehicles[0].lastLocation!.longitude }
@@ -226,7 +223,7 @@ export default function FleetMap({
       return;
     }
 
-    const matchesOnMap = hasZones ? matches.filter((v) => v.lastLocation) : [];
+    const matchesOnMap = matches.filter((v) => v.lastLocation);
 
     if (matchesOnMap.length === 0) {
       setSearchMessage(
@@ -327,7 +324,7 @@ export default function FleetMap({
                     )
                 )}
 
-              {/* Vehicles — hidden entirely until at least one geofence zone exists */}
+              {/* Vehicles — plotted as soon as they have a GPS fix, independent of geofences */}
               {visibleVehicles.map((v) => (
                 <OverlayView
                   key={v.vehicleId}
@@ -359,12 +356,6 @@ export default function FleetMap({
               )}
             </GoogleMap>
 
-            {!hasZones && (
-              <div className="absolute inset-x-0 top-0 z-10 bg-orange-50 px-4 py-2 text-center text-xs font-medium text-orange-700 shadow-sm">
-                No geofence zones yet — vehicles won&apos;t appear on the map until you create one.
-              </div>
-            )}
-
             {mapOverlay}
           </div>
 
@@ -383,7 +374,7 @@ export default function FleetMap({
             </div>
           )}
 
-          {hasZones && withLocation.length === 0 && (
+          {withLocation.length === 0 && (
             <p className="text-sm text-gray-400 text-center py-4">
               No vehicle location data yet — vehicles will appear once GPS pings start coming in.
             </p>
