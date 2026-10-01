@@ -4,8 +4,32 @@ import { useEffect, useState, FormEvent } from "react";
 import Link from "next/link";
 import { apiRequest } from "../lib/api";
 import { VehicleRecord, DriverRecord, GeofenceRecord } from "../types/auth";
+import { VEHICLE_TYPES } from "../lib/vehicleTypes";
 import Skeleton from "./Skeleton";
 import ZoneStatusBadge from "./ZoneStatusBadge";
+
+interface BulkImportResultRow {
+  row: number;
+  plateNumber: string;
+  status: "created" | "failed";
+  error?: string;
+}
+interface BulkImportResult {
+  createdCount: number;
+  failedCount: number;
+  results: BulkImportResultRow[];
+}
+
+function downloadVehicleTemplate() {
+  const csv = "plateNumber,make,model,vehicleType,deviceId\nKDA 123A,Toyota,Hiace,van,TRK-001\n";
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "vehicles-template.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 const statusStyles: Record<string, string> = {
   active: "bg-teal-50 text-teal-600 border-teal-200",
@@ -38,8 +62,14 @@ export default function VehiclesList({
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
   const [deviceId, setDeviceId] = useState("");
+  const [vehicleType, setVehicleType] = useState("car");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<BulkImportResult | null>(null);
 
   async function loadAll() {
     try {
@@ -71,17 +101,41 @@ export default function VehiclesList({
     try {
       await apiRequest("/api/vehicles", {
         method: "POST",
-        body: JSON.stringify({ plateNumber, make, model, deviceId: deviceId || undefined }),
+        body: JSON.stringify({ plateNumber, make, model, deviceId: deviceId || undefined, vehicleType }),
       });
       setPlateNumber("");
       setMake("");
       setModel("");
       setDeviceId("");
+      setVehicleType("car");
       await loadAll();
     } catch (err: any) {
       setFormError(err.message || "Failed to add vehicle");
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleImportVehicles(e: FormEvent) {
+    e.preventDefault();
+    if (!importFile) return;
+    setImportError(null);
+    setImportResult(null);
+    setIsImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", importFile);
+      const result = await apiRequest<BulkImportResult>("/api/vehicles/bulk-import", {
+        method: "POST",
+        body: formData,
+      });
+      setImportResult(result);
+      setImportFile(null);
+      await loadAll();
+    } catch (err: any) {
+      setImportError(err.message || "Failed to import vehicles");
+    } finally {
+      setIsImporting(false);
     }
   }
 
@@ -133,7 +187,7 @@ export default function VehiclesList({
                     <td className="px-5 py-3">
                       <Link
                         href={`${basePath}/${v._id}`}
-                        className="inline-block w-28 cursor-pointer rounded-md bg-blue-950 px-3 py-1.5 text-center text-[12px] font-medium text-white"
+                        className="inline-block w-28 cursor-pointer rounded-md bg-blue-950 px-3 py-1.5 text-center text-[11px] font-bold text-white"
                       >
                         {v.plateNumber}
                       </Link>
@@ -229,6 +283,20 @@ export default function VehiclesList({
             />
           </div>
           <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Vehicle type</label>
+            <select
+              value={vehicleType}
+              onChange={(e) => setVehicleType(e.target.value)}
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+            >
+              {VEHICLE_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
               Device ID <span className="text-gray-400">(optional)</span>
             </label>
@@ -251,6 +319,59 @@ export default function VehiclesList({
             {isSubmitting ? "Adding…" : "Add vehicle"}
           </button>
         </form>
+
+        <div className="my-4 flex items-center gap-3">
+          <div className="h-px flex-1 bg-gray-200" />
+          <span className="text-[11px] font-medium uppercase tracking-wide text-gray-400">or</span>
+          <div className="h-px flex-1 bg-gray-200" />
+        </div>
+
+        <h3 className="text-sm font-medium text-gray-700">Import from a spreadsheet</h3>
+        <p className="text-xs text-teal-600 mt-0.5 mb-3">
+          Add many vehicles at once from an .xlsx or .csv file.{" "}
+          <button type="button" onClick={downloadVehicleTemplate} className="underline hover:text-teal-700">
+            Download template
+          </button>
+        </p>
+        <form onSubmit={handleImportVehicles} className="space-y-3">
+          <input
+            type="file"
+            accept=".xlsx,.csv"
+            onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+            className="w-full text-xs text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-gray-700 hover:file:bg-gray-200"
+          />
+
+          {importError && <p className="text-xs text-red-600">{importError}</p>}
+
+          <button
+            type="submit"
+            disabled={isImporting || !importFile}
+            className="w-full py-2 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+          >
+            {isImporting ? "Importing…" : "Import vehicles"}
+          </button>
+        </form>
+
+        {importResult && (
+          <div className="mt-3 rounded-md border border-gray-200 p-3">
+            <p className="text-xs font-medium text-gray-700">
+              {importResult.createdCount} added
+              {importResult.failedCount > 0 ? `, ${importResult.failedCount} failed` : ""}
+            </p>
+            {importResult.failedCount > 0 && (
+              <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-xs text-red-600">
+                {importResult.results
+                  .filter((r) => r.status === "failed")
+                  .map((r) => (
+                    <li key={r.row}>
+                      Row {r.row}
+                      {r.plateNumber ? ` (${r.plateNumber})` : ""}: {r.error}
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

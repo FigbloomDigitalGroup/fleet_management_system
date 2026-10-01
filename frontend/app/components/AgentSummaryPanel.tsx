@@ -122,7 +122,7 @@ export default function AgentSummaryPanel() {
             {summary.recentFindings.map((f, i) => (
               <li key={i} className="flex items-start justify-between gap-3 px-4 py-3 text-sm">
                 <div>
-                  <p className="font-medium text-gray-900">{f.plateNumber}</p>
+                  <p className="text-xs font-bold text-gray-900">{f.plateNumber}</p>
                   <p className="text-xs text-gray-500 mt-0.5">{f.reason || "No reason given"}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{timeAgo(f.runAt)}</p>
                 </div>

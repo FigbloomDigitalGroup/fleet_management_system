@@ -20,6 +20,9 @@ export interface CompanyRecord {
   slug: string;
   status: "active" | "suspended" | "pending";
   subscriptionPlan: string;
+  paymentMethod?: "mpesa" | "paystack" | null;
+  totalRevenue?: number;
+  industry?: string;
   createdAt: string;
   userCount?: number;
   dailyStartPoint?: {
@@ -28,6 +31,22 @@ export interface CompanyRecord {
     geofenceId?: string;
     updatedAt?: string;
   } | null;
+}
+
+export interface CompanyStats {
+  totalDistanceKm: number;
+  totalFuelConsumedLiters: number;
+  estimatedExpenses: number | null;
+  totalRevenue: number;
+  vehicleCount: number;
+  vehicleTypeBreakdown?: Record<string, number>;
+  monthsSinceJoining: number;
+}
+
+export interface DailyStatPoint {
+  date: string;
+  distanceKm: number;
+  fuelConsumedLiters: number;
 }
 
 export interface AdminRecord {
@@ -45,6 +64,7 @@ export interface VehicleRecord {
   make?: string;
   model?: string;
   deviceId?: string;
+  vehicleType?: string;
   status: "active" | "idle" | "offline" | "maintenance";
   driverId?: { _id: string; fullName: string; email: string } | null;
   startGeofenceId?: { _id: string; name: string } | null;

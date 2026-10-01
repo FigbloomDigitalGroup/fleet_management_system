@@ -57,6 +57,7 @@ export async function ingestLocation(req, res) {
 // 2. Update vehicle status — but never "active" without a driver assigned
 if (!vehicle.driverId) {
   vehicle.status = "offline";
+  vehicle.statusManuallySet = false;
 
   // Flag it if the vehicle is actually moving with nobody assigned to it
   if (isMoving) {
@@ -67,8 +68,16 @@ if (!vehicle.driverId) {
       message: `Vehicle is moving at ${speedKph} km/h with no driver assigned.`,
     });
   }
-} else {
-  vehicle.status = isMoving ? "active" : "idle";
+} else if (isMoving) {
+  // Movement always wins — resumes automatic status tracking even if an
+  // admin had manually pinned a status (e.g. "maintenance") earlier.
+  vehicle.status = "active";
+  vehicle.statusManuallySet = false;
+} else if (!vehicle.statusManuallySet) {
+  // Only auto-set to idle when nobody has manually overridden the status —
+  // otherwise an admin's manual pick (e.g. "idle"/"maintenance") sticks until
+  // the vehicle is next seen moving.
+  vehicle.status = "idle";
 }
 await vehicle.save();
 
@@ -263,13 +272,64 @@ if (vehicle.driverId && !isMoving) {
   }
 }
 
+// Closes out trips whose vehicle has simply gone quiet — a real tracker (or
+// the dev-ping live simulator) often stops sending pings entirely once a
+// vehicle parks, rather than continuing to report speed=0. The trip-closing
+// logic above only runs reactively when a new ping arrives, so without this
+// sweep those trips would stay open forever and never show up anywhere that
+// only lists completed trips (e.g. VehicleTripsMap). Runs on a schedule from
+// Index.js, independent of any single vehicle's ping stream.
+export async function closeStaleTrips() {
+  const openTrips = await Trip.find({ endTime: { $exists: false } });
+  let closedCount = 0;
+
+  for (const trip of openTrips) {
+    const lastPing = await LocationPing.findOne({ vehicleId: trip.vehicleId }).sort({ recordedAt: -1 });
+    if (!lastPing) continue;
+
+    const minutesSinceLastPing = (Date.now() - new Date(lastPing.recordedAt).getTime()) / 60000;
+    if (minutesSinceLastPing < TRIP_IDLE_TIMEOUT_MINUTES) continue;
+
+    const tripPings = await LocationPing.find({
+      vehicleId: trip.vehicleId,
+      recordedAt: { $gte: trip.startTime },
+    }).sort({ recordedAt: 1 });
+
+    let totalDistance = 0;
+    for (let i = 1; i < tripPings.length; i++) {
+      totalDistance += distanceKm(
+        tripPings[i - 1].latitude,
+        tripPings[i - 1].longitude,
+        tripPings[i].latitude,
+        tripPings[i].longitude
+      );
+    }
+
+    const finalPing = tripPings[tripPings.length - 1] || lastPing;
+    trip.endTime = finalPing.recordedAt;
+    trip.endLat = finalPing.latitude;
+    trip.endLng = finalPing.longitude;
+    trip.distanceKm = Math.round(totalDistance * 10) / 10;
+    await trip.save();
+    closedCount += 1;
+  }
+
+  return closedCount;
+}
+
 export async function getLiveLocations(req, res) {
   try {
-    const vehicles = await Vehicle.find(tenantScope(req)).select("plateNumber status");
+    const vehicles = await Vehicle.find(tenantScope(req)).select("plateNumber status vehicleType");
     const results = await Promise.all(
       vehicles.map(async (v) => {
         const lastPing = await LocationPing.findOne({ vehicleId: v._id }).sort({ recordedAt: -1 });
-        return { vehicleId: v._id, plateNumber: v.plateNumber, status: v.status, lastLocation: lastPing || null };
+        return {
+          vehicleId: v._id,
+          plateNumber: v.plateNumber,
+          status: v.status,
+          vehicleType: v.vehicleType,
+          lastLocation: lastPing || null,
+        };
       })
     );
     return res.json(results);

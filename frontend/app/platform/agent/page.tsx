@@ -153,7 +153,7 @@ export default function AgentOverviewPage() {
                               {scan.details.map((d, i) => (
                                 <div key={i} className="flex items-start justify-between gap-3 text-xs">
                                   <div>
-                                    <span className="font-medium text-gray-900">{d.plateNumber}</span>
+                                    <span className="font-bold text-gray-900">{d.plateNumber}</span>
                                     <span className="text-gray-400"> — </span>
                                     <span className="text-gray-600">{d.reason || "no reason given"}</span>
                                   </div>

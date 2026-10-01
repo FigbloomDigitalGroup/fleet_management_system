@@ -1,7 +1,7 @@
 import { Suspense } from "react";
-import { FaCog } from "react-icons/fa";
 import BackgroundSlideshow from "../components/BackgroundSlideshow";
 import ResetPasswordForm from "./ResetPasswordForm";
+import BrandIcon from "../components/BrandIcon";
 
 export default function ResetPasswordPage() {
   return (
@@ -12,7 +12,7 @@ export default function ResetPasswordPage() {
 
         <div className="relative z-20 flex flex-col justify-between h-full">
           <span className="flex items-center gap-2 text-xl font-bold text-white">
-            <FaCog aria-hidden="true" />
+            <BrandIcon variant="light" className="h-6 w-6" />
             FIGBLOOM FLEET
           </span>
 

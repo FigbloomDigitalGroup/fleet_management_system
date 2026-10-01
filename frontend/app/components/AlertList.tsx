@@ -130,7 +130,7 @@ export default function AlertsList() {
             ) : (
               alerts.map((a) => (
                 <tr key={a._id} className="border-t border-gray-100">
-                  <td className="px-5 py-3 font-medium text-gray-900">
+                  <td className="px-5 py-3 text-xs font-bold text-gray-900">
                     {a.vehicleId?.plateNumber || "—"}
                   </td>
                   <td className="px-5 py-3 text-gray-600">{a.type.replace(/_/g, " ")}</td>

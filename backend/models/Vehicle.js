@@ -7,7 +7,33 @@ const vehicleSchema = new mongoose.Schema(
     make: { type: String },
     model: { type: String },
     deviceId: { type: String, unique: true, sparse: true },
+    // One shared list covering every industry this platform serves (logistics,
+    // school/public transport, construction, security, agriculture, oil & gas,
+    // rental, etc.) — every company picks from the same list regardless of
+    // their industry, rather than a per-industry restricted subset.
+    vehicleType: {
+      type: String,
+      enum: [
+        "car",
+        "van",
+        "truck",
+        "bus",
+        "motorcycle",
+        "tractor",
+        "excavator",
+        "crane",
+        "dump_truck",
+        "tanker",
+        "armored_vehicle",
+        "trailer",
+      ],
+      default: "car",
+    },
     status: { type: String, enum: ["active", "idle", "offline", "maintenance"], default: "offline" },
+    // When an admin manually sets status, it sticks (pings stop recomputing it)
+    // until the vehicle is next seen moving — at which point tracking pings
+    // resume automatic active/idle/offline control.
+    statusManuallySet: { type: Boolean, default: false },
     driverId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     // Overrides the company's default daily starting point (Company.dailyStartPoint)
     // for this specific vehicle — only meaningful when a company has more than
@@ -23,3 +49,10 @@ const vehicleSchema = new mongoose.Schema(
 vehicleSchema.index({ companyId: 1, plateNumber: 1 }, { unique: true });
 
 export default mongoose.model("Vehicle", vehicleSchema);
+
+
+
+
+
+
+

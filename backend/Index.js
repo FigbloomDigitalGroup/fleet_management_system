@@ -16,9 +16,11 @@ import routeRoutes from "./routes/routeRoutes.js";
 import geofenceRoutes from "./routes/geofenceRoutes.js";
 import agentRoutes from "./routes/agentRoutes.js";
 import { runAiAnomalyScan } from "./services/aiAnomalyDetector.js";
+import { closeStaleTrips } from "./controllers/trackingController.js";
 
 
 import cors from "cors";
+import helmet from "helmet";
 const app = express();
 
 const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:3000")
@@ -26,6 +28,7 @@ const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:3000")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+app.use(helmet());
 app.use(
   cors({
     origin: allowedOrigins,
@@ -62,8 +65,8 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 5000;
 
 connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running: http://localhost:${PORT}`);
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on port:${PORT}`);
   });
 
   // AI anomaly agent — runs every 15 minutes, independent of the real-time
@@ -77,4 +80,21 @@ connectDB().then(() => {
       )
       .catch((err) => console.error("[agent] scan crashed:", err));
   });
+
+  // Closes out trips whose vehicle has gone quiet, independent of whether
+  // another ping ever arrives to trigger the reactive close in
+  // trackingController.js's ingestLocation.
+  cron.schedule("*/5 * * * *", () => {
+    closeStaleTrips()
+      .then((count) => {
+        if (count > 0) console.log(`[trips] closed ${count} stale trip(s)`);
+      })
+      .catch((err) => console.error("[trips] stale-trip sweep crashed:", err));
+  });
 });
+
+
+
+
+
+

@@ -9,10 +9,12 @@ import BarChartCard from "../../components/BarChartCard";
 import DonutChartCard from "../../components/DonutChartCard";
 import LineChartCard from "../../components/LineChartCard";
 import FullPageLoading from "@/app/components/FullPageLoading";
-import LiveMapWidget from "../../components/LiveMapWidget";
+import LiveMapPreview from "../../components/LiveMapPreview";
+import MapMetricsCard from "../../components/MapMetricsCard";
 import { usePageHeader } from "../../components/DashboardShell";
 import {
-  CompanyRecord,
+  CompanyStats,
+  DailyStatPoint,
   VehicleRecord,
   DriverRecord,
   AdminRecord,
@@ -21,7 +23,7 @@ import {
   AgentSummary,
 } from "../../types/auth";
 
-const FleetMap = dynamic<{ compact?: boolean }>(() => import("../../components/FleetMap"), { ssr: false });
+//const FleetMap = dynamic<{ compact?: boolean }>(() => import("../../components/FleetMap"), { ssr: false });
 
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -67,13 +69,14 @@ function CircleStat({
 }
 
 export default function CompanyDashboard() {
-  const [company, setCompany] = useState<CompanyRecord | null>(null);
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
   const [admins, setAdmins] = useState<AdminRecord[]>([]);
   const [trips, setTrips] = useState<TripRecord[]>([]);
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [agentSummary, setAgentSummary] = useState<AgentSummary | null>(null);
+  const [companyStats, setCompanyStats] = useState<CompanyStats | null>(null);
+  const [dailyStats, setDailyStats] = useState<DailyStatPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
   const vehicleCounts = {
@@ -97,20 +100,18 @@ export default function CompanyDashboard() {
     [vehicleCounts.total, drivers.length, admins.length, unresolvedAlertCount]
   );
 
-  usePageHeader("Dashboard", "Everything your fleet needs, in one place.", statsNode);
+  usePageHeader("Fleet Overview", "Everything your fleet needs, in one place.", statsNode);
 
   useEffect(() => {
     async function loadAll() {
       try {
-        const [companyData, vehicleData, driverData, adminData, tripData, alertData] = await Promise.all([
-          apiRequest<CompanyRecord>("/api/companies/me"),
+        const [vehicleData, driverData, adminData, tripData, alertData] = await Promise.all([
           apiRequest<VehicleRecord[]>("/api/vehicles"),
           apiRequest<DriverRecord[]>("/api/users/drivers"),
           apiRequest<AdminRecord[]>("/api/users/admins"),
           apiRequest<TripRecord[]>("/api/trips"),
           apiRequest<AlertRecord[]>("/api/alerts"),
         ]);
-        setCompany(companyData);
         setVehicles(vehicleData);
         setDrivers(driverData);
         setAdmins(adminData);
@@ -123,12 +124,31 @@ export default function CompanyDashboard() {
       }
     }
     loadAll();
+    const interval = setInterval(loadAll, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     apiRequest<AgentSummary>("/api/agent/summary")
       .then(setAgentSummary)
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    apiRequest<CompanyStats>("/api/companies/me/stats")
+      .then(setCompanyStats)
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    function loadDailyStats() {
+      apiRequest<DailyStatPoint[]>("/api/companies/me/stats/daily")
+        .then(setDailyStats)
+        .catch(() => {});
+    }
+    loadDailyStats();
+    const interval = setInterval(loadDailyStats, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) return <FullPageLoading />;
@@ -151,6 +171,38 @@ export default function CompanyDashboard() {
 
   return (
     <div>
+      {/* Distance, expenses & revenue — shown first, right after the
+          Fleet Overview hero + stat cards above. */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+        <StatCard
+          label="Total distance covered"
+          value={`${companyStats?.totalDistanceKm ?? 0} km`}
+          accent="blue"
+          description="All recorded trips, all time"
+        />
+        <StatCard
+          label="Expenses"
+          value={companyStats?.estimatedExpenses === null ? "Custom plan" : `$${companyStats?.estimatedExpenses ?? 0}`}
+          accent="orange"
+          description="Estimated total spent since joining"
+        />
+        <StatCard
+          label="Fuel consumption"
+          value={`${companyStats?.totalFuelConsumedLiters ?? 0} L`}
+          accent="orange"
+          description="Estimated from fuel sensor readings, all time"
+        />
+      </div>
+
+      {/* Map metrics card + Live Map preview — share the row instead of each
+          spanning the full width on their own. The map's title/button float
+          over it (see LiveMapPreview) instead of sitting above it, so both
+          cards use the row's full height edge to edge. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 h-80">
+        <LiveMapPreview href="/company/live-map" />
+        <MapMetricsCard active={vehicleCounts.active} total={vehicleCounts.total} dailyStats={dailyStats} />
+      </div>
+
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
         <div className="lg:col-span-2">
@@ -211,7 +263,7 @@ export default function CompanyDashboard() {
       <div>
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Recent alerts</h2>
-          <Link href="/company/alerts" className="rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-teal-700">
+          <Link href="/company/alerts" className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
             View all
           </Link>
         </div>
@@ -224,11 +276,11 @@ export default function CompanyDashboard() {
               <tbody>
                 {alerts.slice(0, 5).map((a) => (
                   <tr key={a._id} className="border-t border-gray-100 first:border-t-0">
-                    <td className="px-5 py-3 font-medium text-gray-900">
+                    <td className="px-5 py-3 text-xs font-bold text-gray-900">
                       {a.vehicleId?.plateNumber || "—"}
                     </td>
                     <td className="px-5 py-3 text-gray-600">{a.type.replace(/_/g, " ")}</td>
-                    <td className="px-5 py-3 text-gray-500">{new Date(a.createdAt).toLocaleString()}</td>
+                    <td className="px-5 py-3 text-xs text-gray-500">{new Date(a.createdAt).toLocaleString()}</td>
                     <td className="px-5 py-3">
                       <span
                         className={`text-xs px-2 py-1 rounded-full border ${a.resolved
@@ -246,8 +298,6 @@ export default function CompanyDashboard() {
           )}
         </div>
       </div>
-
-      <LiveMapWidget />
     </div>
   );
 }

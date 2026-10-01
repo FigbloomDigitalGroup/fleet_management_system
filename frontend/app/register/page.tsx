@@ -4,15 +4,18 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { redirectPathForRole } from "../lib/roleRedirect";
-import { FaCog } from "react-icons/fa";
+import { FaGooglePlay } from "react-icons/fa";
 import BackgroundSlideshow from "../components/BackgroundSlideshow";
 import RobotCheckbox from "../components/RobotCheckbox";
+import BrandIcon from "../components/BrandIcon";
+import { INDUSTRIES, INDUSTRIES_WITH_IMAGES } from "../lib/industries";
 
 export default function RegisterPage() {
     const { register } = useAuth();
     const router = useRouter();
 
     const [companyName, setCompanyName] = useState("");
+    const [industry, setIndustry] = useState("");
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -31,7 +34,7 @@ export default function RegisterPage() {
 
         setIsSubmitting(true);
         try {
-            const user = await register({ companyName, ownerName: fullName, email, password });
+            const user = await register({ companyName, industry: industry || undefined, ownerName: fullName, email, password });
             router.push(redirectPathForRole(user.role));
         } catch (err: any) {
             setError(err.message || "Unable to create your account. Please try again.");
@@ -47,7 +50,7 @@ export default function RegisterPage() {
 
                 <div className="relative z-20 flex flex-col justify-between h-full">
                     <span className="flex items-center gap-2 text-xl font-bold text-white">
-                        <FaCog aria-hidden="true" />
+                        <BrandIcon variant="light" className="h-6 w-6" />
                         FIGBLOOM FLEET
                     </span>
 
@@ -61,6 +64,20 @@ export default function RegisterPage() {
                             Register your vehicle company to get started. Admins and drivers
                             are added by whoever manages their account, then sign in directly.
                         </p>
+
+                        <div className="mt-5">
+                            <p className="text-xs text-gray-300 mb-2">Drivers — get the app</p>
+                            <a
+                                href="#"
+                                className="inline-flex items-center gap-3 bg-black hover:bg-gray-900 text-white px-4 py-2 rounded-xl transition-colors"
+                            >
+                                <FaGooglePlay size={22} />
+                                <span className="text-left">
+                                    <span className="block text-[9px] uppercase tracking-wide text-gray-300">Get it on</span>
+                                    <span className="block text-sm font-semibold leading-tight">Google Play</span>
+                                </span>
+                            </a>
+                        </div>
                     </div>
 
                     <p className="text-sm text-gray-200">
@@ -75,7 +92,7 @@ export default function RegisterPage() {
             {/* RIGHT — Form panel */}
             <div className="lg:w-1/2 flex items-center justify-center p-8">
                 <div className="w-full max-w-sm">
-                    <h2 className="text-5xl font-extrabold text-blue-950 mb-2">Create your account</h2>
+                    <h2 className="text-5xl font-extrabold text-teal-950 mb-2">Create your account</h2>
                     <p className="text-sm text-gray-500 mb-8">Register your vehicle company.</p>
 
                     <form onSubmit={handleSubmit} className="space-y-5">
@@ -92,6 +109,44 @@ export default function RegisterPage() {
                                 placeholder="Your company name"
                                 className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                             />
+                        </div>
+
+                        <div>
+                            <label htmlFor="industry" className="block text-sm font-medium text-gray-700 mb-1.5">
+                                Industry
+                            </label>
+                            <select
+                                id="industry"
+                                value={industry}
+                                onChange={(e) => setIndustry(e.target.value)}
+                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                            >
+                                <option value="">Select your industry</option>
+                                {INDUSTRIES.map((i) => (
+                                    <option key={i.value} value={i.value}>
+                                        {i.label}
+                                    </option>
+                                ))}
+                            </select>
+
+                            <div className="mt-2.5 grid grid-cols-4 gap-1.5">
+                                {INDUSTRIES_WITH_IMAGES.map((slug) => (
+                                    <button
+                                        type="button"
+                                        key={slug}
+                                        onClick={() => setIndustry(slug)}
+                                        title={INDUSTRIES.find((i) => i.value === slug)?.label}
+                                        className={`aspect-square overflow-hidden rounded-md ring-1 transition-all ${industry === slug ? "ring-2 ring-teal-600" : "ring-gray-200 hover:ring-teal-400"
+                                            }`}
+                                    >
+                                        <img
+                                            src={`/industries/${slug}.jpg`}
+                                            alt=""
+                                            className="h-full w-full object-cover"
+                                        />
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         <div>

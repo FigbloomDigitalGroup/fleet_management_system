@@ -1,10 +1,11 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GoogleMap, OverlayView, Circle, useJsApiLoader } from "@react-google-maps/api";
 import { IoCarSportSharp } from "react-icons/io5";
 import { ImLocation2 } from "react-icons/im";
+import { FaSearch } from "react-icons/fa";
 import { apiRequest } from "../lib/api";
 import { usePulseColor } from "../lib/usePulseColor";
 import { isOutsideGeofences } from "../lib/geofence";
@@ -17,6 +18,7 @@ interface LiveVehicle {
   vehicleId: string;
   plateNumber: string;
   status: string;
+  vehicleType?: string;
   lastLocation: { latitude: number; longitude: number; recordedAt: string } | null;
 }
 
@@ -152,6 +154,10 @@ export default function FleetMap({
   const [loading, setLoading] = useState(true);
   const [showGeofences, setShowGeofences] = useState(true);
 
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchMessage, setSearchMessage] = useState<string | null>(null);
+
   async function load() {
     try {
       const [vehicleData, geofenceData] = await Promise.all([
@@ -173,11 +179,8 @@ export default function FleetMap({
     return () => clearInterval(interval);
   }, []);
 
-  // Vehicles only ever appear on the map once at least one geofence zone
-  // exists — there's nothing meaningful to plot a fleet against otherwise.
-  const hasZones = geofences.length > 0;
   const withLocation = vehicles.filter((v) => v.lastLocation);
-  const visibleVehicles = hasZones ? withLocation : [];
+  const visibleVehicles = withLocation;
   const center =
     visibleVehicles.length > 0
       ? { lat: visibleVehicles[0].lastLocation!.latitude, lng: visibleVehicles[0].lastLocation!.longitude }
@@ -198,6 +201,58 @@ export default function FleetMap({
       )
     : null;
 
+  // Search by plate number or vehicle type (car/van/truck) — zooms the map to
+  // whatever matches, without changing anything about how vehicles are
+  // fetched, filtered, or rendered above.
+  function handleSearch(e: FormEvent) {
+    e.preventDefault();
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) {
+      setSearchMessage(null);
+      return;
+    }
+
+    const matches = vehicles.filter(
+      (v) =>
+        v.plateNumber.toLowerCase().includes(query) ||
+        (v.vehicleType && v.vehicleType.toLowerCase().includes(query))
+    );
+
+    if (matches.length === 0) {
+      setSearchMessage(`No vehicle found matching "${searchQuery.trim()}".`);
+      return;
+    }
+
+    const matchesOnMap = matches.filter((v) => v.lastLocation);
+
+    if (matchesOnMap.length === 0) {
+      setSearchMessage(
+        matches.length === 1
+          ? `${matches[0].plateNumber} exists but isn't showing on the map yet — no GPS location received.`
+          : `Found ${matches.length} matching vehicles, but none are showing on the map yet — no GPS location received.`
+      );
+      return;
+    }
+
+    const map = mapRef.current;
+    if (map) {
+      if (matchesOnMap.length === 1) {
+        map.panTo({ lat: matchesOnMap[0].lastLocation!.latitude, lng: matchesOnMap[0].lastLocation!.longitude });
+        map.setZoom(16);
+      } else {
+        const bounds = new google.maps.LatLngBounds();
+        matchesOnMap.forEach((v) => bounds.extend({ lat: v.lastLocation!.latitude, lng: v.lastLocation!.longitude }));
+        map.fitBounds(bounds);
+      }
+    }
+
+    setSearchMessage(
+      matchesOnMap.length === 1
+        ? `Zoomed to ${matchesOnMap[0].plateNumber}.`
+        : `Found ${matchesOnMap.length} matching vehicles on the map.`
+    );
+  }
+
   if (loading || !isLoaded) return <FullPageLoading label="Loading map" />;
 
   return (
@@ -205,11 +260,39 @@ export default function FleetMap({
       {/* Map — takes the big central space */}
       <div className="flex-1 min-w-0">
         <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden mb-3">
+          {/* Vehicle search — zooms the map to a match by plate number or
+              vehicle type (car/van/truck); purely additive, doesn't touch
+              how vehicles are loaded or rendered below. */}
+          <div className="border-b border-gray-100 p-3">
+            <form onSubmit={handleSearch} className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by plate number or type (car, van, truck)…"
+                  className="w-full pl-9 pr-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                />
+              </div>
+              <button
+                type="submit"
+                className="shrink-0 rounded-md bg-teal-600 px-4 py-2 text-xs font-medium text-white hover:bg-teal-700"
+              >
+                Search
+              </button>
+            </form>
+            {searchMessage && <p className="mt-2 text-xs text-gray-500">{searchMessage}</p>}
+          </div>
+
           <div className="relative h-[calc(100vh-260px)] min-h-[520px] w-full">
             <GoogleMap
               mapContainerStyle={containerStyle}
               center={center}
               zoom={12}
+              onLoad={(map) => {
+                mapRef.current = map;
+              }}
               onClick={
                 pickMode && onPickStartPoint
                   ? (e) => {
@@ -241,7 +324,7 @@ export default function FleetMap({
                     )
                 )}
 
-              {/* Vehicles — hidden entirely until at least one geofence zone exists */}
+              {/* Vehicles — plotted as soon as they have a GPS fix, independent of geofences */}
               {visibleVehicles.map((v) => (
                 <OverlayView
                   key={v.vehicleId}
@@ -273,12 +356,6 @@ export default function FleetMap({
               )}
             </GoogleMap>
 
-            {!hasZones && (
-              <div className="absolute inset-x-0 top-0 z-10 bg-orange-50 px-4 py-2 text-center text-xs font-medium text-orange-700 shadow-sm">
-                No geofence zones yet — vehicles won&apos;t appear on the map until you create one.
-              </div>
-            )}
-
             {mapOverlay}
           </div>
 
@@ -297,7 +374,7 @@ export default function FleetMap({
             </div>
           )}
 
-          {hasZones && withLocation.length === 0 && (
+          {withLocation.length === 0 && (
             <p className="text-sm text-gray-400 text-center py-4">
               No vehicle location data yet — vehicles will appear once GPS pings start coming in.
             </p>

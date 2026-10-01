@@ -6,6 +6,7 @@ const backgroundImages = [
     "/pexels-car-1281640_1920.jpg",
     "/schwoaze-highway-3392100_1920.jpg",
     "/skica911-driver-3978839_1920.jpg",
+    "/nairobi-city-shuttle-bus.jpg",
 ];
 
 export default function BackgroundSlideshow({

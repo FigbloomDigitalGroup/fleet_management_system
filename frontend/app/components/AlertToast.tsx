@@ -43,7 +43,7 @@ function AlertToast({ toast, onDismiss }: { toast: ToastAlert; onDismiss: (id: s
         <FiAlertTriangle size={18} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold text-gray-900">
+        <p className="text-xs font-bold text-gray-900">
           {alert.vehicleId?.plateNumber || "Fleet alert"}
           <span className="ml-1.5 font-normal text-gray-400">· {alert.type.replace(/_/g, " ")}</span>
         </p>

@@ -3,10 +3,24 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import Company from "../models/Company.js";
 import User from "../models/User.js";
+import RefreshToken from "../models/RefreshToken.js";
+import { sendPasswordResetEmail } from "../lib/mailer.js";
+import { parseSpreadsheetRows } from "../lib/spreadsheet.js";
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const MAX_IMPORT_ROWS = 500;
+
+function generateTempPassword() {
+  return crypto.randomBytes(9).toString("base64").replace(/[+/=]/g, "").slice(0, 12);
+}
 
 function hashResetToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+// Used for refresh tokens too — same idea, different purpose: we only ever
+// keep a hash of the token server-side, never the raw value.
+function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
@@ -24,14 +38,47 @@ function signRefreshToken(user) {
   });
 }
 
+// Signs a refresh token and records it (as a hash) so it can be rotated,
+// revoked, or checked for reuse later.
+async function issueRefreshToken(user) {
+  const token = signRefreshToken(user);
+  const { exp } = jwt.decode(token);
+  await RefreshToken.create({
+    userId: user._id,
+    tokenHash: hashToken(token),
+    expiresAt: new Date(exp * 1000),
+  });
+  return token;
+}
+
 // Registers a new Vehicle Company + its first user (COMPANY_OWNER)
+const INDUSTRIES = [
+  "logistics_courier",
+  "public_transport",
+  "school_transport",
+  "construction",
+  "taxi_ride_hailing",
+  "security_cash_transit",
+  "agriculture",
+  "government_municipal",
+  "oil_gas",
+  "rental_car",
+  "other",
+];
+
 export async function registerCompany(req, res) {
   try {
-    const { companyName, ownerName, email, password } = req.body;
+    const { companyName, ownerName, email, password, industry } = req.body;
     const normalizedEmail = email?.trim().toLowerCase();
 
     if (!companyName || !ownerName || !normalizedEmail || !password) {
       return res.status(400).json({ error: "companyName, ownerName, email, and password are required" });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ error: "Password must be at least 8 characters" });
+    }
+    if (industry !== undefined && !INDUSTRIES.includes(industry)) {
+      return res.status(400).json({ error: `industry must be one of: ${INDUSTRIES.join(", ")}` });
     }
 
     const existing = await User.findOne({ email: normalizedEmail });
@@ -41,7 +88,12 @@ export async function registerCompany(req, res) {
 
     const slug = companyName.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
-    const company = await Company.create({ name: companyName, slug, status: "pending" });
+    const company = await Company.create({
+      name: companyName,
+      slug,
+      status: "pending",
+      industry: industry || "other",
+    });
 
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await User.create({
@@ -53,7 +105,7 @@ export async function registerCompany(req, res) {
     });
 
     const accessToken = signAccessToken(user);
-    const refreshToken = signRefreshToken(user);
+    const refreshToken = await issueRefreshToken(user);
 
     return res.status(201).json({
       message: "Company and owner account created",
@@ -81,6 +133,9 @@ export async function createUserUnderCompany(req, res) {
     if (!normalizedEmail) {
       return res.status(400).json({ error: "email is required" });
     }
+    if (!password || password.length < 8) {
+      return res.status(400).json({ error: "Password must be at least 8 characters" });
+    }
 
     const companyId = req.user.role === "PLATFORM_ADMIN" ? req.body.companyId : req.user.companyId;
     if (!companyId) {
@@ -102,6 +157,86 @@ export async function createUserUnderCompany(req, res) {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to create user" });
+  }
+}
+
+// Bulk-creates DRIVER accounts from an uploaded .xlsx/.csv file — same
+// validation rules as createUserUnderCompany, applied per row. Expected
+// columns (case/spacing-insensitive): fullName, email, password (optional —
+// a temporary one is generated and returned if left blank).
+export async function bulkImportDrivers(req, res) {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+    let rows;
+    try {
+      rows = await parseSpreadsheetRows(req.file.buffer, req.file.originalname);
+    } catch (err) {
+      return res.status(400).json({ error: "Could not read that file — make sure it's a valid .xlsx or .csv" });
+    }
+
+    if (rows.length === 0) return res.status(400).json({ error: "The file has no data rows" });
+    if (rows.length > MAX_IMPORT_ROWS) {
+      return res.status(400).json({ error: `Too many rows — max ${MAX_IMPORT_ROWS} per import` });
+    }
+
+    const companyId = req.user.role === "PLATFORM_ADMIN" ? req.body.companyId : req.user.companyId;
+
+    const results = [];
+    let createdCount = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowNumber = i + 2; // header is row 1
+      const fullName = row.fullname || row.name || "";
+      const email = String(row.email || "").trim().toLowerCase();
+      let password = row.password ? String(row.password) : "";
+      let generatedPassword = null;
+
+      if (!fullName) {
+        results.push({ row: rowNumber, email, status: "failed", error: "fullName is required" });
+        continue;
+      }
+      if (!email) {
+        results.push({ row: rowNumber, email, status: "failed", error: "email is required" });
+        continue;
+      }
+      if (!password) {
+        password = generateTempPassword();
+        generatedPassword = password;
+      } else if (password.length < 8) {
+        results.push({ row: rowNumber, email, status: "failed", error: "password must be at least 8 characters" });
+        continue;
+      }
+      if (!companyId) {
+        results.push({ row: rowNumber, email, status: "failed", error: "companyId is required" });
+        continue;
+      }
+
+      const existing = await User.findOne({ email });
+      if (existing) {
+        results.push({ row: rowNumber, email, status: "failed", error: "An account with this email already exists" });
+        continue;
+      }
+
+      try {
+        const passwordHash = await bcrypt.hash(password, 10);
+        await User.create({ email, passwordHash, fullName, role: "DRIVER", companyId });
+        results.push({ row: rowNumber, email, status: "created", generatedPassword });
+        createdCount++;
+      } catch (err) {
+        if (err.code === 11000) {
+          results.push({ row: rowNumber, email, status: "failed", error: "An account with this email already exists" });
+        } else {
+          results.push({ row: rowNumber, email, status: "failed", error: "Could not save this row" });
+        }
+      }
+    }
+
+    return res.status(201).json({ createdCount, failedCount: results.length - createdCount, results });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to import drivers" });
   }
 }
 
@@ -139,7 +274,7 @@ export async function login(req, res) {
     }
 
     const accessToken = signAccessToken(user);
-    const refreshToken = signRefreshToken(user);
+    const refreshToken = await issueRefreshToken(user);
 
     return res.json({
       user: {
@@ -158,27 +293,62 @@ export async function login(req, res) {
   }
 }
 
-// Issues a new access token from a valid refresh token
+// Issues a new access token (and rotates the refresh token) from a valid
+// refresh token. Each refresh token is single-use: presenting one a second
+// time — which only happens if it was copied/stolen, since the legitimate
+// client always swaps it for the newly-issued one — revokes every refresh
+// token for that user as a precaution.
 export async function refresh(req, res) {
   try {
     const { refreshToken } = req.body;
     if (!refreshToken) return res.status(400).json({ error: "refreshToken is required" });
 
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+    const tokenHash = hashToken(refreshToken);
+    const stored = await RefreshToken.findOne({ tokenHash });
+
+    if (!stored) {
+      return res.status(401).json({ error: "Invalid or expired refresh token" });
+    }
+
+    if (stored.revoked) {
+      await RefreshToken.updateMany({ userId: stored.userId, revoked: false }, { revoked: true });
+      return res.status(401).json({ error: "This session has been revoked. Please sign in again." });
+    }
+
     const user = await User.findById(decoded.id);
     if (!user) return res.status(401).json({ error: "Invalid refresh token" });
 
+    stored.revoked = true;
+    await stored.save();
+
     const accessToken = signAccessToken(user);
-    return res.json({ accessToken });
+    const newRefreshToken = await issueRefreshToken(user);
+    return res.json({ accessToken, refreshToken: newRefreshToken });
   } catch (err) {
     return res.status(401).json({ error: "Invalid or expired refresh token" });
   }
 }
 
+// Revokes a single refresh token — called on sign-out so a stolen-but-unused
+// token from that session can't be replayed later.
+export async function logout(req, res) {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) return res.status(204).send();
+
+    const tokenHash = hashToken(refreshToken);
+    await RefreshToken.updateOne({ tokenHash }, { revoked: true });
+    return res.status(204).send();
+  } catch (err) {
+    // Sign-out should never fail visibly from the client's perspective.
+    return res.status(204).send();
+  }
+}
+
 // Starts a password reset — always responds the same way whether or not the
 // email exists, so this endpoint can't be used to check which emails are
-// registered. Email delivery isn't wired up yet, so the reset link is only
-// logged server-side for now; a verify-by-email step will replace this log.
+// registered.
 export async function forgotPassword(req, res) {
   try {
     const email = req.body.email?.trim().toLowerCase();
@@ -195,7 +365,13 @@ export async function forgotPassword(req, res) {
 
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
       const resetLink = `${frontendUrl}/reset-password?email=${encodeURIComponent(email)}&token=${token}`;
-      console.log(`[password reset] ${email} -> ${resetLink}`);
+      try {
+        await sendPasswordResetEmail(email, resetLink);
+      } catch (mailErr) {
+        // Don't leak whether the account exists via a differing response —
+        // just log it server-side so delivery problems are still visible.
+        console.error("[password reset] failed to send email:", mailErr);
+      }
     }
 
     return res.json({ message: "If an account exists for that email, a reset link has been generated." });
@@ -233,6 +409,10 @@ export async function resetPassword(req, res) {
     user.resetPasswordTokenHash = null;
     user.resetPasswordExpires = null;
     await user.save();
+
+    // The password may have been compromised — invalidate every existing
+    // session so a reset also forces re-authentication everywhere.
+    await RefreshToken.updateMany({ userId: user._id, revoked: false }, { revoked: true });
 
     return res.json({ message: "Password updated. You can now sign in." });
   } catch (err) {

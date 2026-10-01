@@ -5,7 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import { apiRequest } from "../../../lib/api";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import { usePageHeader } from "@/app/components/DashboardShell";
-import { CompanyRecord, AdminRecord } from "../../../types/auth";
+import IndustryBanner from "@/app/components/IndustryBanner";
+import { CompanyRecord, AdminRecord, CompanyStats } from "../../../types/auth";
+import { industryLabel } from "../../../lib/industries";
+import { vehicleTypeLabel } from "../../../lib/vehicleTypes";
 
 const statusStyles: Record<string, string> = {
   active: "bg-teal-50 text-teal-600 border-teal-200",
@@ -19,6 +22,7 @@ export default function CompanyDetailPage() {
 
   const [company, setCompany] = useState<CompanyRecord | null>(null);
   const [users, setUsers] = useState<AdminRecord[]>([]);
+  const [stats, setStats] = useState<CompanyStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
@@ -39,6 +43,12 @@ export default function CompanyDetailPage() {
 
   useEffect(() => {
     load();
+  }, [id]);
+
+  useEffect(() => {
+    apiRequest<CompanyStats>(`/api/companies/${id}/stats`)
+      .then(setStats)
+      .catch(() => {});
   }, [id]);
 
   async function updateStatus(status: string) {
@@ -77,6 +87,8 @@ export default function CompanyDetailPage() {
         </span>
       </div>
 
+      <IndustryBanner industry={company.industry} />
+
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Details + users */}
         <div className="lg:col-span-2 space-y-6">
@@ -87,6 +99,10 @@ export default function CompanyDetailPage() {
               <div>
                 <dt className="text-gray-500">Subscription plan</dt>
                 <dd className="text-gray-900 font-medium mt-0.5">{company.subscriptionPlan}</dd>
+              </div>
+              <div>
+                <dt className="text-gray-500">Industry</dt>
+                <dd className="text-gray-900 font-medium mt-0.5">{industryLabel(company.industry)}</dd>
               </div>
               <div>
                 <dt className="text-gray-500">Registered</dt>
@@ -100,6 +116,50 @@ export default function CompanyDetailPage() {
               </div>
             </dl>
           </div>
+
+          {stats && (
+            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+              <h3 className="text-sm font-medium text-gray-700">Fleet</h3>
+              <p className="text-xs text-teal-600 mt-0.5 mb-3">Vehicles, distance, and money on this company's account</p>
+
+              <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-4">
+                <div>
+                  <dt className="text-gray-500">Vehicles</dt>
+                  <dd className="text-gray-900 font-medium mt-0.5">{stats.vehicleCount}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500">Distance covered</dt>
+                  <dd className="text-gray-900 font-medium mt-0.5">{stats.totalDistanceKm} km</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500">Expenses</dt>
+                  <dd className="text-gray-900 font-medium mt-0.5">
+                    {stats.estimatedExpenses === null ? "Custom plan" : `$${stats.estimatedExpenses}`}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500">Revenue</dt>
+                  <dd className="text-gray-900 font-medium mt-0.5">${stats.totalRevenue}</dd>
+                </div>
+              </dl>
+
+              {stats.vehicleTypeBreakdown && Object.keys(stats.vehicleTypeBreakdown).length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-2">Vehicle types</p>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(stats.vehicleTypeBreakdown).map(([type, count]) => (
+                      <span
+                        key={type}
+                        className="text-xs px-2.5 py-1 rounded-full border bg-blue-50 text-blue-600 border-blue-200"
+                      >
+                        {vehicleTypeLabel(type)} · {count}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
             <h3 className="text-sm font-medium text-gray-700 px-5 pt-5">Users</h3>

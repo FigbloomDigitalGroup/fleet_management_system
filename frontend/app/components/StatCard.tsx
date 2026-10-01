@@ -5,6 +5,7 @@ import {
   FaExclamationTriangle,
   FaTools,
   FaUsers,
+  FaMoneyBillWave,
 } from "react-icons/fa";
 import { IoCarSportSharp } from "react-icons/io5";
 
@@ -101,9 +102,125 @@ function DriverIdIcon({ size = "2.2em" }: { size?: string | number }) {
   );
 }
 
+// Admin-panel icon, used specifically for the Live Map's "Active" stat.
+function ActiveAdminIcon({ size = "2.2em" }: { size?: string | number }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" width={size} height={size}>
+      <path d="M13.61 20.81V3.19a2.19 2.19 0 0 0-.28 0l-1.42.25C9.05 4 6.18 4.5 3.31 5c-.25 0-.31.13-.31.38V19Zm-7.89-6.2c.54-1.92 1.09-3.84 1.62-5.77a.34.34 0 0 1 .4-.3h.73c.47 0 .39-.08.52.36l1.56 5.36.38 1.3c-.47 0-.89 0-1.31-.1-.06 0-.14-.11-.16-.19q-.17-.59-.3-1.17a.23.23 0 0 0-.25-.21h-1.6c-.07 0-.17.1-.2.18-.1.34-.19.69-.26 1 0 .19-.13.24-.31.22s-.62-.05-1-.07c.09-.22.13-.44.18-.61Z" />
+      <path d="M8.13 9.81h-.05l-.67 2.82h1.4c-.23-.96-.45-1.89-.68-2.82ZM17 5.71q-.93-.23-1.83-.48c-.16 0-.22 0-.28.14a4.92 4.92 0 0 0-.68 3.09c0 .23 0 .31.29.33a3.17 3.17 0 0 1 1 6.05 9.87 9.87 0 0 1-1.3.37v1.87a5.65 5.65 0 0 0 .85-.1.36.36 0 0 1 .43.18c.32.44.66.87 1 1.32l1.86-1.1c.05 0 .07-.17.05-.24-.13-.37-.26-.74-.42-1.1s-.19-.58.12-.83a1.29 1.29 0 0 0 .28-.37.28.28 0 0 1 .33-.14c.5.08 1 .13 1.51.21.17 0 .23 0 .27-.19.15-.6.31-1.2.47-1.8 0-.14 0-.22-.12-.28s-.59-.29-.9-.39a.88.88 0 0 1-.71-.94.81.81 0 0 1 .39-.83c.37-.25.72-.54 1.09-.82l-1.03-1.78c-.07-.14-.16-.13-.28-.08-.45.17-.9.35-1.35.5a.42.42 0 0 1-.32-.06c-.21-.14-.38-.33-.59-.47a.29.29 0 0 1-.13-.35c.07-.47.13-1 .2-1.43 0-.15-.03-.24-.2-.28Z" />
+      <path d="M15.39 12a1.14 1.14 0 0 0-1.17-1.11v2.29A1.15 1.15 0 0 0 15.39 12Z" />
+    </svg>
+  );
+}
+
+// Offline/no-signal icon, used specifically for the Live Map's "Offline" stat.
+function OfflineIcon({ size = "2.2em" }: { size?: string | number }) {
+  return (
+    <svg viewBox="0 0 52 52" fill="currentColor" width={size} height={size}>
+      <path d="M34.7,36.1c0.5-0.5,0.5-1.3,0-1.8l-1.8-1.8c-0.5-0.5-1.3-0.5-1.8,0l-4.4,4.4c-0.3,0.3-0.9,0.3-1.2,0
+		l-4.4-4.4c-0.5-0.5-1.3-0.5-1.8,0l-1.8,1.8c-0.5,0.5-0.5,1.3,0,1.8l4.4,4.4c0.3,0.3,0.3,0.9,0,1.2l-4.4,4.4c-0.5,0.5-0.5,1.3,0,1.8
+		l1.8,1.8c0.5,0.5,1.3,0.5,1.8,0l4.4-4.4c0.3-0.3,0.9-0.3,1.2,0l4.4,4.4c0.5,0.5,1.3,0.5,1.8,0l1.8-1.8c0.5-0.5,0.5-1.3,0-1.8
+		l-4.4-4.4c-0.3-0.3-0.3-0.9,0-1.2L34.7,36.1z" />
+      <path d="M47.7,11.6c-5.5-6.1-13.3-9.5-21.6-9.5S10,5.5,4.5,11.6C4.1,12,4.2,12.7,4.6,13l3,2.6C8,16,8.6,15.9,9,15.5
+		c4.4-4.7,10.6-7.4,17.1-7.4s12.7,2.7,17.1,7.4c0.4,0.4,1,0.4,1.4,0.1l3-2.6C48,12.6,48.1,12,47.7,11.6z" />
+      <path d="M26.1,16.1c-4.2,0-8.2,1.8-11,5c-0.4,0.4-0.3,1.1,0.1,1.5l3.2,2.4c0.4,0.3,1,0.3,1.3-0.1
+		c1.7-1.8,4-2.8,6.4-2.8s4.7,1,6.3,2.7c0.3,0.4,0.9,0.4,1.3,0.1l3.2-2.4c0.5-0.4,0.5-1,0.1-1.5C34.3,17.9,30.3,16.1,26.1,16.1z" />
+    </svg>
+  );
+}
+
+// Stop icon, used specifically for the Live Map's "Idle" stat.
+function IdleStopIcon({ size = "2.2em" }: { size?: string | number }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" width={size} height={size}>
+      <path
+        fillRule="evenodd"
+        d="M5.781 4.414a7 7 0 019.62 10.039l-9.62-10.04zm-1.408 1.42a7 7 0 009.549 9.964L4.373 5.836zM10 1a9 9 0 100 18 9 9 0 000-18z"
+      />
+    </svg>
+  );
+}
+
+// Eye-scan icon, used specifically for the "Scans covering your fleet" stat.
+function ScanEyeIcon({ size = "2.2em" }: { size?: string | number }) {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width={size}
+      height={size}
+    >
+      <path d="M27,16c0,0-4.9,7-11,7S5,16,5,16s4.9-7,11-7S27,16,27,16z" />
+      <circle cx="16" cy="16" r="3" />
+      <polyline points="3,9 3,3 9,3 " />
+      <polyline points="9,29 3,29 3,23 " />
+      <polyline points="29,23 29,29 23,29 " />
+      <polyline points="23,3 29,3 29,9 " />
+    </svg>
+  );
+}
+
+// Magnifying-glass icon, used specifically for the "Anomalies found" stat.
+function AnomalyFoundIcon({ size = "2.2em" }: { size?: string | number }) {
+  return (
+    <svg viewBox="0 0 512 512" fill="currentColor" width={size} height={size}>
+      <g transform="translate(42.666667, 42.666667)">
+        <path d="M170.666667,-7.10542736e-15 C264.770773,-7.10542736e-15 341.333333,76.56256 341.333333,170.666667 C341.333333,210.04032 327.799467,246.239573 305.3152,275.148373 L426.630187,396.463573 L396.463573,426.630187 L275.148373,305.314987 C246.239573,327.799467 210.04032,341.333333 170.666667,341.333333 C76.56256,341.333333 7.10542736e-15,264.770773 7.10542736e-15,170.666667 C7.10542736e-15,76.56256 76.56256,-7.10542736e-15 170.666667,-7.10542736e-15 Z M170.666667,42.6666667 C100.083413,42.6666667 42.6666667,100.083413 42.6666667,170.666667 C42.6666667,241.24992 100.083413,298.666667 170.666667,298.666667 C241.24992,298.666667 298.666667,241.24992 298.666667,170.666667 C298.666667,100.083413 241.24992,42.6666667 170.666667,42.6666667 Z M170.666667,202.666667 C188.339779,202.666667 202.666667,216.993555 202.666667,234.666667 C202.666667,252.339779 188.339779,266.666667 170.666667,266.666667 C152.993555,266.666667 138.666667,252.339779 138.666667,234.666667 C138.666667,216.993555 152.993555,202.666667 170.666667,202.666667 Z M192,64 L192,170.666667 L149.333333,170.666667 L149.333333,64 L192,64 Z" />
+      </g>
+    </svg>
+  );
+}
+
+// Stacked-coins icon, used specifically for the "Expenses" stat.
+export function ExpensesIcon({ size = "2.2em" }: { size?: string | number }) {
+  return (
+    <svg viewBox="0 0 1024 1024" fill="currentColor" width={size} height={size}>
+      <path d="M402.95 260.12c0-37.741-79.639-75.796-180.992-75.796-101.361 0-181.002 38.055-181.002 75.796s79.641 75.796 181.002 75.796c101.353 0 180.992-38.055 180.992-75.796zm40.96 0c0 68.608-100.761 116.756-221.952 116.756-121.199 0-221.962-48.148-221.962-116.756s100.763-116.756 221.962-116.756c121.191 0 221.952 48.149 221.952 116.756zm-40.96 372.996c0 37.741-79.639 75.796-180.992 75.796-101.361 0-181.002-38.055-181.002-75.796H-.004c0 68.609 100.763 116.756 221.962 116.756 121.191 0 221.952-48.149 221.952-116.756h-40.96zm0 128.373c0 37.741-79.639 75.796-180.992 75.796-101.361 0-181.002-38.055-181.002-75.796H-.004c0 68.609 100.763 116.756 221.962 116.756 121.191 0 221.952-48.149 221.952-116.756h-40.96zm0-255.677c0 37.741-79.639 75.796-180.992 75.796-101.361 0-181.002-38.055-181.002-75.796H-.004c0 68.609 100.763 116.756 221.962 116.756 121.191 0 221.952-48.149 221.952-116.756h-40.96zm0-117.676c0 37.741-79.639 75.796-180.992 75.796-101.361 0-181.002-38.055-181.002-75.796H-.004c0 68.609 100.763 116.756 221.962 116.756 121.191 0 221.952-48.149 221.952-116.756h-40.96z" />
+      <path d="M0 260.12v511.713c0 11.311 9.169 20.48 20.48 20.48s20.48-9.169 20.48-20.48V260.12c0-11.311-9.169-20.48-20.48-20.48S0 248.809 0 260.12zm402.95 0v511.713c0 11.311 9.169 20.48 20.48 20.48s20.48-9.169 20.48-20.48V260.12c0-11.311-9.169-20.48-20.48-20.48s-20.48 9.169-20.48 20.48zm492.657 211.06c51.085 17.643 86.056 65.893 86.056 120.817 0 70.578-57.206 127.785-127.785 127.785-47.187 0-89.821-25.783-112.113-66.416-5.44-9.916-17.89-13.545-27.806-8.105s-13.545 17.89-8.105 27.806c29.415 53.616 85.733 87.675 148.024 87.675 93.2 0 168.745-75.545 168.745-168.745 0-72.526-46.173-136.23-113.644-159.533-10.691-3.692-22.351 1.981-26.044 12.672s1.981 22.351 12.672 26.044z" />
+      <path d="M785.037 429.607c0-70.572-57.21-127.785-127.785-127.785-70.568 0-127.785 57.217-127.785 127.785s57.217 127.785 127.785 127.785c70.575 0 127.785-57.213 127.785-127.785zm40.96 0c0 93.193-75.548 168.745-168.745 168.745-93.19 0-168.745-75.555-168.745-168.745s75.555-168.745 168.745-168.745c93.197 0 168.745 75.552 168.745 168.745z" />
+    </svg>
+  );
+}
+
+// Protractor/ruler icon, used specifically for the "Total distance covered" stat.
+export function DistanceIcon({ size = "2.2em" }: { size?: string | number }) {
+  return (
+    <svg viewBox="0 0 512 512" fill="currentColor" width={size} height={size}>
+      <path d="M460.8,341.017c-9.422,0-17.067-7.639-17.067-17.067c0-9.428,7.645-17.067,17.067-17.067h50.566
+			c-3.822-57.762-26.875-110.317-62.817-151.355l-35.673,35.673c-3.334,3.334-7.701,5-12.066,5s-8.734-1.667-12.066-5
+			c-6.666-6.661-6.666-17.472,0-24.133l35.673-35.673c-41.04-35.94-93.595-58.988-151.351-62.812v50.566
+			c0,9.428-7.645,17.067-17.067,17.067s-17.067-7.639-17.067-17.067V68.583c-57.756,3.824-110.311,26.873-151.349,62.814
+			l35.673,35.669c6.666,6.661,6.666,17.467,0,24.133c-3.334,3.334-7.7,5.001-12.066,5.001s-8.734-1.667-12.066-5.001l-35.673-35.669
+			C27.51,196.569,4.457,249.126,0.635,306.884H51.2c9.422,0,17.067,7.639,17.067,17.067c0,9.428-7.645,17.067-17.067,17.067H0
+			v85.333c0,9.428,7.645,17.067,17.067,17.067h477.867c9.422,0,17.067-7.639,17.067-17.067v-85.333H460.8z M392.533,341.017H119.467
+			c-9.422,0-17.067-7.639-17.067-17.067c0-84.695,68.9-153.6,153.6-153.6s153.6,68.906,153.6,153.6
+			C409.6,333.378,401.955,341.017,392.533,341.017z"/>
+    </svg>
+  );
+}
+
+// Jerry-can icon, used specifically for the "Fuel consumption" stat.
+export function FuelIcon({ size = "2.2em" }: { size?: string | number }) {
+  return (
+    <svg viewBox="0 0 14 14" fill="currentColor" width={size} height={size}>
+      <path d="m 10.78125,0 -0.625,0.71875 1.1875,1.09375 c 0.03621,0.036212 0.0856,0.084693 0.125,0.125 l -0.25,0.28125 C 10.818532,2.6189681 11.105689,3.1369332 11.25,3.28125 L 12,4.03125 12,10 c 0,1 -0.392136,1 -0.5,1 C 11.392136,11 11,11 11,10 L 11,6 C 11,4.7190916 10,4 9,4 L 9,2 C 9,1.4486964 8.575273,1 8,1 L 2,1 C 1.400757,1 1,1.4247267 1,2 l 0,12 8,0 0,-9 c 0,0 1,0 1,1 l 0,4 c 0,2 1.239698,2 1.5,2 0.275652,0 1.5,0 1.5,-2 L 13,3 C 13,2 12.713983,1.7907839 12.375,1.46875 L 10.78125,0 z M 2,3 8,3 8,6 2,6 2,3 z" />
+    </svg>
+  );
+}
+
 function getStatIcon(label: string) {
   const normalizedLabel = label.toLowerCase();
 
+  if (normalizedLabel === "scans covering your fleet") return ScanEyeIcon;
+  if (normalizedLabel === "anomalies found") return AnomalyFoundIcon;
+  if (normalizedLabel === "total distance covered") return DistanceIcon;
+  if (normalizedLabel === "expenses") return ExpensesIcon;
+  if (normalizedLabel.includes("fuel")) return FuelIcon;
+  if (normalizedLabel === "revenue") return FaMoneyBillWave;
   if (normalizedLabel === "total vehicles") return TwoCarsIcon;
   if (normalizedLabel.includes("vehicle")) return IoCarSportSharp;
   if (normalizedLabel === "drivers") return DriverIdIcon;
@@ -113,7 +230,10 @@ function getStatIcon(label: string) {
   if (normalizedLabel.includes("alert")) return AlertBellIcon;
   if (normalizedLabel.includes("pending")) return FaClock;
   if (normalizedLabel.includes("maintenance")) return FaTools;
+  if (normalizedLabel === "active" || normalizedLabel === "active now") return ActiveAdminIcon;
   if (normalizedLabel.includes("active")) return FaCheckCircle;
+  if (normalizedLabel === "offline") return OfflineIcon;
+  if (normalizedLabel === "idle") return IdleStopIcon;
   if (normalizedLabel.includes("idle") || normalizedLabel.includes("offline")) return FaExclamationTriangle;
 
   return FaCheckCircle;
@@ -145,14 +265,14 @@ export default function StatCard({
           </p>
           <p className={`mt-1.5 text-xl font-bold ${light ? "text-white" : "text-blue-950"}`}>{value}</p>
           {description && (
-            <p className={`text-xs mt-1 ${light ? "text-white/80" : "text-teal-600"}`}>{description}</p>
+            <p className={`text-[10px] font-bold mt-1 ${light ? "text-white/80" : "text-teal-600"}`}>{description}</p>
           )}
         </div>
         <span
           className={`shrink-0 rounded-xl p-2 text-base ${light ? "bg-white/20 text-white" : "bg-teal-50 text-teal-600"}`}
           aria-hidden="true"
         >
-          <Icon />
+          <Icon size="2.2em" />
         </span>
       </div>
     </div>

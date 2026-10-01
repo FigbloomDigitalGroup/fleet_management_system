@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-import { FaCog } from "react-icons/fa";
 import BackgroundSlideshow from "../components/BackgroundSlideshow";
 import RobotCheckbox from "../components/RobotCheckbox";
+import BrandIcon from "../components/BrandIcon";
 import { apiRequest } from "../lib/api";
 
 export default function ForgotPasswordPage() {
@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
 
         <div className="relative z-20 flex flex-col justify-between h-full">
           <span className="flex items-center gap-2 text-xl font-bold text-white">
-            <FaCog aria-hidden="true" />
+            <BrandIcon variant="light" className="h-6 w-6" />
             FIGBLOOM FLEET
           </span>
 
@@ -66,7 +66,7 @@ export default function ForgotPasswordPage() {
       {/* RIGHT — Form panel */}
       <div className="lg:w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-sm">
-          <h2 className="text-5xl font-extrabold text-blue-950 mb-2">Reset password</h2>
+          <h2 className="text-5xl font-extrabold text-teal-950 mb-2">Reset password</h2>
           <p className="text-sm text-gray-500 mb-8">
             We&apos;ll send instructions to reset your password.
           </p>
