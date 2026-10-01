@@ -57,6 +57,7 @@ export async function ingestLocation(req, res) {
 // 2. Update vehicle status — but never "active" without a driver assigned
 if (!vehicle.driverId) {
   vehicle.status = "offline";
+  vehicle.statusManuallySet = false;
 
   // Flag it if the vehicle is actually moving with nobody assigned to it
   if (isMoving) {
@@ -67,8 +68,16 @@ if (!vehicle.driverId) {
       message: `Vehicle is moving at ${speedKph} km/h with no driver assigned.`,
     });
   }
-} else {
-  vehicle.status = isMoving ? "active" : "idle";
+} else if (isMoving) {
+  // Movement always wins — resumes automatic status tracking even if an
+  // admin had manually pinned a status (e.g. "maintenance") earlier.
+  vehicle.status = "active";
+  vehicle.statusManuallySet = false;
+} else if (!vehicle.statusManuallySet) {
+  // Only auto-set to idle when nobody has manually overridden the status —
+  // otherwise an admin's manual pick (e.g. "idle"/"maintenance") sticks until
+  // the vehicle is next seen moving.
+  vehicle.status = "idle";
 }
 await vehicle.save();
 

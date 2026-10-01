@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  FaCog,
   FaTwitter,
   FaLinkedin,
   FaFacebook,
@@ -14,6 +13,7 @@ import {
   FaGooglePlay,
 } from "react-icons/fa";
 import { useState } from "react";
+import BrandIcon from "./components/BrandIcon";
 
 const FAQS = [
   {
@@ -82,7 +82,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 bg-white">
         <nav className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
           <span className="flex items-center gap-2 text-xl font-bold text-teal-950">
-            <FaCog aria-hidden="true" />
+            <BrandIcon variant="dark" className="h-6 w-6" />
             FIGBLOOM FLEET
           </span>
           <div className="flex items-center gap-3">
@@ -540,7 +540,7 @@ export default function LandingPage() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
               <div>
                 <span className="flex items-center gap-2 text-lg font-bold text-teal-950 mb-3">
-                  <FaCog aria-hidden="true" />
+                  <BrandIcon variant="dark" className="h-5 w-5" />
                   FIGBLOOM FLEET
                 </span>
                 <p className="text-sm text-gray-500 mb-4">

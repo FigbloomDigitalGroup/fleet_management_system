@@ -16,3 +16,21 @@ export const INDUSTRIES: { value: string; label: string }[] = [
 export function industryLabel(value: string | undefined | null) {
   return INDUSTRIES.find((i) => i.value === value)?.label ?? "Other";
 }
+
+// Slugs that have a real photo saved at public/industries/<slug>.jpg — the
+// rest (security_cash_transit, government_municipal, other) still show as
+// empty placeholder slots until photos are sent for them too.
+export const INDUSTRIES_WITH_IMAGES = [
+  "logistics_courier",
+  "public_transport",
+  "school_transport",
+  "construction",
+  "taxi_ride_hailing",
+  "agriculture",
+  "oil_gas",
+  "rental_car",
+];
+
+export function industryHasImage(value: string | undefined | null) {
+  return !!value && INDUSTRIES_WITH_IMAGES.includes(value);
+}

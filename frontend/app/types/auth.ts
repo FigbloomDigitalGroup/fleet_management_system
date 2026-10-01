@@ -35,10 +35,18 @@ export interface CompanyRecord {
 
 export interface CompanyStats {
   totalDistanceKm: number;
+  totalFuelConsumedLiters: number;
   estimatedExpenses: number | null;
   totalRevenue: number;
   vehicleCount: number;
+  vehicleTypeBreakdown?: Record<string, number>;
   monthsSinceJoining: number;
+}
+
+export interface DailyStatPoint {
+  date: string;
+  distanceKm: number;
+  fuelConsumedLiters: number;
 }
 
 export interface AdminRecord {

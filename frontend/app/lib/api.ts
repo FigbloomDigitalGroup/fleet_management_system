@@ -37,13 +37,16 @@ export async function apiRequest<T = any>(
   isRetry = false
 ): Promise<T> {
   const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+  // FormData bodies (file uploads) must NOT get an explicit Content-Type —
+  // the browser sets its own multipart boundary only when we leave it unset.
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
 
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {
       ...options,
       headers: {
-        "Content-Type": "application/json",
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },

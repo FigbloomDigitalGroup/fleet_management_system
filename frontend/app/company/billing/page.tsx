@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { FaRoute, FaWallet, FaMoneyBillWave } from "react-icons/fa";
+import { FaMoneyBillWave } from "react-icons/fa";
+import { DistanceIcon, ExpensesIcon } from "../../components/StatCard";
 import { apiRequest } from "../../lib/api";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import { CompanyRecord, CompanyStats } from "../../types/auth";
@@ -157,7 +158,7 @@ export default function CompanyBillingPage() {
         <div className="grid sm:grid-cols-3 gap-5">
           <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
             <span className="shrink-0 rounded-xl bg-blue-50 p-2.5 text-blue-600">
-              <FaRoute size={18} />
+              <DistanceIcon size={18} />
             </span>
             <div>
               <p className="text-xs text-gray-500">Total distance covered</p>
@@ -167,7 +168,7 @@ export default function CompanyBillingPage() {
 
           <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
             <span className="shrink-0 rounded-xl bg-orange-50 p-2.5 text-orange-600">
-              <FaWallet size={18} />
+              <ExpensesIcon size={18} />
             </span>
             <div>
               <p className="text-xs text-gray-500">Estimated expenses</p>

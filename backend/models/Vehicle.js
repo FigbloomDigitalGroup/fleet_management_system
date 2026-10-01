@@ -30,6 +30,10 @@ const vehicleSchema = new mongoose.Schema(
       default: "car",
     },
     status: { type: String, enum: ["active", "idle", "offline", "maintenance"], default: "offline" },
+    // When an admin manually sets status, it sticks (pings stop recomputing it)
+    // until the vehicle is next seen moving — at which point tracking pings
+    // resume automatic active/idle/offline control.
+    statusManuallySet: { type: Boolean, default: false },
     driverId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     // Overrides the company's default daily starting point (Company.dailyStartPoint)
     // for this specific vehicle — only meaningful when a company has more than

@@ -99,7 +99,7 @@ export default function PlatformDashboard() {
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Recently registered</h2>
-          <Link href="/platform/companies" className="rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-teal-700">
+          <Link href="/platform/companies" className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
             View all
           </Link>
         </div>
@@ -178,7 +178,7 @@ export default function PlatformDashboard() {
         <div className="mb-4">
           <div className="flex items-center justify-between mb-1">
             <h2 className="text-base font-semibold text-gray-900">Needs approval</h2>
-            <Link href="/platform/companies" className="rounded-md bg-teal-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-teal-700">
+            <Link href="/platform/companies" className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
               View all
             </Link>
           </div>

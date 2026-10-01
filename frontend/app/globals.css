@@ -226,4 +226,25 @@ main .space-y-4 > :not([hidden]) ~ :not([hidden]) {
   }
 }
 
+@keyframes shake {
+  0%, 14%, 100% { transform: translateX(0) rotate(0); }
+  2% { transform: translateX(-3px) rotate(-4deg); }
+  4% { transform: translateX(3px) rotate(4deg); }
+  6% { transform: translateX(-3px) rotate(-4deg); }
+  8% { transform: translateX(3px) rotate(4deg); }
+  10% { transform: translateX(-2px) rotate(-2deg); }
+  12% { transform: translateX(2px) rotate(2deg); }
+}
+
+.animate-shake {
+  animation: shake 4s ease-in-out infinite;
+  transform-origin: 50% 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-shake {
+    animation: none;
+  }
+}
+
 

@@ -30,8 +30,10 @@ export default router;
 
 import express from "express";
 import { authenticate, authorize } from "../middleware/auth.js";
+import { handleSpreadsheetUpload } from "../middleware/upload.js";
 import {
   createVehicle,
+  bulkImportVehicles,
   listVehicles,
   getVehicle,
   updateVehicle,
@@ -46,6 +48,12 @@ router.get("/mine", getMyVehicle);
 router.get("/", listVehicles);
 router.get("/:id", getVehicle);
 router.post("/", authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"), createVehicle);
+router.post(
+  "/bulk-import",
+  authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"),
+  handleSpreadsheetUpload,
+  bulkImportVehicles
+);
 router.put("/:id", authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"), updateVehicle);
 router.delete("/:id", authorize("COMPANY_OWNER", "PLATFORM_ADMIN"), deleteVehicle);
 
