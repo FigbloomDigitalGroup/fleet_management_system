@@ -273,8 +273,8 @@ if (vehicle.driverId && !isMoving) {
 }
 
 // Closes out trips whose vehicle has simply gone quiet — a real tracker (or
-// the dev-ping live simulator) often stops sending pings entirely once a
-// vehicle parks, rather than continuing to report speed=0. The trip-closing
+// the driver app) often stops sending pings entirely once a vehicle parks,
+// rather than continuing to report speed=0. The trip-closing
 // logic above only runs reactively when a new ping arrives, so without this
 // sweep those trips would stay open forever and never show up anywhere that
 // only lists completed trips (e.g. VehicleTripsMap). Runs on a schedule from
@@ -317,18 +317,36 @@ export async function closeStaleTrips() {
   return closedCount;
 }
 
+const TRAIL_LOOKBACK_MINUTES = 30;
+const TRAIL_MAX_POINTS = 50;
+
 export async function getLiveLocations(req, res) {
   try {
     const vehicles = await Vehicle.find(tenantScope(req)).select("plateNumber status vehicleType");
+    const since = new Date(Date.now() - TRAIL_LOOKBACK_MINUTES * 60 * 1000);
     const results = await Promise.all(
       vehicles.map(async (v) => {
         const lastPing = await LocationPing.findOne({ vehicleId: v._id }).sort({ recordedAt: -1 });
+
+        // Most recent pings within the lookback window, newest-first so the
+        // limit keeps the latest points, then reversed back to chronological
+        // order for drawing as a trail.
+        const recentPingsDesc = await LocationPing.find({ vehicleId: v._id, recordedAt: { $gte: since } })
+          .select("latitude longitude recordedAt")
+          .sort({ recordedAt: -1 })
+          .limit(TRAIL_MAX_POINTS);
+
         return {
           vehicleId: v._id,
           plateNumber: v.plateNumber,
           status: v.status,
           vehicleType: v.vehicleType,
           lastLocation: lastPing || null,
+          recentTrail: recentPingsDesc.reverse().map((p) => ({
+            latitude: p.latitude,
+            longitude: p.longitude,
+            recordedAt: p.recordedAt,
+          })),
         };
       })
     );

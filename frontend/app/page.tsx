@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  FaCog,
   FaTwitter,
   FaLinkedin,
   FaFacebook,
@@ -13,7 +14,6 @@ import {
   FaGooglePlay,
 } from "react-icons/fa";
 import { useState } from "react";
-import BrandIcon from "./components/BrandIcon";
 
 const FAQS = [
   {
@@ -42,6 +42,59 @@ const FAQS = [
   },
 ];
 
+const NAV_LINKS = [
+  { label: "Features", href: "#features" },
+  { label: "Routes & fuel", href: "#routes" },
+  { label: "Industries", href: "#industries" },
+  { label: "Pricing", href: "#pricing" },
+  { label: "FAQ", href: "#faq" },
+];
+
+const FEATURES = [
+  {
+    icon: FaMapMarkerAlt,
+    iconBg: "bg-teal-50",
+    iconColor: "text-teal-950",
+    title: "Live tracking",
+    description: "See every vehicle location update in real time on one map.",
+  },
+  {
+    icon: FaBell,
+    iconBg: "bg-orange-50",
+    iconColor: "text-orange-500",
+    title: "Instant alerts",
+    description: "Get notified the moment a vehicle speeds, idles, or leaves its route.",
+  },
+  {
+    icon: FaChartLine,
+    iconBg: "bg-green-50",
+    iconColor: "text-green-600",
+    title: "Fleet analytics",
+    description: "Track trips, mileage, and driver activity with clear reports.",
+  },
+  {
+    icon: FaMapMarkedAlt,
+    iconBg: "bg-purple-50",
+    iconColor: "text-purple-600",
+    title: "Geofencing",
+    description: "Draw zones and get notified the moment a vehicle enters or leaves one.",
+  },
+  {
+    icon: FaTachometerAlt,
+    iconBg: "bg-yellow-50",
+    iconColor: "text-yellow-600",
+    title: "Driver behavior",
+    description: "Catch harsh braking, harsh acceleration, and excessive idling automatically.",
+  },
+  {
+    icon: FaShieldAlt,
+    iconBg: "bg-red-50",
+    iconColor: "text-red-600",
+    title: "SOS emergency alerts",
+    description: "Drivers can send an emergency alert straight to your dashboard in one tap.",
+  },
+];
+
 const STEPS = [
   { n: 1, title: "Register your company", text: "Create your account in minutes and set up your company profile." },
   { n: 2, title: "Add vehicles & drivers", text: "Register each vehicle, assign a driver, and set up alerts or zones." },
@@ -56,9 +109,7 @@ const INDUSTRIES = [
   { slug: "school_transport", name: "School transport", description: "Know when the bus arrives, and who's on board." },
   { slug: "construction", name: "Construction & equipment", description: "Track machinery and trucks across job sites." },
   { slug: "taxi_ride_hailing", name: "Taxi & ride-hailing", description: "Driver accountability and route verification." },
-  { slug: "security_cash_transit", name: "Security & cash-in-transit", description: "High-value cargo protection and panic alerts." },
   { slug: "agriculture", name: "Agriculture", description: "Track tractors and trucks across farms and routes." },
-  { slug: "government_municipal", name: "Government & municipal", description: "Fuel accountability, no unauthorized use." },
   { slug: "oil_gas", name: "Oil & gas distribution", description: "Tanker tracking and theft prevention." },
   { slug: "rental_car", name: "Rental car", description: "Know where rentals are, enforce geofenced limits." },
 ];
@@ -82,14 +133,25 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 bg-white">
         <nav className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
           <span className="flex items-center gap-2 text-xl font-bold text-teal-950">
-            <BrandIcon variant="dark" className="h-6 w-6" />
+            <FaCog aria-hidden="true" />
             FIGBLOOM FLEET
           </span>
+          <div className="hidden lg:flex items-center gap-6">
+            {NAV_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="relative pb-1 text-sm text-gray-600 font-medium transition-colors hover:text-teal-950 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-orange-500 after:transition-all after:duration-300 hover:after:w-full"
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
           <div className="flex items-center gap-3">
-            <a href="/login" className="text-sm text-gray-700 hover:text-gray-900 px-5 py-2.5 font-medium">
+            <a href="/login" className="text-sm text-gray-700 hover:text-gray-900 px-5 py-2.5 font-medium transition-colors">
               Sign in
             </a>
-            <a href="/register" className="text-sm text-white hover:text-gray-200 bg-orange-500 hover:bg-orange-600 px-5 py-2.5 font-medium rounded-full">
+            <a href="/register" className="text-sm text-white hover:text-gray-200 bg-orange-500 hover:bg-orange-600 px-5 py-2.5 font-medium rounded-full transition-colors">
               Get started
             </a>
           </div>
@@ -149,50 +211,23 @@ export default function LandingPage() {
       </section>
 
       {/* FEATURE ICONS — now react-icons instead of image files */}
-      <section className="max-w-6xl mx-auto px-6 py-20">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          <div className="text-center">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-teal-50 text-teal-950 flex items-center justify-center">
-              <FaMapMarkerAlt size={22} />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Live tracking</h3>
-            <p className="text-sm text-gray-500">See every vehicle location update in real time on one map.</p>
-          </div>
-          <div className="text-center">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center">
-              <FaBell size={22} />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Instant alerts</h3>
-            <p className="text-sm text-gray-500">Get notified the moment a vehicle speeds, idles, or leaves its route.</p>
-          </div>
-          <div className="text-center">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-green-50 text-green-600 flex items-center justify-center">
-              <FaChartLine size={22} />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Fleet analytics</h3>
-            <p className="text-sm text-gray-500">Track trips, mileage, and driver activity with clear reports.</p>
-          </div>
-          <div className="text-center">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
-              <FaMapMarkedAlt size={22} />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Geofencing</h3>
-            <p className="text-sm text-gray-500">Draw zones and get notified the moment a vehicle enters or leaves one.</p>
-          </div>
-          <div className="text-center">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-yellow-50 text-yellow-600 flex items-center justify-center">
-              <FaTachometerAlt size={22} />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Driver behavior</h3>
-            <p className="text-sm text-gray-500">Catch harsh braking, harsh acceleration, and excessive idling automatically.</p>
-          </div>
-          <div className="text-center">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
-              <FaShieldAlt size={22} />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">SOS emergency alerts</h3>
-            <p className="text-sm text-gray-500">Drivers can send an emergency alert straight to your dashboard in one tap.</p>
-          </div>
+      <section id="features" className="max-w-6xl mx-auto px-6 py-20 scroll-mt-20">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {FEATURES.map((feature) => {
+            const Icon = feature.icon;
+            return (
+              <div
+                key={feature.title}
+                className="border border-gray-200 hover:border-orange-500 hover:shadow-lg transition-all duration-200 p-6 text-center"
+              >
+                <div className={`w-14 h-14 mx-auto mb-4 rounded-full ${feature.iconBg} ${feature.iconColor} flex items-center justify-center`}>
+                  <Icon size={22} />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                <p className="text-sm text-gray-500">{feature.description}</p>
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -326,8 +361,36 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ROUTE PLANNING & FUEL ESTIMATES */}
+      <section id="routes" className="max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center scroll-mt-20">
+        <div>
+          <span className="text-sm uppercase tracking-wide text-teal-950 font-bold mb-3 block">
+            Route planning & fuel insight
+          </span>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
+            Plan the route, know the fuel cost before you drive it.
+          </h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Draw a route point by point on the map and assign it to a vehicle — FIGBLOOM FLEET
+            works out the distance in kilometers and an estimated fuel range in litres, based on
+            that vehicle's own average consumption, not a generic figure.
+          </p>
+          <ul className="text-sm text-gray-600 space-y-2">
+            <li>• Draw a multi-point route on the map, or ask the AI assistant to draft one for you</li>
+            <li>• Distance calculated automatically in kilometers</li>
+            <li>• Fuel estimated in litres from each vehicle's real average consumption</li>
+            <li>• Set a deviation tolerance so drivers stay on the planned path</li>
+            <li>• See every planned route's distance and fuel estimate on your dashboard at a glance</li>
+          </ul>
+        </div>
+
+        <div className="w-full aspect-video bg-gray-100 overflow-hidden">
+          <img src="/schwoaze-highway-3392100_1920.jpg" alt="Planned route on the highway" className="w-full h-full object-cover" />
+        </div>
+      </section>
+
       {/* INDUSTRIES WE SERVE */}
-      <section className="max-w-6xl mx-auto px-6 py-20">
+      <section id="industries" className="max-w-6xl mx-auto px-6 py-20 scroll-mt-20">
         <div className="text-center mb-12">
           <span className="text-sm uppercase tracking-wide text-teal-950 font-bold mb-3 block">
             Industries we serve
@@ -341,23 +404,28 @@ export default function LandingPage() {
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
           {INDUSTRIES.map((industry) => (
-            <div key={industry.slug}>
-              <div className="w-full aspect-square bg-gray-100 overflow-hidden rounded-lg mb-3">
+            <div
+              key={industry.slug}
+              className="group border border-gray-200 hover:border-orange-500 hover:shadow-lg transition-all duration-200"
+            >
+              <div className="w-full aspect-square bg-gray-100 overflow-hidden border-b border-gray-200">
                 <img
                   src={`/industries/${industry.slug}.jpg`}
                   alt={industry.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               </div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-1">{industry.name}</h3>
-              <p className="text-xs text-gray-500">{industry.description}</p>
+              <div className="p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-1">{industry.name}</h3>
+                <p className="text-xs text-gray-500">{industry.description}</p>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
       {/* PRICING */}
-      <section className="max-w-6xl mx-auto px-6 py-20">
+      <section id="pricing" className="max-w-6xl mx-auto px-6 py-20 scroll-mt-20">
         <div className="text-center mb-12">
           <span className="text-sm uppercase tracking-wide text-teal-950 font-bold mb-3 block">
             Pricing
@@ -491,7 +559,7 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ */}
-      <section className="max-w-3xl mx-auto px-6 py-20">
+      <section id="faq" className="max-w-3xl mx-auto px-6 py-20 scroll-mt-20">
         <div className="text-center mb-12">
           <span className="text-sm uppercase tracking-wide text-teal-950 font-bold mb-3 block">
             FAQ
@@ -540,7 +608,7 @@ export default function LandingPage() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
               <div>
                 <span className="flex items-center gap-2 text-lg font-bold text-teal-950 mb-3">
-                  <BrandIcon variant="dark" className="h-5 w-5" />
+                  <FaCog aria-hidden="true" />
                   FIGBLOOM FLEET
                 </span>
                 <p className="text-sm text-gray-500 mb-4">

@@ -46,37 +46,39 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
               </td>
             </tr>
           ) : (
-            trips.map((t) => (
-              <tr key={t._id} className="border-t border-gray-100">
-                <td className="px-5 py-3 text-xs font-bold text-teal-600 hover:underline">
-                  <Link href={`${basePath}/${t._id}`}>{t.vehicleId?.plateNumber || "View trip"}</Link>
-                </td>
-                <td className="px-5 py-3 text-gray-600">{t.driverId?.fullName || "Unassigned"}</td>
-                <td className="px-5 py-3 text-gray-600">{new Date(t.startTime).toLocaleString()}</td>
-                <td className="px-5 py-3">
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full border ${t.endTime
+            trips.map((t) => {
+              return (
+                <tr key={t._id} className="border-t border-gray-100">
+                  <td className="px-5 py-3 text-xs font-bold text-teal-600 hover:underline">
+                    <Link href={`${basePath}/${t._id}`}>{t.vehicleId?.plateNumber || "View trip"}</Link>
+                  </td>
+                  <td className="px-5 py-3 text-gray-600">{t.driverId?.fullName || "Unassigned"}</td>
+                  <td className="px-5 py-3 text-gray-600">{new Date(t.startTime).toLocaleString()}</td>
+                  <td className="px-5 py-3">
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full border ${t.endTime
                         ? "bg-gray-100 text-gray-500 border-gray-200"
                         : "bg-teal-50 text-teal-600 border-teal-200"
-                      }`}
-                  >
-                    {t.endTime ? "completed" : "in progress"}
-                  </span>
-                </td>
-                <td className="px-5 py-3 text-gray-600">
-                  {t.distanceKm ? `${t.distanceKm.toFixed(1)} km` : "—"}
-                </td>
-                <td className="px-5 py-3">
-                  <Link
-                    href={`${basePath}/${t._id}`}
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-teal-600 hover:text-teal-700 hover:underline"
-                  >
-                    <FaRoute size={12} />
-                    Click to view trip replay
-                  </Link>
-                </td>
-              </tr>
-            ))
+                        }`}
+                    >
+                      {t.endTime ? "completed" : "in progress"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 text-gray-600">
+                    {t.distanceKm ? `${t.distanceKm.toFixed(1)} km` : "—"}
+                  </td>
+                  <td className="px-5 py-3">
+                    <Link
+                      href={`${basePath}/${t._id}`}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-teal-600 hover:text-teal-700 hover:underline"
+                    >
+                      <FaRoute size={12} />
+                      Click to view trip replay
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>

@@ -2,6 +2,7 @@ import AgentScanLog from "../models/AgentScanLog.js";
 import Vehicle from "../models/Vehicle.js";
 import { runAiAnomalyScan } from "../services/aiAnomalyDetector.js";
 import { answerFleetQuestion } from "../services/fleetAssistant.js";
+import { looksLikeRouteRequest, tryHandleRouteRequest } from "../services/routeAssistant.js";
 
 export async function listScans(req, res) {
   try {
@@ -115,8 +116,20 @@ export async function askAboutFleet(req, res) {
     if (!question || !question.trim()) {
       return res.status(400).json({ error: "question is required" });
     }
+    const trimmed = question.trim();
 
-    const answer = await answerFleetQuestion(companyId, question.trim());
+    if (looksLikeRouteRequest(trimmed)) {
+      // Route creation mirrors the Routes page's own permission split
+      // (ADMIN manages, COMPANY_OWNER is read-only) — a draft the owner
+      // can't save anyway isn't a useful answer.
+      if (req.user.role !== "ADMIN") {
+        return res.json({ answer: "Only fleet admins can create routes — ask your admin to draw this one." });
+      }
+      const routeResult = await tryHandleRouteRequest(trimmed);
+      if (routeResult) return res.json(routeResult);
+    }
+
+    const answer = await answerFleetQuestion(companyId, trimmed);
     return res.json({ answer });
   } catch (err) {
     console.error(err);

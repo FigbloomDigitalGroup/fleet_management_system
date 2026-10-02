@@ -15,8 +15,13 @@ const STEPS = [
   { n: 3, title: "Track live, get alerted", text: "Watch your fleet move in real time, and get notified the moment something needs attention." },
 ];
 
+const ROLE_OPTIONS: { value: "COMPANY_OWNER" | "ADMIN"; label: string }[] = [
+  { value: "COMPANY_OWNER", label: "Company" },
+  { value: "ADMIN", label: "Company Admin" },
+];
+
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -25,6 +30,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isHuman, setIsHuman] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<"COMPANY_OWNER" | "ADMIN">("COMPANY_OWNER");
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -33,6 +39,19 @@ export default function LoginPage() {
 
     try {
       const user = await login(email, password);
+
+      // Purely a client-side sanity check — nothing here is sent to the
+      // backend or stored. Only enforced for the two company-side roles the
+      // picker offers; platform admins and drivers sign in unaffected by it.
+      const isCompanyRole = user.role === "COMPANY_OWNER" || user.role === "ADMIN";
+      if (isCompanyRole && user.role !== selectedRole) {
+        logout();
+        const pickedLabel = ROLE_OPTIONS.find((r) => r.value === selectedRole)?.label;
+        setError(`Not authorized — this account isn't a "${pickedLabel}" account.`);
+        setIsSubmitting(false);
+        return;
+      }
+
       router.push(redirectPathForRole(user.role));
     } catch (err: any) {
       setError(err.message || "Unable to sign in. Check your details and try again.");
@@ -111,6 +130,26 @@ export default function LoginPage() {
           <p className="text-sm text-gray-500 mb-8">Enter your details to reach your dashboard.</p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Sign in as</label>
+              <div className="grid grid-cols-2 gap-2">
+                {ROLE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setSelectedRole(option.value)}
+                    className={`py-2 rounded-md text-sm font-medium border transition-colors ${
+                      selectedRole === option.value
+                        ? "bg-teal-600 border-teal-600 text-white"
+                        : "bg-white border-gray-300 text-gray-600 hover:border-teal-400"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
                 Email

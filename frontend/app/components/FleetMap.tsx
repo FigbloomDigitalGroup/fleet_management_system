@@ -2,7 +2,7 @@
 
 import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GoogleMap, OverlayView, Circle, useJsApiLoader } from "@react-google-maps/api";
+import { GoogleMap, OverlayView, Circle, Polyline, useJsApiLoader } from "@react-google-maps/api";
 import { IoCarSportSharp } from "react-icons/io5";
 import { ImLocation2 } from "react-icons/im";
 import { FaSearch } from "react-icons/fa";
@@ -12,7 +12,7 @@ import { isOutsideGeofences } from "../lib/geofence";
 import StatCard from "./StatCard";
 import CircleStat from "./CircleStat";
 import FullPageLoading from "./FullPageLoading";
-import { GeofenceRecord } from "../types/auth";
+import { GeofenceRecord, RouteRecord } from "../types/auth";
 
 interface LiveVehicle {
   vehicleId: string;
@@ -20,6 +20,7 @@ interface LiveVehicle {
   status: string;
   vehicleType?: string;
   lastLocation: { latitude: number; longitude: number; recordedAt: string } | null;
+  recentTrail?: { latitude: number; longitude: number; recordedAt: string }[];
 }
 
 const statusColor: Record<string, string> = {
@@ -151,8 +152,11 @@ export default function FleetMap({
 
   const [vehicles, setVehicles] = useState<LiveVehicle[]>([]);
   const [geofences, setGeofences] = useState<GeofenceRecord[]>([]);
+  const [routes, setRoutes] = useState<RouteRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showGeofences, setShowGeofences] = useState(true);
+  const [showRoutes, setShowRoutes] = useState(true);
+  const [showTrails, setShowTrails] = useState(true);
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -160,12 +164,14 @@ export default function FleetMap({
 
   async function load() {
     try {
-      const [vehicleData, geofenceData] = await Promise.all([
+      const [vehicleData, geofenceData, routeData] = await Promise.all([
         apiRequest<LiveVehicle[]>("/api/tracking/live"),
         apiRequest<GeofenceRecord[]>("/api/geofences"),
+        apiRequest<RouteRecord[]>("/api/routes"),
       ]);
       setVehicles(vehicleData);
       setGeofences(geofenceData);
+      setRoutes(routeData);
     } catch (err) {
       console.error(err);
     } finally {
@@ -324,6 +330,35 @@ export default function FleetMap({
                     )
                 )}
 
+              {/* Planned routes — the path a vehicle is expected to follow */}
+              {showRoutes &&
+                routes
+                  .filter((r) => r.active && r.waypoints.length > 1)
+                  .map((r) => (
+                    <Polyline
+                      key={r._id}
+                      path={r.waypoints}
+                      options={{
+                        strokeColor: "#3b82f6",
+                        strokeWeight: 3,
+                        strokeOpacity: 0.7,
+                        icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 1, scale: 3 }, offset: "0", repeat: "12px" }],
+                      }}
+                    />
+                  ))}
+
+              {/* Live trail — where a vehicle has actually been recently, distinct from the planned route above */}
+              {showTrails &&
+                vehicles
+                  .filter((v) => v.recentTrail && v.recentTrail.length > 1)
+                  .map((v) => (
+                    <Polyline
+                      key={`trail-${v.vehicleId}`}
+                      path={v.recentTrail!.map((p) => ({ lat: p.latitude, lng: p.longitude }))}
+                      options={{ strokeColor: "#a855f7", strokeWeight: 3, strokeOpacity: 0.85 }}
+                    />
+                  ))}
+
               {/* Vehicles — plotted as soon as they have a GPS fix, independent of geofences */}
               {visibleVehicles.map((v) => (
                 <OverlayView
@@ -359,18 +394,29 @@ export default function FleetMap({
             {mapOverlay}
           </div>
 
-          {/* Geofence toggle */}
-          {geofences.length > 0 && (
-            <div className="px-4 py-2 border-t border-gray-100 flex items-center justify-between">
+          {/* Geofence / route / trail toggles */}
+          {(geofences.length > 0 || routes.length > 0) && (
+            <div className="px-4 py-2 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs text-gray-500">
-                {geofences.length} geofence{geofences.length !== 1 ? "s" : ""} on this map
+                {geofences.length > 0 && `${geofences.length} geofence${geofences.length !== 1 ? "s" : ""}`}
+                {geofences.length > 0 && routes.length > 0 && " · "}
+                {routes.length > 0 && `${routes.length} route${routes.length !== 1 ? "s" : ""}`}
               </span>
-              <button
-                onClick={() => setShowGeofences((s) => !s)}
-                className="text-xs text-teal-600 hover:underline"
-              >
-                {showGeofences ? "Hide zones" : "Show zones"}
-              </button>
+              <div className="flex items-center gap-3">
+                {geofences.length > 0 && (
+                  <button onClick={() => setShowGeofences((s) => !s)} className="text-xs text-teal-600 hover:underline">
+                    {showGeofences ? "Hide zones" : "Show zones"}
+                  </button>
+                )}
+                {routes.length > 0 && (
+                  <button onClick={() => setShowRoutes((s) => !s)} className="text-xs text-blue-600 hover:underline">
+                    {showRoutes ? "Hide routes" : "Show routes"}
+                  </button>
+                )}
+                <button onClick={() => setShowTrails((s) => !s)} className="text-xs text-purple-600 hover:underline">
+                  {showTrails ? "Hide trails" : "Show trails"}
+                </button>
+              </div>
             </div>
           )}
 
@@ -412,6 +458,16 @@ export default function FleetMap({
                 <span className="text-xs text-gray-600">Driver starting point</span>
               </div>
             )}
+            {routes.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="h-0.5 w-4" style={{ background: "#3b82f6" }} />
+                <span className="text-xs text-gray-600">Planned route</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <span className="h-0.5 w-4" style={{ background: "#a855f7" }} />
+              <span className="text-xs text-gray-600">Recent movement (last 30 min)</span>
+            </div>
           </div>
         </div>
 
