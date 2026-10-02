@@ -12,6 +12,7 @@ import FullPageLoading from "@/app/components/FullPageLoading";
 import LiveMapPreview from "../../components/LiveMapPreview";
 import MapMetricsCard from "../../components/MapMetricsCard";
 import { usePageHeader } from "../../components/DashboardShell";
+import { routeDistanceKm, estimateFuelRangeLiters } from "../../lib/routeEstimate";
 import {
   CompanyStats,
   DailyStatPoint,
@@ -21,6 +22,7 @@ import {
   TripRecord,
   AlertRecord,
   AgentSummary,
+  RouteRecord,
 } from "../../types/auth";
 
 //const FleetMap = dynamic<{ compact?: boolean }>(() => import("../../components/FleetMap"), { ssr: false });
@@ -77,6 +79,7 @@ export default function CompanyDashboard() {
   const [agentSummary, setAgentSummary] = useState<AgentSummary | null>(null);
   const [companyStats, setCompanyStats] = useState<CompanyStats | null>(null);
   const [dailyStats, setDailyStats] = useState<DailyStatPoint[]>([]);
+  const [routes, setRoutes] = useState<RouteRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   const vehicleCounts = {
@@ -105,18 +108,20 @@ export default function CompanyDashboard() {
   useEffect(() => {
     async function loadAll() {
       try {
-        const [vehicleData, driverData, adminData, tripData, alertData] = await Promise.all([
+        const [vehicleData, driverData, adminData, tripData, alertData, routeData] = await Promise.all([
           apiRequest<VehicleRecord[]>("/api/vehicles"),
           apiRequest<DriverRecord[]>("/api/users/drivers"),
           apiRequest<AdminRecord[]>("/api/users/admins"),
           apiRequest<TripRecord[]>("/api/trips"),
           apiRequest<AlertRecord[]>("/api/alerts"),
+          apiRequest<RouteRecord[]>("/api/routes"),
         ]);
         setVehicles(vehicleData);
         setDrivers(driverData);
         setAdmins(adminData);
         setTrips(tripData);
         setAlerts(alertData);
+        setRoutes(routeData);
       } catch (err) {
         console.error(err);
       } finally {
@@ -259,40 +264,39 @@ export default function CompanyDashboard() {
   </div>
 </div>
 
-      {/* Recent alerts */}
-      <div>
+      {/* Routes */}
+      <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
-          <h2 className="text-base font-semibold text-gray-900">Recent alerts</h2>
-          <Link href="/company/alerts" className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
+          <h2 className="text-base font-semibold text-gray-900">Routes</h2>
+          <Link href="/company/routes" className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
             View all
           </Link>
         </div>
-        <p className="text-xs text-teal-600 mb-3">The 5 most recent alerts across your fleet</p>
+        <p className="text-xs text-teal-600 mb-3">Distance and estimated fuel per planned route</p>
         <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
-          {alerts.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-6">No alerts yet.</p>
+          {routes.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-6">No routes created yet.</p>
           ) : (
             <table className="w-full text-sm">
               <tbody>
-                {alerts.slice(0, 5).map((a) => (
-                  <tr key={a._id} className="border-t border-gray-100 first:border-t-0">
-                    <td className="px-5 py-3 text-xs font-bold text-gray-900">
-                      {a.vehicleId?.plateNumber || "—"}
-                    </td>
-                    <td className="px-5 py-3 text-gray-600">{a.type.replace(/_/g, " ")}</td>
-                    <td className="px-5 py-3 text-xs text-gray-500">{new Date(a.createdAt).toLocaleString()}</td>
-                    <td className="px-5 py-3">
-                      <span
-                        className={`text-xs px-2 py-1 rounded-full border ${a.resolved
-                            ? "bg-gray-100 text-gray-500 border-gray-200"
-                            : "bg-orange-50 text-orange-600 border-orange-200"
-                          }`}
-                      >
-                        {a.resolved ? "resolved" : "open"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {routes.slice(0, 5).map((r) => {
+                  const vehicleIdStr = typeof r.vehicleId === "object" ? r.vehicleId._id : r.vehicleId;
+                  const vehicle = vehicles.find((v) => v._id === vehicleIdStr);
+                  const distanceKm = routeDistanceKm(r.waypoints);
+                  const fuelEstimate = estimateFuelRangeLiters(distanceKm, vehicle?.avgConsumptionLPer100Km);
+                  return (
+                    <tr key={r._id} className="border-t border-gray-100 first:border-t-0">
+                      <td className="px-5 py-3 text-xs font-bold text-gray-900">{r.name}</td>
+                      <td className="px-5 py-3 text-gray-600">
+                        {typeof r.vehicleId === "object" ? r.vehicleId.plateNumber : "—"}
+                      </td>
+                      <td className="px-5 py-3 text-gray-600">{distanceKm.toFixed(1)} km</td>
+                      <td className="px-5 py-3 text-gray-600">
+                        {fuelEstimate.min.toFixed(1)}–{fuelEstimate.max.toFixed(1)} L
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
