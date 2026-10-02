@@ -68,6 +68,7 @@ export interface VehicleRecord {
   status: "active" | "idle" | "offline" | "maintenance";
   driverId?: { _id: string; fullName: string; email: string } | null;
   startGeofenceId?: { _id: string; name: string } | null;
+  avgConsumptionLPer100Km?: number;
   createdAt: string;
 }
 
@@ -97,6 +98,17 @@ export interface AlertRecord {
   createdAt: string;
 }
 
+
+export interface RouteRecord {
+  _id: string;
+  vehicleId: { _id: string; plateNumber: string } | string;
+  name: string;
+  waypoints: { lat: number; lng: number }[];
+  toleranceMeters: number;
+  speedLimitKph: number | null;
+  active: boolean;
+  createdAt: string;
+}
 
 export interface GeofenceRecord {
   _id: string;

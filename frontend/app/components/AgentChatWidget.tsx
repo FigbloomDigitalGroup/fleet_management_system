@@ -1,20 +1,51 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { RiRobot3Fill } from "react-icons/ri";
 import { FiX, FiSend } from "react-icons/fi";
+import { BsStars } from "react-icons/bs";
 import { apiRequest } from "../lib/api";
+
+interface RouteDraft {
+  name: string;
+  waypoints: { lat: number; lng: number }[];
+  originAddress: string;
+  destinationAddress: string;
+}
 
 interface ChatMessage {
   role: "user" | "agent";
   text: string;
+  routeDraft?: RouteDraft;
 }
+
+// Keyed by the page segment shared by both /admin/* and /company/* (see
+// layout.tsx nav arrays) — one hint per feature, shown beside the floating
+// button so it nudges toward what's actually useful to ask on that page.
+const PAGE_HINTS: Record<string, string> = {
+  dashboard: "Ask about your fleet — vehicles, alerts, or what's happened recently.",
+  "live-map": "Ask where your vehicles are, or who's active right now.",
+  geofences: "Want help setting up a geofence zone?",
+  routes: "Want help drawing a route?",
+  vehicles: "Ask about a specific vehicle's status or history.",
+  drivers: "Ask about driver assignments or activity.",
+  trips: "Ask about recent trips or distance covered.",
+  alerts: "Ask about open alerts or recent incidents.",
+  agent: "Ask how the AI agent's anomaly scans are going.",
+  billing: "Ask about your plan or expenses.",
+  admins: "Ask about your admin team.",
+  settings: "Need help with your account settings?",
+};
+const DEFAULT_HINT = "Ask about your fleet.";
 
 // Floating assistant — like the LiveMapWidget's floating button, but opens a
 // small chat panel instead of navigating. Answers are grounded in this
 // company's own fleet data on the backend (see fleetAssistant.js), not
 // general knowledge.
 export default function AgentChatWidget() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "agent", text: "Hi! Ask me anything about your fleet — vehicles, alerts, or what's happened recently." },
@@ -38,17 +69,34 @@ export default function AgentChatWidget() {
     setError(null);
 
     try {
-      const { answer } = await apiRequest<{ answer: string }>("/api/agent/ask", {
-        method: "POST",
-        body: JSON.stringify({ question }),
-      });
-      setMessages((m) => [...m, { role: "agent", text: answer }]);
+      const { answer, routeDraft } = await apiRequest<{ answer: string; routeDraft?: RouteDraft }>(
+        "/api/agent/ask",
+        { method: "POST", body: JSON.stringify({ question }) }
+      );
+      setMessages((m) => [...m, { role: "agent", text: answer, routeDraft }]);
     } catch (err: any) {
       setError(err.message || "Failed to get an answer");
     } finally {
       setSending(false);
     }
   }
+
+  function openRouteDraft(draft: RouteDraft) {
+    const basePath = pathname?.startsWith("/admin") ? "/admin" : "/company";
+    const targetPath = `${basePath}/routes`;
+
+    if (pathname === targetPath) {
+      // Already on the Routes page — hand it over live, no navigation (which
+      // would be a no-op to the same URL anyway) and no refresh needed.
+      window.dispatchEvent(new CustomEvent("fleet:route-draft", { detail: draft }));
+    } else {
+      sessionStorage.setItem("routeDraft", JSON.stringify(draft));
+      router.push(targetPath);
+    }
+  }
+
+  const pageSegment = pathname?.split("/").filter(Boolean)[1] || "dashboard";
+  const hint = PAGE_HINTS[pageSegment] || DEFAULT_HINT;
 
   return (
     <>
@@ -73,6 +121,14 @@ export default function AgentChatWidget() {
                   }`}
                 >
                   {m.text}
+                  {m.routeDraft && (
+                    <button
+                      onClick={() => openRouteDraft(m.routeDraft!)}
+                      className="mt-2 block w-full rounded-md bg-orange-500 px-2 py-1.5 text-center text-xs font-medium text-white hover:bg-orange-600"
+                    >
+                      Click to view the route
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -105,13 +161,25 @@ export default function AgentChatWidget() {
         </div>
       )}
 
-      <button
-        onClick={() => setOpen((o) => !o)}
-        aria-label={open ? "Close fleet assistant" : "Ask the fleet assistant"}
-        className="fixed bottom-40 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-teal-600 to-cyan-600 text-white shadow-lg transition-transform hover:scale-105"
-      >
-        <RiRobot3Fill size={24} />
-      </button>
+      <div className="fixed bottom-40 right-6 z-50 flex items-center gap-3">
+        {!open && (
+          <div
+            key={pageSegment}
+            className="animate-hint-in flex max-w-[210px] items-start gap-1.5 rounded-xl bg-gradient-to-br from-violet-50 to-indigo-50 px-3 py-2 text-xs text-violet-800 shadow-lg ring-1 ring-violet-200"
+          >
+            <BsStars className="mt-0.5 shrink-0 text-violet-500" size={13} aria-hidden="true" />
+            <span>{hint}</span>
+          </div>
+        )}
+
+        <button
+          onClick={() => setOpen((o) => !o)}
+          aria-label={open ? "Close fleet assistant" : "Ask the fleet assistant"}
+          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-600 to-cyan-600 text-white shadow-lg transition-transform hover:scale-105"
+        >
+          <RiRobot3Fill size={24} />
+        </button>
+      </div>
     </>
   );
 }
