@@ -194,16 +194,16 @@ export default function DashboardShell({
       {(user?.role === "ADMIN" || user?.role === "COMPANY_OWNER") && <AgentChatWidget />}
 
       {/* SIDEBAR */}
-      <aside className="h-screen w-48 shrink-0 overflow-y-auto bg-teal-950 flex flex-col text-white">
-        <div className="px-4 py-4">
-          <span className="flex items-center gap-2 text-sm font-bold text-white">
-            <BrandIcon variant="light" className="h-4 w-4" />
+      <aside className="h-screen w-40 shrink-0 overflow-y-auto bg-teal-950 flex flex-col text-white">
+        <div className="px-3 py-4">
+          <span className="flex items-center gap-1.5 text-xs font-bold text-white whitespace-nowrap">
+            <BrandIcon variant="light" className="h-4 w-4 shrink-0" />
             FIGBLOOM FLEET
           </span>
           <p className="text-[11px] text-white mt-0.5">{title}</p>
         </div>
 
-        <nav className="flex-1 px-2.5 py-3 space-y-1">
+        <nav className="flex-1 px-2 py-3 space-y-1">
           {navItems.map((item) => {
             const active = pathname === item.href;
             const Icon = item.icon;
@@ -213,7 +213,7 @@ export default function DashboardShell({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs font-medium transition-colors ${active
+                className={`flex items-center gap-2 px-2 py-2 rounded-md text-xs font-medium transition-colors ${active
                   ? "bg-teal-900 text-white"
                   : "text-white hover:bg-teal-900"
                   }`}
