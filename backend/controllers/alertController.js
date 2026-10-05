@@ -4,6 +4,8 @@ import { tenantScope } from "../middleware/auth.js";
 
 // Alert types relevant to the driver actually behind the wheel — excludes
 // admin-facing types like maintenance scheduling or device connectivity.
+// admin_message is a direct note from ADMIN/COMPANY_OWNER to this driver
+// specifically (see createAlert) — always driver-visible, by definition.
 const DRIVER_VISIBLE_TYPES = [
   "speeding",
   "route_deviation",
@@ -15,11 +17,15 @@ const DRIVER_VISIBLE_TYPES = [
   "harsh_braking",
   "harsh_acceleration",
   "excessive_idling",
+  "admin_message",
 ];
 
+// admin_message is a message TO a driver, not an operational alert ABOUT a
+// vehicle — it's excluded here so it only ever shows up on the driver's own
+// phone (getMyAlerts below), never cluttering the admin/company dashboard.
 export async function listAlerts(req, res) {
   try {
-    const alerts = await Alert.find(tenantScope(req))
+    const alerts = await Alert.find({ ...tenantScope(req), type: { $ne: "admin_message" } })
       .populate("vehicleId", "plateNumber")
       .sort({ createdAt: -1 })
       .limit(100);
@@ -73,6 +79,9 @@ export async function createAlert(req, res) {
 
     if (!vehicleId || !type || !message) {
       return res.status(400).json({ error: "vehicleId, type, and message are required" });
+    }
+    if (type === "admin_message" && !["ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Only fleet admins can message a driver" });
     }
 
     const companyId = req.user.role === "PLATFORM_ADMIN" ? req.body.companyId : req.user.companyId;

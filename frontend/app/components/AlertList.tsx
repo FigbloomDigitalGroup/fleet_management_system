@@ -2,23 +2,16 @@
 "use client";
 
 import { useEffect, useRef, useState, FormEvent } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { apiRequest } from "../lib/api";
 import { AlertRecord, VehicleRecord } from "../types/auth";
-import FullPageLoading from "./FullPageLoading";
-
-const ALERT_TYPES = [
-  { value: "speeding", label: "Speeding" },
-  { value: "geofence_entry", label: "Geofence entry" },
-  { value: "geofence_exit", label: "Geofence exit" },
-  { value: "unauthorized_movement", label: "Unauthorized movement" },
-  { value: "device_offline", label: "Device offline" },
-  { value: "maintenance_due", label: "Maintenance due" },
-  { value: "harsh_braking", label: "Harsh braking" },
-  { value: "harsh_acceleration", label: "Harsh acceleration" },
-  { value: "excessive_idling", label: "Excessive idling" },
-];
+import Skeleton from "./Skeleton";
+import WheelIcon from "./WheelIcon";
 
 export default function AlertsList() {
+  const pathname = usePathname();
+  const basePath = pathname?.startsWith("/admin") ? "/admin/vehicles" : "/company/vehicles";
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,10 +19,10 @@ export default function AlertsList() {
   const [resolvingId, setResolvingId] = useState<string | null>(null);
 
   const [vehicleId, setVehicleId] = useState("");
-  const [type, setType] = useState(ALERT_TYPES[0].value);
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [sendSuccess, setSendSuccess] = useState(false);
 
   // load() is also called on a poll interval below — these refs let it read
   // the current vehicleId and first-load status without being redeclared
@@ -81,7 +74,7 @@ export default function AlertsList() {
     setFormError(null);
 
     if (!vehicleId) {
-      setFormError("Add a vehicle first before sending an alert.");
+      setFormError("Add a vehicle first before messaging its driver.");
       return;
     }
 
@@ -89,24 +82,26 @@ export default function AlertsList() {
     try {
       await apiRequest("/api/alerts", {
         method: "POST",
-        body: JSON.stringify({ vehicleId, type, message }),
+        body: JSON.stringify({ vehicleId, type: "admin_message", message }),
       });
       setMessage("");
-      await load();
+      setSendSuccess(true);
+      setTimeout(() => setSendSuccess(false), 4000);
     } catch (err: any) {
-      setFormError(err.message || "Failed to send alert");
+      setFormError(err.message || "Failed to send message");
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  if (loading) return <FullPageLoading label="Loading alerts" />;
-  if (error) return <p className="text-sm text-red-600">{error}</p>;
-
   return (
     <div className="grid lg:grid-cols-3 gap-6">
       {/* Alerts list */}
       <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+        {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
+        {error && <p className="text-sm text-red-600 p-5">{error}</p>}
+        {!loading && !error && (
+          <>
         <p className="text-xs text-teal-600 px-5 pt-4">
           Speeding, geofence, and offline alerts raised across your fleet.
         </p>
@@ -131,7 +126,14 @@ export default function AlertsList() {
               alerts.map((a) => (
                 <tr key={a._id} className="border-t border-gray-100">
                   <td className="px-5 py-3 text-xs font-bold text-gray-900">
-                    {a.vehicleId?.plateNumber || "—"}
+                    {a.vehicleId ? (
+                      <Link href={`${basePath}/${a.vehicleId._id}`} className="inline-flex items-center gap-2 hover:text-teal-600">
+                        <WheelIcon size={16} className="spin-slow shrink-0" />
+                        {a.vehicleId.plateNumber}
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="px-5 py-3 text-gray-600">{a.type.replace(/_/g, " ")}</td>
                   <td className="px-5 py-3 text-xs text-teal-600">{a.message}</td>
@@ -161,12 +163,17 @@ export default function AlertsList() {
             )}
           </tbody>
         </table>
+          </>
+        )}
       </div>
 
-      {/* Send alert form */}
+      {/* Message driver form */}
+      {!loading && !error && (
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 h-fit">
-        <h3 className="text-sm font-medium text-gray-700">Send an alert</h3>
-        <p className="text-xs text-teal-600 mt-0.5 mb-4">Manually notify the team about a vehicle issue.</p>
+        <h3 className="text-sm font-medium text-gray-700">Message driver</h3>
+        <p className="text-xs text-teal-600 mt-0.5 mb-4">
+          Sends straight to this vehicle's driver in the mobile app — it won't appear in the list on the left.
+        </p>
         <form onSubmit={handleSendAlert} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Vehicle</label>
@@ -185,43 +192,32 @@ export default function AlertsList() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Alert type</label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
-            >
-              {ALERT_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Message</label>
             <textarea
               required
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Describe what's happening…"
+              placeholder="e.g. Please return to the depot by 5pm…"
               rows={3}
               className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
             />
           </div>
 
           {formError && <p className="text-xs text-red-600">{formError}</p>}
+          {sendSuccess && (
+            <p className="text-xs text-teal-600">Sent — it'll show up on the driver's phone, not here.</p>
+          )}
 
           <button
             type="submit"
             disabled={isSubmitting || vehicles.length === 0}
             className="w-full py-2 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
           >
-            {isSubmitting ? "Sending…" : "Send alert"}
+            {isSubmitting ? "Sending…" : "Send message"}
           </button>
         </form>
       </div>
+      )}
     </div>
   );
 }
