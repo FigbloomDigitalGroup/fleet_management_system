@@ -81,3 +81,36 @@ export async function getDrivingRoute(originQuery, destinationQuery) {
     distanceText: leg?.distance?.text,
   };
 }
+
+// Resolves a single free-text place to a lat/lng — there's no separate
+// Geocoding API call here (this key only has Directions enabled; a direct
+// Geocoding request returns REQUEST_DENIED). Directions does its own
+// geocoding internally even for a zero-length "route" from a place to
+// itself, so requesting origin === destination is a reliable way to recover
+// just one resolved coordinate without needing a second API.
+export async function getPlaceLocation(query) {
+  if (!GOOGLE_MAPS_SERVER_API_KEY) {
+    return { error: "Geofence drawing isn't configured yet — GOOGLE_MAPS_SERVER_API_KEY is missing on the server." };
+  }
+
+  const place = withRegionalContext(query);
+  const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(
+    place
+  )}&destination=${encodeURIComponent(place)}&mode=driving&key=${GOOGLE_MAPS_SERVER_API_KEY}`;
+
+  let data;
+  try {
+    const res = await fetch(url);
+    data = await res.json();
+  } catch (err) {
+    return { error: `Could not reach Google Directions: ${err.message}` };
+  }
+
+  if (data.status !== "OK" || !data.routes?.length) {
+    const reason = data.status === "NOT_FOUND" ? "That place couldn't be found." : `Location lookup failed (${data.status}).`;
+    return { error: reason };
+  }
+
+  const leg = data.routes[0].legs[0];
+  return { lat: leg.start_location.lat, lng: leg.start_location.lng, address: leg.start_address };
+}

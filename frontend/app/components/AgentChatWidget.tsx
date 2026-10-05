@@ -14,10 +14,18 @@ interface RouteDraft {
   destinationAddress: string;
 }
 
+interface GeofenceDraft {
+  name: string;
+  lat: number;
+  lng: number;
+  radiusMeters: number;
+}
+
 interface ChatMessage {
   role: "user" | "agent";
   text: string;
   routeDraft?: RouteDraft;
+  geofenceDraft?: GeofenceDraft;
 }
 
 // Keyed by the page segment shared by both /admin/* and /company/* (see
@@ -31,6 +39,7 @@ const PAGE_HINTS: Record<string, string> = {
   vehicles: "Ask about a specific vehicle's status or history.",
   drivers: "Ask about driver assignments or activity.",
   trips: "Ask about recent trips or distance covered.",
+  expenses: "Ask about fuel or other expenses logged by drivers.",
   alerts: "Ask about open alerts or recent incidents.",
   agent: "Ask how the AI agent's anomaly scans are going.",
   billing: "Ask about your plan or expenses.",
@@ -69,11 +78,12 @@ export default function AgentChatWidget() {
     setError(null);
 
     try {
-      const { answer, routeDraft } = await apiRequest<{ answer: string; routeDraft?: RouteDraft }>(
-        "/api/agent/ask",
-        { method: "POST", body: JSON.stringify({ question }) }
-      );
-      setMessages((m) => [...m, { role: "agent", text: answer, routeDraft }]);
+      const { answer, routeDraft, geofenceDraft } = await apiRequest<{
+        answer: string;
+        routeDraft?: RouteDraft;
+        geofenceDraft?: GeofenceDraft;
+      }>("/api/agent/ask", { method: "POST", body: JSON.stringify({ question }) });
+      setMessages((m) => [...m, { role: "agent", text: answer, routeDraft, geofenceDraft }]);
     } catch (err: any) {
       setError(err.message || "Failed to get an answer");
     } finally {
@@ -91,6 +101,18 @@ export default function AgentChatWidget() {
       window.dispatchEvent(new CustomEvent("fleet:route-draft", { detail: draft }));
     } else {
       sessionStorage.setItem("routeDraft", JSON.stringify(draft));
+      router.push(targetPath);
+    }
+  }
+
+  function openGeofenceDraft(draft: GeofenceDraft) {
+    const basePath = pathname?.startsWith("/admin") ? "/admin" : "/company";
+    const targetPath = `${basePath}/geofences`;
+
+    if (pathname === targetPath) {
+      window.dispatchEvent(new CustomEvent("fleet:geofence-draft", { detail: draft }));
+    } else {
+      sessionStorage.setItem("geofenceDraft", JSON.stringify(draft));
       router.push(targetPath);
     }
   }
@@ -127,6 +149,14 @@ export default function AgentChatWidget() {
                       className="mt-2 block w-full rounded-md bg-orange-500 px-2 py-1.5 text-center text-xs font-medium text-white hover:bg-orange-600"
                     >
                       Click to view the route
+                    </button>
+                  )}
+                  {m.geofenceDraft && (
+                    <button
+                      onClick={() => openGeofenceDraft(m.geofenceDraft!)}
+                      className="mt-2 block w-full rounded-md bg-orange-500 px-2 py-1.5 text-center text-xs font-medium text-white hover:bg-orange-600"
+                    >
+                      Click to view the geofence
                     </button>
                   )}
                 </div>

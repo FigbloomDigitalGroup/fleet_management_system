@@ -41,6 +41,42 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
     load();
   }, []);
 
+  function applyDraft(draft: { name?: string; lat?: number; lng?: number; radiusMeters?: number }) {
+    if (typeof draft.lat === "number" && typeof draft.lng === "number") {
+      setClickedCenter({ lat: draft.lat, lng: draft.lng });
+      setName(draft.name || "");
+      setRadiusM(String(draft.radiusMeters || 500));
+    }
+  }
+
+  // Picks up a zone the AI assistant drafted from a chat request made on a
+  // *different* page (see AgentChatWidget) — handed off via sessionStorage
+  // since navigating here mounts this component fresh, so a one-time read is
+  // enough.
+  useEffect(() => {
+    if (!canManage) return;
+    const draftRaw = sessionStorage.getItem("geofenceDraft");
+    if (!draftRaw) return;
+    sessionStorage.removeItem("geofenceDraft");
+    try {
+      applyDraft(JSON.parse(draftRaw));
+    } catch {
+      // malformed draft — ignore, user can just click the map manually
+    }
+  }, [canManage]);
+
+  // Picks up a zone drafted while already sitting on this page — navigating
+  // to the same URL is a no-op, so AgentChatWidget dispatches this event
+  // directly instead, and we apply it live without a refresh.
+  useEffect(() => {
+    if (!canManage) return;
+    function handleLiveDraft(e: Event) {
+      applyDraft((e as CustomEvent).detail || {});
+    }
+    window.addEventListener("fleet:geofence-draft", handleLiveDraft);
+    return () => window.removeEventListener("fleet:geofence-draft", handleLiveDraft);
+  }, [canManage]);
+
   function handleMapClick(e: google.maps.MapMouseEvent) {
     if (!canManage || !e.latLng) return;
     setClickedCenter({ lat: e.latLng.lat(), lng: e.latLng.lng() });
