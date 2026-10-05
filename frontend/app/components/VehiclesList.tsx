@@ -7,6 +7,7 @@ import { VehicleRecord, DriverRecord, GeofenceRecord } from "../types/auth";
 import { VEHICLE_TYPES } from "../lib/vehicleTypes";
 import Skeleton from "./Skeleton";
 import ZoneStatusBadge from "./ZoneStatusBadge";
+import WheelIcon from "./WheelIcon";
 
 interface BulkImportResultRow {
   row: number;
@@ -46,9 +47,11 @@ interface LiveLocation {
 export default function VehiclesList({
   basePath = "/admin/vehicles",
   canAssignDriver = true,
+  canAdd = true,
 }: {
   basePath?: string;
   canAssignDriver?: boolean;
+  canAdd?: boolean;
 }) {
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
@@ -156,7 +159,7 @@ export default function VehiclesList({
 
   return (
     <div className="grid lg:grid-cols-3 gap-4">
-      <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+      <div className={`${canAdd ? "lg:col-span-2" : "lg:col-span-3"} bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden`}>
         {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
         {error && <p className="text-sm text-red-600 p-5">{error}</p>}
         {!loading && !error && (
@@ -187,8 +190,9 @@ export default function VehiclesList({
                     <td className="px-5 py-3">
                       <Link
                         href={`${basePath}/${v._id}`}
-                        className="inline-block w-28 cursor-pointer rounded-md bg-blue-950 px-3 py-1.5 text-center text-[11px] font-bold text-white"
+                        className="inline-flex items-center gap-2 text-[11px] font-bold text-blue-950 hover:text-teal-600"
                       >
+                        <WheelIcon size={20} className="spin-slow shrink-0" />
                         {v.plateNumber}
                       </Link>
                     </td>
@@ -247,6 +251,7 @@ export default function VehiclesList({
         )}
       </div>
 
+      {canAdd && (
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 h-fit">
         <h3 className="text-sm font-medium text-gray-700">Add a vehicle</h3>
         <p className="text-xs text-teal-600 mt-0.5 mb-4">Register a vehicle to start tracking it.</p>
@@ -373,6 +378,7 @@ export default function VehiclesList({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

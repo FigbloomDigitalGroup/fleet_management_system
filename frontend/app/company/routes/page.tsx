@@ -8,7 +8,7 @@ export default function CompanyRoutesPage() {
 
   return (
     <div>
-      <RoutesManager canManage={false} />
+      <RoutesManager canManage={true} />
     </div>
   );
 }

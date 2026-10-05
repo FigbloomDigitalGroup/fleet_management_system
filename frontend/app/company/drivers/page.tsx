@@ -8,7 +8,7 @@ export default function CompanyDriversPage() {
 
   return (
     <div>
-      <DriversList canAdd={false} canAssignVehicle={false} />
+      <DriversList canAdd={false} canAssignVehicle={true} />
     </div>
   );
 }
