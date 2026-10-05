@@ -33,6 +33,31 @@ export interface CompanyRecord {
   } | null;
 }
 
+export interface TransactionRecord {
+  _id: string;
+  companyId: { _id: string; name: string } | string;
+  plan: "basic" | "pro";
+  reference: string;
+  amount: number;
+  currency: string;
+  status: "pending" | "success" | "failed" | "abandoned";
+  channel: "card" | "mobile_money" | null;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+export interface ExpenseRecord {
+  _id: string;
+  companyId: string;
+  vehicleId: { _id: string; plateNumber: string } | string;
+  driverId: { _id: string; fullName: string } | string | null;
+  category: "fuel" | "toll" | "parking" | "repair" | "other";
+  amount: number;
+  note: string | null;
+  incurredAt: string;
+  createdAt: string;
+}
+
 export interface CompanyStats {
   totalDistanceKm: number;
   totalFuelConsumedLiters: number;
@@ -78,6 +103,14 @@ export interface DriverRecord {
   email: string;
   status: string;
   createdAt: string;
+  phone?: string | null;
+  dob?: string | null;
+  nationalId?: string | null;
+  address?: string | null;
+  licenseNumber?: string | null;
+  licenseExpiry?: string | null;
+  emergencyName?: string | null;
+  emergencyPhone?: string | null;
 }
 
 export interface TripRecord {
@@ -107,6 +140,12 @@ export interface RouteRecord {
   toleranceMeters: number;
   speedLimitKph: number | null;
   active: boolean;
+  frequency: "daily" | "weekly";
+  daysOfWeek: number[];
+  source: "manual" | "ai";
+  scheduledToday: boolean;
+  completedToday: boolean;
+  completedAt: string | null;
   createdAt: string;
 }
 
