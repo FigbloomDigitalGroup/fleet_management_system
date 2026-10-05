@@ -130,6 +130,9 @@ export async function createUserUnderCompany(req, res) {
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({ error: `role must be one of: ${allowedRoles.join(", ")}` });
     }
+    if (role === "DRIVER" && !["ADMIN", "PLATFORM_ADMIN"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Only fleet admins can add drivers" });
+    }
     if (!normalizedEmail) {
       return res.status(400).json({ error: "email is required" });
     }

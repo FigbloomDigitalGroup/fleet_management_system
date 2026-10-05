@@ -63,7 +63,7 @@ export default function VehicleTripsMap({ vehicleId, basePath }: { vehicleId: st
   const allPoints = useMemo(() => Object.values(routes).flat(), [routes]);
 
   if (loading || !isLoaded) {
-    return <div className="h-56 animate-pulse rounded-xl bg-gray-100" />;
+    return <div className="skeleton-shimmer h-56 rounded-xl" />;
   }
 
   if (trips.length === 0) {

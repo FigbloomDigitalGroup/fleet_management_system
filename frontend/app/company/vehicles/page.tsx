@@ -8,7 +8,7 @@ export default function CompanyVehiclesPage() {
 
   return (
     <div>
-      <VehiclesList basePath="/company/vehicles" canAssignDriver={false} />
+      <VehiclesList basePath="/company/vehicles" canAssignDriver={true} canAdd={false} />
     </div>
   );
 }

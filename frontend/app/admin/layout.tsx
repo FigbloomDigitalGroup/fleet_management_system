@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
-import { FiHome, FiUsers, FiMapPin, FiAlertTriangle, FiFileText, FiMap, FiCpu, FiNavigation } from "react-icons/fi";
+import { FiHome, FiUsers, FiMapPin, FiAlertTriangle, FiFileText, FiMap, FiCpu, FiNavigation, FiDollarSign } from "react-icons/fi";
 import { IoCarSportSharp } from "react-icons/io5";
 import ProtectedRoute from "../components/ProtectedRoute";
 import DashboardShell from "../components/DashboardShell";
@@ -14,6 +14,7 @@ const navItems = [
   { label: "Vehicles", href: "/admin/vehicles", icon: IoCarSportSharp },
   { label: "Drivers", href: "/admin/drivers", icon: FiUsers },
   { label: "Trips", href: "/admin/trips", icon: FiFileText },
+  { label: "Expenses", href: "/admin/expenses", icon: FiDollarSign },
   { label: "Alerts", href: "/admin/alerts", icon: FiAlertTriangle },
   { label: "AI Agent", href: "/admin/agent", icon: FiCpu },
 ];

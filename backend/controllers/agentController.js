@@ -3,6 +3,7 @@ import Vehicle from "../models/Vehicle.js";
 import { runAiAnomalyScan } from "../services/aiAnomalyDetector.js";
 import { answerFleetQuestion } from "../services/fleetAssistant.js";
 import { looksLikeRouteRequest, tryHandleRouteRequest } from "../services/routeAssistant.js";
+import { looksLikeGeofenceRequest, tryHandleGeofenceRequest } from "../services/geofenceAssistant.js";
 
 export async function listScans(req, res) {
   try {
@@ -119,14 +120,23 @@ export async function askAboutFleet(req, res) {
     const trimmed = question.trim();
 
     if (looksLikeRouteRequest(trimmed)) {
-      // Route creation mirrors the Routes page's own permission split
-      // (ADMIN manages, COMPANY_OWNER is read-only) — a draft the owner
-      // can't save anyway isn't a useful answer.
-      if (req.user.role !== "ADMIN") {
+      // Route creation mirrors the Routes page's own permission split —
+      // both ADMIN and COMPANY_OWNER can manage routes.
+      if (req.user.role !== "ADMIN" && req.user.role !== "COMPANY_OWNER") {
         return res.json({ answer: "Only fleet admins can create routes — ask your admin to draw this one." });
       }
       const routeResult = await tryHandleRouteRequest(trimmed);
       if (routeResult) return res.json(routeResult);
+    }
+
+    if (looksLikeGeofenceRequest(trimmed)) {
+      // Mirrors the Geofences page's own permission split — both ADMIN and
+      // COMPANY_OWNER can manage zones.
+      if (req.user.role !== "ADMIN" && req.user.role !== "COMPANY_OWNER") {
+        return res.json({ answer: "Only fleet admins can create geofences — ask your admin to set this one up." });
+      }
+      const geofenceResult = await tryHandleGeofenceRequest(trimmed);
+      if (geofenceResult) return res.json(geofenceResult);
     }
 
     const answer = await answerFleetQuestion(companyId, trimmed);

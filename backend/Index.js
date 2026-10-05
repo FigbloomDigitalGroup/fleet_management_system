@@ -15,6 +15,7 @@ import  trackingRoutes from "./routes/trackingRoutes.js";
 import routeRoutes from "./routes/routeRoutes.js";
 import geofenceRoutes from "./routes/geofenceRoutes.js";
 import agentRoutes from "./routes/agentRoutes.js";
+import expenseRoutes from "./routes/expenseRoutes.js";
 import { runAiAnomalyScan } from "./services/aiAnomalyDetector.js";
 import { closeStaleTrips } from "./controllers/trackingController.js";
 
@@ -37,7 +38,14 @@ app.use(
 );
 
 
-app.use(express.json());
+// The Paystack webhook needs its own raw-body parser (see billingRoutes.js)
+// for HMAC signature verification — express.json() would consume the
+// request stream first and leave nothing for it to read, so this skips
+// that one path and lets express.json() handle every other route as before.
+app.use((req, res, next) => {
+  if (req.originalUrl === "/api/billing/webhook") return next();
+  express.json()(req, res, next);
+});
 app.get("/health", (req, res) => {
   res.json({ status: "ok", server: "running" })
 });
@@ -55,6 +63,7 @@ app.use("/api/tracking", trackingRoutes);
 app.use("/api/routes", routeRoutes);
 app.use("/api/geofences", geofenceRoutes);
 app.use("/api/agent", agentRoutes);
+app.use("/api/expenses", expenseRoutes);
 
 
 

@@ -8,7 +8,7 @@ export default function AdminVehiclesPage() {
 
   return (
     <div>
-      <VehiclesList basePath="/admin/vehicles" />
+      <VehiclesList basePath="/admin/vehicles" canAdd={true} />
     </div>
   );
 }

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { FaRoute } from "react-icons/fa";
 import { apiRequest } from "../lib/api";
 import { TripRecord } from "../types/auth";
-import FullPageLoading from "./FullPageLoading";
+import Skeleton from "./Skeleton";
+import WheelIcon from "./WheelIcon";
 
 export default function TripsList({ basePath = "/admin/trips" }: { basePath?: string }) {
   const [trips, setTrips] = useState<TripRecord[]>([]);
@@ -19,11 +20,12 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <FullPageLoading label="Loading trips" />;
-  if (error) return <p className="text-sm text-red-600">{error}</p>;
-
   return (
     <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+      {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
+      {error && <p className="text-sm text-red-600 p-5">{error}</p>}
+      {!loading && !error && (
+        <>
       <p className="text-xs text-teal-600 px-5 pt-4">
         Every recorded trip, most recent first — tap a vehicle to see its full route.
       </p>
@@ -49,8 +51,11 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
             trips.map((t) => {
               return (
                 <tr key={t._id} className="border-t border-gray-100">
-                  <td className="px-5 py-3 text-xs font-bold text-teal-600 hover:underline">
-                    <Link href={`${basePath}/${t._id}`}>{t.vehicleId?.plateNumber || "View trip"}</Link>
+                  <td className="px-5 py-3 text-xs font-bold text-teal-600">
+                    <Link href={`${basePath}/${t._id}`} className="inline-flex items-center gap-2 hover:underline">
+                      <WheelIcon size={16} className="spin-slow shrink-0" />
+                      {t.vehicleId?.plateNumber || "View trip"}
+                    </Link>
                   </td>
                   <td className="px-5 py-3 text-gray-600">{t.driverId?.fullName || "Unassigned"}</td>
                   <td className="px-5 py-3 text-gray-600">{new Date(t.startTime).toLocaleString()}</td>
@@ -82,6 +87,8 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
           )}
         </tbody>
       </table>
+        </>
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 import {
   FiAlertTriangle,
   FiCreditCard,
+  FiDollarSign,
   FiFileText,
   FiHome,
   FiMapPin,
@@ -27,6 +28,7 @@ const navItems = [
   { label: "Routes", href: "/company/routes", icon: FiNavigation },
   { label: "Vehicles", href: "/company/vehicles", icon: IoCarSportSharp },
    { label: "Trips", href: "/company/trips", icon: FiFileText },
+  { label: "Expenses", href: "/company/expenses", icon: FiDollarSign },
   { label: "Drivers", href: "/company/drivers", icon: FiUsers },
   { label: "Alerts", href: "/company/alerts", icon: FiAlertTriangle },
   { label: "AI Agent", href: "/company/agent", icon: FiCpu },

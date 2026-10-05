@@ -3,6 +3,7 @@
 import { useState, FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiRequest } from "../lib/api";
+import PasswordInput from "../components/PasswordInput";
 
 export default function ResetPasswordForm() {
   const router = useRouter();
@@ -72,9 +73,8 @@ export default function ResetPasswordForm() {
         <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
           New password
         </label>
-        <input
+        <PasswordInput
           id="password"
-          type="password"
           required
           autoComplete="new-password"
           value={password}
@@ -88,9 +88,8 @@ export default function ResetPasswordForm() {
         <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1.5">
           Confirm password
         </label>
-        <input
+        <PasswordInput
           id="confirmPassword"
-          type="password"
           required
           autoComplete="new-password"
           value={confirmPassword}

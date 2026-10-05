@@ -14,6 +14,18 @@ const userSchema = new mongoose.Schema(
     status: { type: String, default: "active" },
     resetPasswordTokenHash: { type: String, default: null },
     resetPasswordExpires: { type: Date, default: null },
+
+    // Extended driver profile — filled in by the driver themselves from the
+    // mobile app's "Complete profile" screen, viewed by ADMIN/COMPANY_OWNER
+    // on the driver's detail page. Left null until the driver fills them in.
+    phone: { type: String, default: null },
+    dob: { type: String, default: null },
+    nationalId: { type: String, default: null },
+    address: { type: String, default: null },
+    licenseNumber: { type: String, default: null },
+    licenseExpiry: { type: String, default: null },
+    emergencyName: { type: String, default: null },
+    emergencyPhone: { type: String, default: null },
   },
   { timestamps: true }
 );

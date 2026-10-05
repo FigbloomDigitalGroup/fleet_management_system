@@ -10,7 +10,7 @@ export default function Skeleton({
   return (
     <div className={`space-y-3 ${className}`}>
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className={`animate-pulse rounded-md bg-orange-500/10 ${rowClassName}`} />
+        <div key={i} className={`skeleton-shimmer rounded-md ${rowClassName}`} />
       ))}
     </div>
   );

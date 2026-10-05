@@ -17,10 +17,10 @@ router.use(authenticate);
 router.get("/mine", getMyVehicle);
 router.get("/", listVehicles);
 router.get("/:id", getVehicle);
-router.post("/", authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"), createVehicle);
+router.post("/", authorize("ADMIN", "PLATFORM_ADMIN"), createVehicle);
 router.post(
   "/bulk-import",
-  authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"),
+  authorize("ADMIN", "PLATFORM_ADMIN"),
   handleSpreadsheetUpload,
   bulkImportVehicles
 );

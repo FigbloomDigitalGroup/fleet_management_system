@@ -11,8 +11,11 @@ import LineChartCard from "../../components/LineChartCard";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import LiveMapPreview from "../../components/LiveMapPreview";
 import MapMetricsCard from "../../components/MapMetricsCard";
+import WheelIcon from "../../components/WheelIcon";
 import { usePageHeader } from "../../components/DashboardShell";
 import { routeDistanceKm, estimateFuelRangeLiters } from "../../lib/routeEstimate";
+import { routeStatusBadge } from "../../lib/routeStatus";
+import { formatKes } from "../../lib/pricing";
 import {
   CompanyStats,
   DailyStatPoint,
@@ -187,7 +190,7 @@ export default function CompanyDashboard() {
         />
         <StatCard
           label="Expenses"
-          value={companyStats?.estimatedExpenses === null ? "Custom plan" : `$${companyStats?.estimatedExpenses ?? 0}`}
+          value={companyStats?.estimatedExpenses === null ? "Custom plan" : formatKes(companyStats?.estimatedExpenses ?? 0)}
           accent="orange"
           description="Estimated total spent since joining"
         />
@@ -288,11 +291,23 @@ export default function CompanyDashboard() {
                     <tr key={r._id} className="border-t border-gray-100 first:border-t-0">
                       <td className="px-5 py-3 text-xs font-bold text-gray-900">{r.name}</td>
                       <td className="px-5 py-3 text-gray-600">
-                        {typeof r.vehicleId === "object" ? r.vehicleId.plateNumber : "—"}
+                        {vehicleIdStr ? (
+                          <Link href={`/company/vehicles/${vehicleIdStr}`} className="inline-flex items-center gap-2 hover:text-teal-600">
+                            <WheelIcon size={16} className="spin-slow shrink-0" />
+                            {typeof r.vehicleId === "object" ? r.vehicleId.plateNumber : "—"}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="px-5 py-3 text-gray-600">{distanceKm.toFixed(1)} km</td>
                       <td className="px-5 py-3 text-gray-600">
                         {fuelEstimate.min.toFixed(1)}–{fuelEstimate.max.toFixed(1)} L
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className={`text-xs px-2 py-1 rounded-full border ${routeStatusBadge(r).className}`}>
+                          {routeStatusBadge(r).label}
+                        </span>
                       </td>
                     </tr>
                   );

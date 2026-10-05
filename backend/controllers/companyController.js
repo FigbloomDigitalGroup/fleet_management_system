@@ -5,6 +5,7 @@ import Vehicle from "../models/Vehicle.js";
 import Trip from "../models/Trip.js";
 import LocationPing from "../models/LocationPing.js";
 import { isInsideGeofence } from "../lib/geo.js";
+import { PLAN_PRICING_KES } from "../config/pricing.js";
 
 // PLATFORM_ADMIN only — list every company on the platform
 export async function listCompanies(req, res) {
@@ -143,30 +144,27 @@ export async function updateStartPoint(req, res) {
   }
 }
 
-// COMPANY_OWNER — self-serve upgrade/downgrade between Trial, Basic and Pro.
-// Enterprise is sales-assisted (see the landing page's "Contact sales"), so
-// it isn't offered through this endpoint. Real payment processing isn't
-// wired up yet — this just records the chosen plan and payment method.
-const SELF_SERVE_PLANS = ["trial", "basic", "pro"];
-const PAYMENT_METHODS = ["mpesa", "paystack"];
-
+// COMPANY_OWNER — downgrade/cancel back to Trial. This is the only
+// subscriptionPlan transition this endpoint allows — moving to a paid plan
+// (Basic/Pro) requires an actual successful payment, handled entirely by
+// billingController's checkout/verify/webhook flow instead, so there's no
+// way to grant yourself a paid plan without a real Paystack charge behind it.
 export async function updateMyPlan(req, res) {
   try {
     if (!req.user.companyId) {
       return res.status(400).json({ error: "This account is not linked to a company" });
     }
 
-    const { subscriptionPlan, paymentMethod } = req.body;
-    if (!SELF_SERVE_PLANS.includes(subscriptionPlan)) {
-      return res.status(400).json({ error: `subscriptionPlan must be one of: ${SELF_SERVE_PLANS.join(", ")}` });
-    }
-    if (subscriptionPlan !== "trial" && !PAYMENT_METHODS.includes(paymentMethod)) {
-      return res.status(400).json({ error: `paymentMethod must be one of: ${PAYMENT_METHODS.join(", ")}` });
+    const { subscriptionPlan } = req.body;
+    if (subscriptionPlan !== "trial") {
+      return res.status(400).json({
+        error: "Only downgrading to 'trial' is allowed here — upgrade to Basic/Pro via /api/billing/checkout",
+      });
     }
 
     const company = await Company.findByIdAndUpdate(
       req.user.companyId,
-      { subscriptionPlan, paymentMethod: subscriptionPlan === "trial" ? null : paymentMethod },
+      { subscriptionPlan: "trial", paymentMethod: null },
       { new: true }
     );
     if (!company) return res.status(404).json({ error: "Company not found" });
@@ -178,10 +176,10 @@ export async function updateMyPlan(req, res) {
   }
 }
 
-// Per-vehicle monthly price for each self-serve plan — mirrors the pricing
-// shown on the landing page and the billing checkout flow. Enterprise has no
-// fixed price (it's sales-negotiated), so expenses can't be estimated for it.
-const PLAN_PRICE_PER_VEHICLE = { trial: 0, basic: 29, pro: 49, enterprise: null };
+// Per-vehicle monthly price for each self-serve plan — mirrors the real
+// pricing charged in billingController.js. Enterprise has no fixed price
+// (it's sales-negotiated), so expenses can't be estimated for it.
+const PLAN_PRICE_PER_VEHICLE = { trial: 0, ...PLAN_PRICING_KES, enterprise: null };
 const MS_PER_MONTH = 30 * 24 * 60 * 60 * 1000;
 
 // Fuel consumed is estimated from recorded fuel-level pings — a drop between

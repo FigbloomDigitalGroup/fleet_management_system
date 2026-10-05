@@ -4,6 +4,7 @@ import { useEffect, useState, FormEvent } from "react";
 import { apiRequest } from "../../lib/api";
 import { AdminRecord } from "../../types/auth";
 import Skeleton from "../../components/Skeleton";
+import PasswordInput from "../../components/PasswordInput";
 import { usePageHeader } from "../../components/DashboardShell";
 
 export default function AdminsPage() {
@@ -122,8 +123,7 @@ export default function AdminsPage() {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Password</label>
-              <input
-                type="password"
+              <PasswordInput
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

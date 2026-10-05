@@ -8,6 +8,7 @@ import { FaGooglePlay } from "react-icons/fa";
 import BackgroundSlideshow from "../components/BackgroundSlideshow";
 import RobotCheckbox from "../components/RobotCheckbox";
 import BrandIcon from "../components/BrandIcon";
+import PasswordInput from "../components/PasswordInput";
 import { INDUSTRIES, INDUSTRIES_WITH_IMAGES } from "../lib/industries";
 
 export default function RegisterPage() {
@@ -184,9 +185,8 @@ export default function RegisterPage() {
                             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
                                 Password
                             </label>
-                            <input
+                            <PasswordInput
                                 id="password"
-                                type="password"
                                 required
                                 autoComplete="new-password"
                                 value={password}

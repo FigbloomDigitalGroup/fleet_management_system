@@ -8,7 +8,7 @@ export default function CompanyGeofencesPage() {
 
   return (
     <div>
-      <GeofencesManager canManage={false} />
+      <GeofencesManager canManage={true} />
     </div>
   );
 }

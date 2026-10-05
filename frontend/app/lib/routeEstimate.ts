@@ -25,3 +25,10 @@ export function estimateFuelRangeLiters(distanceKm: number, avgConsumptionLPer10
   const base = (distanceKm / 100) * avgConsumptionLPer100Km;
   return { min: base * 0.9, max: base * 1.15 };
 }
+
+
+
+
+
+
+

@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { apiRequest } from "../lib/api";
 import { DriverRecord, VehicleRecord } from "../types/auth";
 import Skeleton from "./Skeleton";
+import WheelIcon from "./WheelIcon";
+import PasswordInput from "./PasswordInput";
 
 interface BulkImportResultRow {
   row: number;
@@ -30,6 +34,9 @@ function downloadDriverTemplate() {
 }
 
 export default function DriversList({ canAdd = false, canAssignVehicle = false }: { canAdd?: boolean; canAssignVehicle?: boolean }) {
+  const pathname = usePathname();
+  const basePath = pathname?.startsWith("/admin") ? "/admin/vehicles" : "/company/vehicles";
+  const driversBasePath = pathname?.startsWith("/admin") ? "/admin/drivers" : "/company/drivers";
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -170,7 +177,11 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                   const assigned = vehicleForDriver(d._id);
                   return (
                     <tr key={d._id} className="border-t border-gray-100">
-                      <td className="px-5 py-3 font-medium text-blue-950">{d.fullName}</td>
+                      <td className="px-5 py-3 font-medium text-blue-950">
+                        <Link href={`${driversBasePath}/${d._id}`} className="hover:text-teal-600 hover:underline">
+                          {d.fullName}
+                        </Link>
+                      </td>
                       <td className="px-5 py-3 text-blue-950">{d.email}</td>
                       <td className="px-5 py-3">
                         {canAssignVehicle ? (
@@ -187,10 +198,16 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                               </option>
                             ))}
                           </select>
+                        ) : assigned ? (
+                          <Link
+                            href={`${basePath}/${assigned._id}`}
+                            className="inline-flex items-center gap-2 text-xs font-bold text-blue-950 hover:text-teal-600"
+                          >
+                            <WheelIcon size={16} className="spin-slow shrink-0" />
+                            {assigned.plateNumber}
+                          </Link>
                         ) : (
-                          <span className="text-xs font-bold text-blue-950">
-                            {assigned ? assigned.plateNumber : "No vehicle"}
-                          </span>
+                          <span className="text-xs font-bold text-blue-950">No vehicle</span>
                         )}
                       </td>
                     </tr>
@@ -230,8 +247,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Password</label>
-              <input
-                type="password"
+              <PasswordInput
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

@@ -20,6 +20,7 @@ const alertSchema = new mongoose.Schema(
         "harsh_braking",
         "harsh_acceleration",
         "excessive_idling",
+        "admin_message",
       ],
       required: true,
     },

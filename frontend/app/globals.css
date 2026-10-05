@@ -22,6 +22,14 @@ textarea::placeholder {
     opacity: 1;
 }
 
+/* Edge (Chromium) bakes its own eye icon into password fields — it sits
+   right where our own PasswordInput toggle button is, so without this the
+   two overlap. Our button already provides the same show/hide behavior. */
+input::-ms-reveal,
+input::-ms-clear {
+    display: none;
+}
+
 /*
  * Site-wide card treatment. Every card in the app uses this exact
  * `rounded-2xl ... shadow-sm ring-1 ring-black/5` combo (verified: every
@@ -265,6 +273,28 @@ main .space-y-4 > :not([hidden]) ~ :not([hidden]) {
 @media (prefers-reduced-motion: reduce) {
   .animate-shake {
     animation: none;
+  }
+}
+
+/* Shared skeleton-loading shimmer — a soft gray sweep rather than a flat
+   pulse, used by Skeleton.tsx and FullPageLoading.tsx so every loading
+   state in the app reads as one consistent, professional pattern. */
+@keyframes skeleton-shimmer {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
+
+.skeleton-shimmer {
+  background-image: linear-gradient(100deg, #e5e7eb 30%, #f3f4f6 45%, #e5e7eb 60%);
+  background-size: 250% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+    background-image: none;
+    background-color: #e5e7eb;
   }
 }
 

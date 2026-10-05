@@ -5,12 +5,20 @@ import { GoogleMap, Polyline, useJsApiLoader } from "@react-google-maps/api";
 import { apiRequest } from "../lib/api";
 import { RouteRecord, VehicleRecord } from "../types/auth";
 import { routeDistanceKm, estimateFuelRangeLiters } from "../lib/routeEstimate";
+import { routeStatusBadge } from "../lib/routeStatus";
 
 const containerStyle = { width: "100%", height: "100%" };
 const defaultCenter = { lat: -1.2921, lng: 36.8219 };
 const DEFAULT_CONSUMPTION_L_PER_100KM = 12;
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 type LatLng = { lat: number; lng: number };
+
+function frequencyLabel(frequency: "daily" | "weekly", daysOfWeek: number[]) {
+  if (frequency === "daily") return "Every day";
+  if (daysOfWeek.length === 0) return "Weekly";
+  return [...daysOfWeek].sort().map((d) => DAY_LABELS[d]).join(", ");
+}
 
 export default function RoutesManager({ canManage = false }: { canManage?: boolean }) {
   const { isLoaded } = useJsApiLoader({
@@ -24,10 +32,13 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [waypoints, setWaypoints] = useState<LatLng[]>([]);
+  const [draftSource, setDraftSource] = useState<"manual" | "ai">("manual");
   const [vehicleId, setVehicleId] = useState("");
   const [name, setName] = useState("");
   const [toleranceMeters, setToleranceMeters] = useState("300");
   const [speedLimitKph, setSpeedLimitKph] = useState("");
+  const [frequency, setFrequency] = useState<"daily" | "weekly">("daily");
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -55,6 +66,7 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
     if (Array.isArray(draft.waypoints) && draft.waypoints.length >= 2) {
       setWaypoints(draft.waypoints);
       setName(draft.name || "");
+      setDraftSource("ai");
       setIsDrawing(true);
     }
   }
@@ -90,6 +102,7 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
   function startDrawing() {
     setIsDrawing(true);
     setWaypoints([]);
+    setDraftSource("manual");
     setFormError(null);
   }
 
@@ -105,6 +118,11 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
   function clearDrawing() {
     setIsDrawing(false);
     setWaypoints([]);
+    setDraftSource("manual");
+  }
+
+  function toggleDay(day: number) {
+    setDaysOfWeek((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort()));
   }
 
   async function handleCreate(e: FormEvent) {
@@ -134,12 +152,17 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
           waypoints,
           toleranceMeters: parseFloat(toleranceMeters) || 300,
           speedLimitKph: speedLimitKph ? parseFloat(speedLimitKph) : null,
+          frequency,
+          daysOfWeek: frequency === "weekly" ? daysOfWeek : [],
+          source: draftSource,
         }),
       });
       setName("");
       setVehicleId("");
       setToleranceMeters("300");
       setSpeedLimitKph("");
+      setFrequency("daily");
+      setDaysOfWeek([]);
       clearDrawing();
       await load();
     } catch (err: any) {
@@ -179,33 +202,50 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
       <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
         <div className="h-[450px] w-full">
           <GoogleMap mapContainerStyle={containerStyle} center={mapCenter} zoom={12} onClick={handleMapClick}>
-            {/* Existing active routes */}
+            {/* Existing active routes — purple if AI-drafted, orange if hand-drawn */}
             {routes
               .filter((r) => r.active && r.waypoints.length > 1)
               .map((r) => (
                 <Polyline
                   key={r._id}
                   path={r.waypoints}
-                  options={{ strokeColor: "#a855f7", strokeWeight: 4, strokeOpacity: 0.8 }}
+                  options={{
+                    strokeColor: r.source === "ai" ? "#a855f7" : "#f97316",
+                    strokeWeight: 4,
+                    strokeOpacity: 0.8,
+                  }}
                 />
               ))}
 
-            {/* Route being drawn — a plain line, no point markers */}
+            {/* Route being drawn — a plain line, no point markers. Same
+                color rule: purple for an AI draft, orange while drawing by hand. */}
             {canManage && waypoints.length > 0 && (
               <Polyline
                 path={waypoints}
-                options={{ strokeColor: "#a855f7", strokeWeight: 4, strokeOpacity: 0.9 }}
+                options={{
+                  strokeColor: draftSource === "ai" ? "#a855f7" : "#f97316",
+                  strokeWeight: 4,
+                  strokeOpacity: 0.9,
+                }}
               />
             )}
           </GoogleMap>
         </div>
         {canManage && (
-          <p className="text-xs text-teal-600 text-center py-3 border-t border-gray-100">
+          <p className="text-xs text-teal-600 text-center pt-3 border-t border-gray-100">
             {isDrawing
               ? "Click the map to add waypoints, in order, along the path this vehicle should follow."
               : 'Click "Draw a new route" to start placing waypoints.'}
           </p>
         )}
+        <div className="flex items-center justify-center gap-4 pb-3 pt-1">
+          <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
+            <span className="h-0.5 w-4 rounded-full bg-orange-500" /> Drawn by you
+          </span>
+          <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
+            <span className="h-0.5 w-4 rounded-full bg-purple-500" /> Drafted by AI
+          </span>
+        </div>
       </div>
 
       {/* Sidebar: list + create form */}
@@ -301,6 +341,44 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
                   />
                 </div>
 
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">How often it repeats</label>
+                  <div className="flex gap-2">
+                    {(["daily", "weekly"] as const).map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => setFrequency(f)}
+                        className={`flex-1 py-2 rounded-md text-xs font-medium border ${
+                          frequency === f
+                            ? "bg-teal-600 border-teal-600 text-white"
+                            : "bg-white border-gray-300 text-gray-600 hover:border-teal-400"
+                        }`}
+                      >
+                        {f === "daily" ? "Every day" : "Specific days"}
+                      </button>
+                    ))}
+                  </div>
+                  {frequency === "weekly" && (
+                    <div className="flex gap-1 mt-2">
+                      {DAY_LABELS.map((label, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => toggleDay(i)}
+                          className={`flex-1 py-1.5 rounded-md text-[11px] font-medium border ${
+                            daysOfWeek.includes(i)
+                              ? "bg-teal-50 border-teal-400 text-teal-700"
+                              : "bg-white border-gray-300 text-gray-500 hover:border-teal-400"
+                          }`}
+                        >
+                          {label[0]}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {formError && <p className="text-xs text-red-600">{formError}</p>}
 
                 <button
@@ -344,6 +422,25 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
                       <p className="font-medium text-gray-900">
                         {r.name}
                         {!r.active && <span className="ml-2 text-[10px] text-gray-400 align-middle">inactive</span>}
+                        <span className="ml-2 text-[10px] font-medium text-teal-600 align-middle">
+                          {frequencyLabel(r.frequency ?? "daily", r.daysOfWeek ?? [])}
+                        </span>
+                        <span
+                          className={`ml-2 text-[10px] font-medium align-middle ${
+                            r.source === "ai" ? "text-purple-600" : "text-orange-600"
+                          }`}
+                        >
+                          {r.source === "ai" ? "AI-drafted" : "Drawn by you"}
+                        </span>
+                        {r.active && (
+                          <span
+                            className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full border align-middle ${
+                              routeStatusBadge(r).className
+                            }`}
+                          >
+                            {routeStatusBadge(r).label}
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-gray-400">
                         {typeof r.vehicleId === "object" ? r.vehicleId.plateNumber : "Unknown vehicle"} ·{" "}
