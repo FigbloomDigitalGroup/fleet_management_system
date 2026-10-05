@@ -3,6 +3,7 @@ import LocationPing from "../models/LocationPing.js";
 import Trip from "../models/Trip.js";
 import Alert from "../models/Alert.js";
 import Route from "../models/Route.js";
+import RouteCompletion from "../models/RouteCompletion.js";
 import Geofence from "../models/Geofence.js";
 import { tenantScope } from "../middleware/auth.js";
 import { distanceKm, isInsideGeofence } from "../lib/geo.js";
@@ -202,6 +203,30 @@ if (vehicle.driverId && !isMoving) {
           type: "route_deviation",
           message: `Vehicle is ${(deviationKm * 1000).toFixed(0)}m off its assigned route "${activeRoute.name}" (allowed: ${activeRoute.toleranceMeters}m).`,
         });
+      }
+    }
+
+    // 5b. Route completion — has the vehicle reached the destination (the
+    // route's final waypoint) today? Logged once per calendar day since a
+    // route recurs daily/weekly rather than being a one-off assignment.
+    if (activeRoute && activeRoute.waypoints.length > 0) {
+      const destination = activeRoute.waypoints[activeRoute.waypoints.length - 1];
+      const distanceToDestKm = distanceKm(latitude, longitude, destination.lat, destination.lng);
+      const toleranceKm = activeRoute.toleranceMeters / 1000;
+
+      if (distanceToDestKm <= toleranceKm) {
+        const dateKey = new Date().toISOString().slice(0, 10);
+        const alreadyCompleted = await RouteCompletion.findOne({ routeId: activeRoute._id, dateKey });
+
+        if (!alreadyCompleted) {
+          await RouteCompletion.create({
+            companyId: vehicle.companyId,
+            routeId: activeRoute._id,
+            vehicleId,
+            driverId: vehicle.driverId || null,
+            dateKey,
+          });
+        }
       }
     }
 

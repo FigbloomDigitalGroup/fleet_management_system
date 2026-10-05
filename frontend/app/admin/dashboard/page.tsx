@@ -14,7 +14,9 @@ import { usePageHeader } from "../../components/DashboardShell";
 import { VehicleRecord, DriverRecord, TripRecord, AlertRecord, AgentSummary, DailyStatPoint, RouteRecord } from "../../types/auth";
 import LiveMapPreview from "../../components/LiveMapPreview";
 import MapMetricsCard from "../../components/MapMetricsCard";
+import WheelIcon from "../../components/WheelIcon";
 import { routeDistanceKm, estimateFuelRangeLiters } from "../../lib/routeEstimate";
+import { routeStatusBadge } from "../../lib/routeStatus";
 
 //const FleetMap = dynamic<{ compact?: boolean }>(() => import("../../components/FleetMap"), { ssr: false });
 
@@ -193,7 +195,12 @@ export default function AdminDashboard() {
                 <tbody>
                   {trips.slice(0, 5).map((t) => (
                     <tr key={t._id} className="border-t border-gray-100 first:border-t-0">
-                      <td className="px-5 py-3 text-xs font-bold text-gray-900">{t.vehicleId?.plateNumber || "—"}</td>
+                      <td className="px-5 py-3 text-xs font-bold text-gray-900">
+                        <Link href={`/admin/trips/${t._id}`} className="inline-flex items-center gap-2 hover:text-teal-600">
+                          <WheelIcon size={16} className="spin-slow shrink-0" />
+                          {t.vehicleId?.plateNumber || "—"}
+                        </Link>
+                      </td>
                       <td className="px-5 py-3 text-gray-600">{t.driverId?.fullName || "Unassigned"}</td>
                       <td className="px-5 py-3 text-xs text-gray-500">{new Date(t.startTime).toLocaleString()}</td>
                       <td className="px-5 py-3 text-gray-600">
@@ -230,11 +237,23 @@ export default function AdminDashboard() {
                       <tr key={r._id} className="border-t border-gray-100 first:border-t-0">
                         <td className="px-5 py-3 text-xs font-bold text-gray-900">{r.name}</td>
                         <td className="px-5 py-3 text-gray-600">
-                          {typeof r.vehicleId === "object" ? r.vehicleId.plateNumber : "—"}
+                          {vehicleIdStr ? (
+                            <Link href={`/admin/vehicles/${vehicleIdStr}`} className="inline-flex items-center gap-2 hover:text-teal-600">
+                              <WheelIcon size={16} className="spin-slow shrink-0" />
+                              {typeof r.vehicleId === "object" ? r.vehicleId.plateNumber : "—"}
+                            </Link>
+                          ) : (
+                            "—"
+                          )}
                         </td>
                         <td className="px-5 py-3 text-gray-600">{distanceKm.toFixed(1)} km</td>
                         <td className="px-5 py-3 text-gray-600">
                           {fuelEstimate.min.toFixed(1)}–{fuelEstimate.max.toFixed(1)} L
+                        </td>
+                        <td className="px-5 py-3">
+                          <span className={`text-xs px-2 py-1 rounded-full border ${routeStatusBadge(r).className}`}>
+                            {routeStatusBadge(r).label}
+                          </span>
                         </td>
                       </tr>
                     );
