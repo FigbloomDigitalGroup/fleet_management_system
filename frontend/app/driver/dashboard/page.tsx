@@ -58,7 +58,7 @@ export default function DriverDashboard() {
       </div>
 
       {loading && !hasLoadedOnce.current ? (
-        <div className="h-40 animate-pulse rounded-2xl bg-white shadow-sm ring-1 ring-black/5" />
+        <div className="skeleton-shimmer h-40 rounded-2xl" />
       ) : vehicle ? (
         <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
           <div className="flex items-start justify-between gap-4">
