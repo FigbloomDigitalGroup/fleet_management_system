@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { FaMoneyBillWave } from "react-icons/fa";
 import { DistanceIcon, ExpensesIcon } from "../../components/StatCard";
 import { apiRequest } from "../../lib/api";
 import FullPageLoading from "@/app/components/FullPageLoading";
-import { CompanyRecord, CompanyStats } from "../../types/auth";
+import { CompanyRecord, CompanyStats, TransactionRecord } from "../../types/auth";
 import { industryLabel } from "../../lib/industries";
 import { usePageHeader } from "../../components/DashboardShell";
 import PlanCheckoutModal, { SelfServePlan } from "../../components/PlanCheckoutModal";
+import { PLAN_PRICING_KES, SPECIAL_OFFER, priceForPlan, formatKes, offerLabel } from "../../lib/pricing";
 
 const ACCEPTED_PAYMENT_METHODS = [
   { id: "mpesa", label: "M-Pesa", logo: "/mpesa-logo.png" },
@@ -32,6 +32,7 @@ const PLAN_CARDS: {
   id: SelfServePlan | "enterprise";
   label: string;
   price: string;
+  originalPrice?: string;
   cadence: string;
   features: string[];
   highlighted?: boolean;
@@ -39,14 +40,16 @@ const PLAN_CARDS: {
   {
     id: "basic",
     label: "Basic",
-    price: "$29",
+    price: formatKes(PLAN_PRICING_KES.basic),
     cadence: "per vehicle / month",
     features: ["Up to 15 vehicles", "Live GPS tracking", "Trip history & reports", "Speeding & idle alerts"],
   },
   {
     id: "pro",
     label: "Pro",
-    price: "$49",
+    price: formatKes(priceForPlan("pro")),
+    originalPrice:
+      SPECIAL_OFFER.active && SPECIAL_OFFER.plan === "pro" ? formatKes(PLAN_PRICING_KES.pro) : undefined,
     cadence: "per vehicle / month",
     features: ["Up to 50 vehicles", "Everything in Basic", "Driver behavior alerts", "AI fleet assistant chat"],
     highlighted: true,
@@ -66,9 +69,7 @@ export default function CompanyBillingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [checkoutPlan, setCheckoutPlan] = useState<SelfServePlan | null>(null);
-  const [revenueInput, setRevenueInput] = useState("");
-  const [editingRevenue, setEditingRevenue] = useState(false);
-  const [savingRevenue, setSavingRevenue] = useState(false);
+  const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
 
   useEffect(() => {
     apiRequest<CompanyRecord>("/api/companies/me")
@@ -83,25 +84,13 @@ export default function CompanyBillingPage() {
       .catch(() => {});
   }, []);
 
-  async function saveRevenue() {
-    const value = Number(revenueInput);
-    if (Number.isNaN(value) || value < 0) return;
-
-    setSavingRevenue(true);
-    try {
-      const updated = await apiRequest<CompanyRecord>("/api/companies/me/revenue", {
-        method: "PATCH",
-        body: JSON.stringify({ totalRevenue: value }),
-      });
-      setCompany(updated);
-      setStats((s) => (s ? { ...s, totalRevenue: value } : s));
-      setEditingRevenue(false);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSavingRevenue(false);
-    }
+  function loadTransactions() {
+    apiRequest<TransactionRecord[]>("/api/billing/transactions/mine")
+      .then(setTransactions)
+      .catch(() => {});
   }
+
+  useEffect(loadTransactions, []);
 
   usePageHeader("Billing", "Your subscription details");
 
@@ -150,12 +139,10 @@ export default function CompanyBillingPage() {
       </div>
 
       <div>
-        <h2 className="text-base font-semibold text-gray-900 mb-1">Expenses &amp; revenue</h2>
-        <p className="text-xs text-teal-600 mb-4">
-          Distance and expenses are calculated automatically. Revenue is entered by you.
-        </p>
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Expenses</h2>
+        <p className="text-xs text-teal-600 mb-4">Distance and expenses are calculated automatically.</p>
 
-        <div className="grid sm:grid-cols-3 gap-5">
+        <div className="grid sm:grid-cols-2 gap-5 max-w-md">
           <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
             <span className="shrink-0 rounded-xl bg-blue-50 p-2.5 text-blue-600">
               <DistanceIcon size={18} />
@@ -173,58 +160,23 @@ export default function CompanyBillingPage() {
             <div>
               <p className="text-xs text-gray-500">Estimated expenses</p>
               <p className="text-lg font-bold text-gray-900">
-                {stats?.estimatedExpenses === null ? "Custom plan" : `$${stats?.estimatedExpenses ?? 0}`}
+                {stats?.estimatedExpenses === null ? "Custom plan" : formatKes(stats?.estimatedExpenses ?? 0)}
               </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-            <span className="shrink-0 rounded-xl bg-teal-50 p-2.5 text-teal-600">
-              <FaMoneyBillWave size={18} />
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-gray-500">Revenue</p>
-              {editingRevenue ? (
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <input
-                    type="number"
-                    min={0}
-                    autoFocus
-                    value={revenueInput}
-                    onChange={(e) => setRevenueInput(e.target.value)}
-                    className="w-24 px-2 py-1 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600"
-                  />
-                  <button
-                    onClick={saveRevenue}
-                    disabled={savingRevenue}
-                    className="text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-md px-2 py-1 disabled:opacity-50"
-                  >
-                    {savingRevenue ? "..." : "Save"}
-                  </button>
-                  <button
-                    onClick={() => setEditingRevenue(false)}
-                    className="text-xs font-medium text-gray-500 hover:text-gray-700 px-1"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => {
-                    setRevenueInput(String(stats?.totalRevenue ?? company.totalRevenue ?? 0));
-                    setEditingRevenue(true);
-                  }}
-                  className="text-left"
-                >
-                  <p className="text-lg font-bold text-gray-900 hover:underline">
-                    ${stats?.totalRevenue ?? company.totalRevenue ?? 0}
-                  </p>
-                </button>
-              )}
             </div>
           </div>
         </div>
       </div>
+
+      {SPECIAL_OFFER.active && (
+        <div className="relative overflow-hidden rounded-2xl bg-teal-950 shadow-sm">
+          <div className="relative flex items-center gap-3 px-5 py-4">
+            <span className="animate-shake inline-block shrink-0 rounded-full bg-orange-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+              Special offer
+            </span>
+            <span className="text-sm font-medium text-white">{offerLabel()}</span>
+          </div>
+        </div>
+      )}
 
       <div>
         <h2 className="text-base font-semibold text-gray-900 mb-1">Change plan</h2>
@@ -259,10 +211,13 @@ export default function CompanyBillingPage() {
               >
                 {p.highlighted && (
                   <span className="absolute -top-3 left-5 bg-orange-500 text-white text-[10px] font-medium px-2.5 py-1 rounded-full">
-                    Most popular
+                    {p.originalPrice ? `Save ${SPECIAL_OFFER.discountPercent}%` : "Most popular"}
                   </span>
                 )}
                 <h3 className="text-xs font-semibold text-gray-500 uppercase mb-1">{p.label}</h3>
+                {p.originalPrice && (
+                  <p className="text-sm text-gray-400 line-through">{p.originalPrice}</p>
+                )}
                 <p className="text-2xl font-bold text-gray-900 mb-0.5">{p.price}</p>
                 <p className="text-xs text-gray-400 mb-4">{p.cadence}</p>
 
@@ -301,11 +256,62 @@ export default function CompanyBillingPage() {
         </div>
       </div>
 
+      <div>
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Payment history</h2>
+        <p className="text-xs text-teal-600 mb-4">Every real charge made on this account, most recent first.</p>
+
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+          {transactions.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">No payments yet.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+                <tr>
+                  <th className="text-left px-5 py-3 font-medium">Date</th>
+                  <th className="text-left px-5 py-3 font-medium">Plan</th>
+                  <th className="text-left px-5 py-3 font-medium">Amount</th>
+                  <th className="text-left px-5 py-3 font-medium">Channel</th>
+                  <th className="text-left px-5 py-3 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactions.map((t) => (
+                  <tr key={t._id} className="border-t border-gray-100">
+                    <td className="px-5 py-3 text-gray-600">{new Date(t.createdAt).toLocaleString()}</td>
+                    <td className="px-5 py-3 text-gray-900 font-medium capitalize">{t.plan}</td>
+                    <td className="px-5 py-3 text-gray-600">{formatKes(t.amount)}</td>
+                    <td className="px-5 py-3 text-gray-600">
+                      {t.channel === "mobile_money" ? "M-Pesa" : t.channel === "card" ? "Card" : "—"}
+                    </td>
+                    <td className="px-5 py-3">
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full border ${
+                          t.status === "success"
+                            ? "bg-teal-50 text-teal-600 border-teal-200"
+                            : t.status === "pending"
+                              ? "bg-orange-50 text-orange-600 border-orange-200"
+                              : "bg-gray-100 text-gray-500 border-gray-200"
+                        }`}
+                      >
+                        {t.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
       {checkoutPlan && (
         <PlanCheckoutModal
           plan={checkoutPlan}
           onClose={() => setCheckoutPlan(null)}
-          onSuccess={(updated) => setCompany(updated)}
+          onSuccess={(updated) => {
+            setCompany(updated);
+            loadTransactions();
+          }}
         />
       )}
     </div>

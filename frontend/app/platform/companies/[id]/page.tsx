@@ -9,6 +9,7 @@ import IndustryBanner from "@/app/components/IndustryBanner";
 import { CompanyRecord, AdminRecord, CompanyStats } from "../../../types/auth";
 import { industryLabel } from "../../../lib/industries";
 import { vehicleTypeLabel } from "../../../lib/vehicleTypes";
+import { formatKes } from "../../../lib/pricing";
 
 const statusStyles: Record<string, string> = {
   active: "bg-teal-50 text-teal-600 border-teal-200",
@@ -134,12 +135,12 @@ export default function CompanyDetailPage() {
                 <div>
                   <dt className="text-gray-500">Expenses</dt>
                   <dd className="text-gray-900 font-medium mt-0.5">
-                    {stats.estimatedExpenses === null ? "Custom plan" : `$${stats.estimatedExpenses}`}
+                    {stats.estimatedExpenses === null ? "Custom plan" : formatKes(stats.estimatedExpenses)}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-gray-500">Revenue</dt>
-                  <dd className="text-gray-900 font-medium mt-0.5">${stats.totalRevenue}</dd>
+                  <dd className="text-gray-900 font-medium mt-0.5">{formatKes(stats.totalRevenue)}</dd>
                 </div>
               </dl>
 

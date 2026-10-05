@@ -14,6 +14,7 @@ import {
   FaGooglePlay,
 } from "react-icons/fa";
 import { useState } from "react";
+import { PLAN_PRICING_KES, SPECIAL_OFFER, priceForPlan, formatKes, offerLabel } from "./lib/pricing";
 
 const FAQS = [
   {
@@ -129,6 +130,20 @@ export default function LandingPage() {
           animation: stepIn 0.6s ease-out forwards;
         }
       `}</style>
+
+      {SPECIAL_OFFER.active && (
+        <div className="bg-teal-950">
+          <div className="max-w-6xl mx-auto px-6 py-2 flex flex-wrap items-center justify-center gap-2">
+            <span className="animate-shake inline-block shrink-0 rounded-full bg-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+              Special offer
+            </span>
+            <span className="text-xs font-medium text-white text-center">{offerLabel()}</span>
+            <a href="#pricing" className="text-xs font-semibold text-orange-300 hover:text-orange-200 underline underline-offset-2">
+              See plans
+            </a>
+          </div>
+        </div>
+      )}
 
       <header className="sticky top-0 z-50 bg-white">
         <nav className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
@@ -303,7 +318,7 @@ export default function LandingPage() {
       </section>
 
       {/* GET THE APP */}
-      <section className="bg-gradient-to-br from-teal-950 via-teal-900 to-cyan-900 py-20">
+      <section className="bg-gradient-to-br from-blue-950 via-blue-900 to-blue-900 py-20">
         <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
           <div className="order-2 md:order-1 flex justify-center">
             <img
@@ -460,7 +475,7 @@ export default function LandingPage() {
           {/* Basic */}
           <div className="rounded-lg p-6 flex flex-col">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Basic</h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">$29</p>
+            <p className="text-3xl font-bold text-gray-900 mb-1">{formatKes(PLAN_PRICING_KES.basic)}</p>
             <p className="text-xs text-gray-400 mb-6">per vehicle / month</p>
             <ul className="text-sm text-gray-600 space-y-2 mb-8 flex-1">
               <li>Up to 15 vehicles</li>
@@ -482,10 +497,13 @@ export default function LandingPage() {
           {/* Pro — highlighted */}
           <div className="rounded-lg p-6 flex flex-col relative ring-2 ring-orange-500">
             <span className="absolute -top-3 left-6 bg-orange-500 text-white text-xs font-medium px-3 py-1 rounded-full">
-              Most popular
+              {SPECIAL_OFFER.active && SPECIAL_OFFER.plan === "pro" ? `Save ${SPECIAL_OFFER.discountPercent}%` : "Most popular"}
             </span>
             <h3 className="text-sm font-semibold text-orange-500 uppercase mb-2">Pro</h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">$49</p>
+            {SPECIAL_OFFER.active && SPECIAL_OFFER.plan === "pro" && (
+              <p className="text-sm text-gray-400 line-through">{formatKes(PLAN_PRICING_KES.pro)}</p>
+            )}
+            <p className="text-3xl font-bold text-gray-900 mb-1">{formatKes(priceForPlan("pro"))}</p>
             <p className="text-xs text-gray-400 mb-6">per vehicle / month</p>
             <ul className="text-sm text-gray-600 space-y-2 mb-8 flex-1">
               <li>Up to 50 vehicles</li>

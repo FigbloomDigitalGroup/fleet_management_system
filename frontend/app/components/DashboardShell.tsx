@@ -8,6 +8,7 @@ import { apiRequest } from "../lib/api";
 import { CompanyRecord, AlertRecord, GeofenceRecord } from "../types/auth";
 import { isOutsideGeofences } from "../lib/geofence";
 import { industryLabel } from "../lib/industries";
+import { offerLabel } from "../lib/pricing";
 import { IconType } from "react-icons";
 import { FiBell } from "react-icons/fi";
 import { FaMapMarkerAlt } from "react-icons/fa";
@@ -261,7 +262,7 @@ export default function DashboardShell({
                     Special offer
                   </span>
                   <span className="truncate text-xs font-medium text-white">
-                    FIGBLOOM FLEET — upgrade to Pro this month and save on every vehicle.
+                    FIGBLOOM FLEET — {offerLabel()}
                   </span>
                 </div>
               </div>
