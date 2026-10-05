@@ -8,6 +8,7 @@ import { FaGooglePlay } from "react-icons/fa";
 import BackgroundSlideshow from "../components/BackgroundSlideshow";
 import RobotCheckbox from "../components/RobotCheckbox";
 import BrandIcon from "../components/BrandIcon";
+import PasswordInput from "../components/PasswordInput";
 
 const STEPS = [
   { n: 1, title: "Register your company", text: "Create your account in minutes and set up your company profile." },
@@ -15,9 +16,9 @@ const STEPS = [
   { n: 3, title: "Track live, get alerted", text: "Watch your fleet move in real time, and get notified the moment something needs attention." },
 ];
 
-const ROLE_OPTIONS: { value: "COMPANY_OWNER" | "ADMIN"; label: string }[] = [
-  { value: "COMPANY_OWNER", label: "Company" },
-  { value: "ADMIN", label: "Company Admin" },
+const ROLE_OPTIONS: { value: "COMPANY_OWNER" | "ADMIN"; label: string; icon: string }[] = [
+  { value: "COMPANY_OWNER", label: "Company", icon: "/company-role-icon.svg" },
+  { value: "ADMIN", label: "Company Admin", icon: "/admin-role-icon.svg" },
 ];
 
 export default function LoginPage() {
@@ -26,7 +27,6 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isHuman, setIsHuman] = useState(false);
@@ -138,12 +138,18 @@ export default function LoginPage() {
                     key={option.value}
                     type="button"
                     onClick={() => setSelectedRole(option.value)}
-                    className={`py-2 rounded-md text-sm font-medium border transition-colors ${
+                    className={`flex flex-col items-center justify-center gap-2 py-4 rounded-md text-sm font-medium border transition-colors ${
                       selectedRole === option.value
                         ? "bg-teal-600 border-teal-600 text-white"
                         : "bg-white border-gray-300 text-gray-600 hover:border-teal-400"
                     }`}
                   >
+                    <img
+                      src={option.icon}
+                      alt=""
+                      aria-hidden="true"
+                      className={`h-10 w-10 shrink-0 ${selectedRole === option.value ? "brightness-0 invert" : ""}`}
+                    />
                     {option.label}
                   </button>
                 ))}
@@ -175,25 +181,15 @@ export default function LoginPage() {
                   Forgot password?
                 </a>
               </div>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  required
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Your password"
-                  className="w-full px-3.5 py-2.5 pr-16 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((s) => !s)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500"
-                >
-                  {showPassword ? "hide" : "show"}
-                </button>
-              </div>
+              <PasswordInput
+                id="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Your password"
+                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+              />
             </div>
 
             <RobotCheckbox checked={isHuman} onChange={setIsHuman} />
