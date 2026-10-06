@@ -6,6 +6,7 @@ import { GoogleMap, OverlayView, Circle, Polyline, useJsApiLoader } from "@react
 import { IoCarSportSharp } from "react-icons/io5";
 import { ImLocation2 } from "react-icons/im";
 import { FaSearch } from "react-icons/fa";
+import { FiPlus, FiMinus, FiCrosshair } from "react-icons/fi";
 import { apiRequest } from "../lib/api";
 import { usePulseColor } from "../lib/usePulseColor";
 import { isOutsideGeofences } from "../lib/geofence";
@@ -39,6 +40,20 @@ const LEGEND_ITEMS = [
 
 const containerStyle = { width: "100%", height: "100%" };
 const defaultCenter = { lat: -1.2921, lng: 36.8219 };
+
+// Toggle-pill styling shared by the Zones/Routes/Trails layer controls —
+// filled when the layer is visible, muted text when hidden, same idea as a
+// real mapping product's layer switcher.
+const PILL_ACTIVE_STYLES: Record<"teal" | "blue" | "purple", string> = {
+  teal: "bg-teal-50 text-teal-700",
+  blue: "bg-blue-50 text-blue-700",
+  purple: "bg-purple-50 text-purple-700",
+};
+function layerPillClass(active: boolean, color: "teal" | "blue" | "purple") {
+  return `rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors ${
+    active ? PILL_ACTIVE_STYLES[color] : "text-gray-400 hover:text-gray-600"
+  }`;
+}
 
 function timeAgo(dateStr: string) {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
@@ -259,6 +274,39 @@ export default function FleetMap({
     );
   }
 
+  // Recenters/fits the map to whatever vehicles currently have a GPS fix —
+  // the floating button equivalent of a real mapping product's "locate me".
+  function handleRecenter() {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (visibleVehicles.length === 0) {
+      map.panTo(defaultCenter);
+      map.setZoom(12);
+      return;
+    }
+    if (visibleVehicles.length === 1) {
+      map.panTo({
+        lat: visibleVehicles[0].lastLocation!.latitude,
+        lng: visibleVehicles[0].lastLocation!.longitude,
+      });
+      map.setZoom(14);
+      return;
+    }
+
+    const bounds = new google.maps.LatLngBounds();
+    visibleVehicles.forEach((v) =>
+      bounds.extend({ lat: v.lastLocation!.latitude, lng: v.lastLocation!.longitude })
+    );
+    map.fitBounds(bounds);
+  }
+
+  function handleZoom(delta: number) {
+    const map = mapRef.current;
+    if (!map) return;
+    map.setZoom((map.getZoom() || 12) + delta);
+  }
+
   if (loading || !isLoaded) return <FullPageLoading label="Loading map" />;
 
   return (
@@ -266,32 +314,7 @@ export default function FleetMap({
       {/* Map — takes the big central space */}
       <div className="flex-1 min-w-0">
         <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden mb-3">
-          {/* Vehicle search — zooms the map to a match by plate number or
-              vehicle type (car/van/truck); purely additive, doesn't touch
-              how vehicles are loaded or rendered below. */}
-          <div className="border-b border-gray-100 p-3">
-            <form onSubmit={handleSearch} className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by plate number or type (car, van, truck)…"
-                  className="w-full pl-9 pr-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
-                />
-              </div>
-              <button
-                type="submit"
-                className="shrink-0 rounded-md bg-teal-600 px-4 py-2 text-xs font-medium text-white hover:bg-teal-700"
-              >
-                Search
-              </button>
-            </form>
-            {searchMessage && <p className="mt-2 text-xs text-gray-500">{searchMessage}</p>}
-          </div>
-
-          <div className="relative h-[calc(100vh-260px)] min-h-[520px] w-full">
+          <div className="relative h-[calc(100vh-220px)] min-h-[560px] w-full">
             <GoogleMap
               mapContainerStyle={containerStyle}
               center={center}
@@ -306,7 +329,17 @@ export default function FleetMap({
                     }
                   : undefined
               }
-              options={pickMode ? { draggableCursor: "crosshair" } : undefined}
+              options={{
+                disableDefaultUI: true,
+                mapTypeControl: false,
+                zoomControl: false,
+                streetViewControl: false,
+                fullscreenControl: false,
+                rotateControl: false,
+                scaleControl: false,
+                clickableIcons: false,
+                draggableCursor: pickMode ? "crosshair" : undefined,
+              }}
             >
               {/* Geofence zones */}
               {showGeofences &&
@@ -391,34 +424,88 @@ export default function FleetMap({
               )}
             </GoogleMap>
 
-            {mapOverlay}
-          </div>
+            {/* Floating top bar — search on the left, layer toggles on the
+                right, both overlaying the map instead of sitting in a
+                separate bordered strip above it. */}
+            <div className="absolute inset-x-3 top-3 z-10 flex flex-col gap-2 sm:flex-row sm:items-start">
+              <form
+                onSubmit={handleSearch}
+                className="flex flex-1 items-center gap-2 rounded-full bg-white px-4 py-2.5 shadow-lg ring-1 ring-black/5"
+              >
+                <FaSearch className="shrink-0 text-gray-400" size={13} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by plate number or type (car, van, truck)…"
+                  className="flex-1 bg-transparent text-sm outline-none"
+                />
+                {searchQuery && (
+                  <button type="submit" className="shrink-0 text-xs font-medium text-teal-600 hover:text-teal-700">
+                    Search
+                  </button>
+                )}
+              </form>
 
-          {/* Geofence / route / trail toggles */}
-          {(geofences.length > 0 || routes.length > 0) && (
-            <div className="px-4 py-2 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs text-gray-500">
-                {geofences.length > 0 && `${geofences.length} geofence${geofences.length !== 1 ? "s" : ""}`}
-                {geofences.length > 0 && routes.length > 0 && " · "}
-                {routes.length > 0 && `${routes.length} route${routes.length !== 1 ? "s" : ""}`}
-              </span>
-              <div className="flex items-center gap-3">
-                {geofences.length > 0 && (
-                  <button onClick={() => setShowGeofences((s) => !s)} className="text-xs text-teal-600 hover:underline">
-                    {showGeofences ? "Hide zones" : "Show zones"}
+              {(geofences.length > 0 || routes.length > 0) && (
+                <div className="flex shrink-0 items-center gap-1 rounded-full bg-white px-2 py-1.5 shadow-lg ring-1 ring-black/5">
+                  {geofences.length > 0 && (
+                    <button onClick={() => setShowGeofences((s) => !s)} className={layerPillClass(showGeofences, "teal")}>
+                      Zones
+                    </button>
+                  )}
+                  {routes.length > 0 && (
+                    <button onClick={() => setShowRoutes((s) => !s)} className={layerPillClass(showRoutes, "blue")}>
+                      Routes
+                    </button>
+                  )}
+                  <button onClick={() => setShowTrails((s) => !s)} className={layerPillClass(showTrails, "purple")}>
+                    Trails
                   </button>
-                )}
-                {routes.length > 0 && (
-                  <button onClick={() => setShowRoutes((s) => !s)} className="text-xs text-blue-600 hover:underline">
-                    {showRoutes ? "Hide routes" : "Show routes"}
-                  </button>
-                )}
-                <button onClick={() => setShowTrails((s) => !s)} className="text-xs text-purple-600 hover:underline">
-                  {showTrails ? "Hide trails" : "Show trails"}
+                </div>
+              )}
+            </div>
+
+            {searchMessage && (
+              <div className="absolute left-3 top-16 z-10 max-w-sm rounded-lg bg-white px-3 py-2 text-xs text-gray-600 shadow-lg ring-1 ring-black/5">
+                {searchMessage}
+              </div>
+            )}
+
+            {/* Floating controls — recenter + zoom, replacing Google's
+                default UI (disabled above) with ones that match the rest of
+                the app's styling. Anchored top-right, below the search/layer
+                bar, rather than bottom-right — mapOverlay (e.g. the admin
+                page's "set starting point" sheet) can occupy the full bottom
+                edge, which would otherwise cover them. */}
+            <div className="absolute right-3 top-16 z-10 flex flex-col gap-2">
+              <button
+                onClick={handleRecenter}
+                title="Recenter on fleet"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-gray-600 shadow-lg ring-1 ring-black/5 hover:text-teal-600"
+              >
+                <FiCrosshair size={16} />
+              </button>
+              <div className="flex flex-col overflow-hidden rounded-full bg-white shadow-lg ring-1 ring-black/5">
+                <button
+                  onClick={() => handleZoom(1)}
+                  title="Zoom in"
+                  className="flex h-9 w-9 items-center justify-center border-b border-gray-100 text-gray-600 hover:text-teal-600"
+                >
+                  <FiPlus size={16} />
+                </button>
+                <button
+                  onClick={() => handleZoom(-1)}
+                  title="Zoom out"
+                  className="flex h-9 w-9 items-center justify-center text-gray-600 hover:text-teal-600"
+                >
+                  <FiMinus size={16} />
                 </button>
               </div>
             </div>
-          )}
+
+            {mapOverlay}
+          </div>
 
           {withLocation.length === 0 && (
             <p className="text-sm text-gray-400 text-center py-4">
