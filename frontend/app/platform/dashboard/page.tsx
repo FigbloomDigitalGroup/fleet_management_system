@@ -42,6 +42,7 @@ export default function PlatformDashboard() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [companies, setCompanies] = useState<CompanyRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const statsNode = useMemo(() => {
     if (!analytics) return undefined;
@@ -58,26 +59,42 @@ export default function PlatformDashboard() {
 
   usePageHeader("Platform overview", "Your platform, your network.", statsNode);
 
-  useEffect(() => {
-    async function loadAll() {
-      try {
-        const [analyticsData, companyData] = await Promise.all([
-          apiRequest<AnalyticsData>("/api/analytics/platform"),
-          apiRequest<CompanyRecord[]>("/api/companies"),
-        ]);
+  function loadAll() {
+    setLoading(true);
+    Promise.all([
+      apiRequest<AnalyticsData>("/api/analytics/platform"),
+      apiRequest<CompanyRecord[]>("/api/companies"),
+    ])
+      .then(([analyticsData, companyData]) => {
         setAnalytics(analyticsData);
         setCompanies(companyData);
-      } catch (err) {
+        setLoadError(null);
+      })
+      .catch((err) => {
         console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
+        setLoadError(err.message || "Failed to load dashboard data");
+      })
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
     loadAll();
   }, []);
 
   if (loading) return <FullPageLoading label="Loading dashboard" />;
-  if (!analytics) return null;
+  if (loadError || !analytics) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <p className="text-sm text-red-600 mb-4">{loadError || "Failed to load dashboard data."}</p>
+        <button
+          onClick={loadAll}
+          className="rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   const { totals, vehiclesPerCompany, growth } = analytics;
 

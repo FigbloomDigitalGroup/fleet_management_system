@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { apiRequest } from "../../lib/api";
@@ -84,6 +84,8 @@ export default function CompanyDashboard() {
   const [dailyStats, setDailyStats] = useState<DailyStatPoint[]>([]);
   const [routes, setRoutes] = useState<RouteRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const hasLoadedOnceRef = useRef(false);
 
   const vehicleCounts = {
     total: vehicles.length,
@@ -125,8 +127,11 @@ export default function CompanyDashboard() {
         setTrips(tripData);
         setAlerts(alertData);
         setRoutes(routeData);
-      } catch (err) {
+        hasLoadedOnceRef.current = true;
+        setLoadError(null);
+      } catch (err: any) {
         console.error(err);
+        setLoadError(err.message || "Failed to refresh dashboard data");
       } finally {
         setLoading(false);
       }
@@ -161,6 +166,20 @@ export default function CompanyDashboard() {
 
   if (loading) return <FullPageLoading />;
 
+  if (loadError && !hasLoadedOnceRef.current) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <p className="text-sm text-red-600 mb-4">{loadError}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   const activePct = vehicleCounts.total ? Math.round((vehicleCounts.active / vehicleCounts.total) * 100) : 0;
 
   // Build a simple "trips per day, last 7 days" chart from the trips list already fetched
@@ -179,6 +198,12 @@ export default function CompanyDashboard() {
 
   return (
     <div>
+      {loadError && (
+        <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-2 text-xs text-red-600">
+          Couldn't refresh dashboard data — showing the last loaded values. ({loadError})
+        </div>
+      )}
+
       {/* Distance, expenses & revenue — shown first, right after the
           Fleet Overview hero + stat cards above. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
