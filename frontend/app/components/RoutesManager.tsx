@@ -198,6 +198,14 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
 
   return (
     <div className="grid lg:grid-cols-3 gap-6">
+      {canManage && (
+        <div className="lg:col-span-3 rounded-md border border-purple-200 bg-purple-50 px-4 py-2.5 text-xs text-purple-700">
+          <span className="font-semibold">NB:</span> If you're asking the AI assistant to create a route, use the
+          exact spelling of the place name as it appears on the map — a misspelled name can't be matched to a real
+          location.
+        </div>
+      )}
+
       {/* Map */}
       <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
         <div className="h-[450px] w-full">
