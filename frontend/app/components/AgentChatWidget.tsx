@@ -123,7 +123,7 @@ export default function AgentChatWidget() {
   return (
     <>
       {open && (
-        <div className="fixed bottom-[232px] right-6 z-50 flex h-[28rem] w-[22rem] max-w-[90vw] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/10">
+        <div className="fixed bottom-24 right-6 z-50 flex h-[28rem] w-[22rem] max-w-[90vw] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/10">
           <div className="flex items-center justify-between bg-gradient-to-br from-teal-600 via-teal-500 to-cyan-600 px-4 py-3">
             <div className="flex items-center gap-2 text-white">
               <RiRobot3Fill size={18} />
@@ -191,7 +191,7 @@ export default function AgentChatWidget() {
         </div>
       )}
 
-      <div className="fixed bottom-40 right-6 z-50 flex items-center gap-3">
+      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
         {!open && (
           <div
             key={pageSegment}
