@@ -14,6 +14,18 @@ const FUEL_ANOMALY_THRESHOLD_PCT = 50;
 const HARSH_BRAKING_KPH_PER_SEC = 8; // deceleration rate considered harsh braking
 const HARSH_ACCELERATION_KPH_PER_SEC = 6; // acceleration rate considered harsh acceleration
 const EXCESSIVE_IDLE_MINUTES = 10; // continuous idle time considered excessive
+const ALERT_DEBOUNCE_MINUTES = 2; // suppress repeat alerts of the same type/vehicle within this window
+
+// Creates an alert unless one of the same type already fired for this
+// vehicle within the debounce window — without this, a vehicle hovering
+// right at a threshold (or with noisy GPS/fuel-sensor jitter) would get a
+// fresh alert on every single ping instead of one per incident.
+async function createDebouncedAlert({ companyId, vehicleId, type, message }) {
+  const since = new Date(Date.now() - ALERT_DEBOUNCE_MINUTES * 60 * 1000);
+  const recent = await Alert.findOne({ vehicleId, type, createdAt: { $gte: since } });
+  if (recent) return null;
+  return Alert.create({ companyId, vehicleId, type, message });
+}
 
 // Distance in km from a point to the nearest segment of a route's waypoints
 function distanceToRouteKm(lat, lng, waypoints) {
@@ -174,7 +186,7 @@ if (vehicle.driverId && !isMoving) {
     const speedLimit = activeRoute?.speedLimitKph || SPEEDING_LIMIT_KPH;
 
     if (speedKph && speedKph > speedLimit) {
-      await Alert.create({
+      await createDebouncedAlert({
         companyId: vehicle.companyId,
         vehicleId,
         type: "speeding",
@@ -192,14 +204,14 @@ if (vehicle.driverId && !isMoving) {
         const ratePerSec = (speedKph - previousPing.speedKph) / deltaSeconds;
 
         if (ratePerSec <= -HARSH_BRAKING_KPH_PER_SEC) {
-          await Alert.create({
+          await createDebouncedAlert({
             companyId: vehicle.companyId,
             vehicleId,
             type: "harsh_braking",
             message: `Harsh braking detected: dropped from ${previousPing.speedKph} km/h to ${speedKph} km/h in ${deltaSeconds.toFixed(0)}s.`,
           });
         } else if (ratePerSec >= HARSH_ACCELERATION_KPH_PER_SEC) {
-          await Alert.create({
+          await createDebouncedAlert({
             companyId: vehicle.companyId,
             vehicleId,
             type: "harsh_acceleration",
@@ -215,7 +227,7 @@ if (vehicle.driverId && !isMoving) {
       const toleranceKm = activeRoute.toleranceMeters / 1000;
 
       if (deviationKm !== null && deviationKm > toleranceKm) {
-        await Alert.create({
+        await createDebouncedAlert({
           companyId: vehicle.companyId,
           vehicleId,
           type: "route_deviation",
@@ -270,7 +282,7 @@ if (vehicle.driverId && !isMoving) {
           expectedDropLiters > 0 ? ((fuelDropLiters - expectedDropLiters) / expectedDropLiters) * 100 : 0;
 
         if (percentOverExpected > FUEL_ANOMALY_THRESHOLD_PCT) {
-          await Alert.create({
+          await createDebouncedAlert({
             companyId: vehicle.companyId,
             vehicleId,
             type: "fuel_anomaly",

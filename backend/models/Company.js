@@ -10,6 +10,9 @@ const companySchema = new mongoose.Schema(
       default: "pending",
     },
     subscriptionPlan: { type: String, default: "trial" },
+    // Set at registration from PlatformSettings.trialDays; null once the
+    // company has moved off the trial plan (upgraded or set manually).
+    trialEndsAt: { type: Date, default: null },
     // What kind of fleet this company runs — chosen at registration. Purely
     // informational/for future tailoring (e.g. suggested vehicle types); it
     // doesn't restrict which vehicleType values a company can use.

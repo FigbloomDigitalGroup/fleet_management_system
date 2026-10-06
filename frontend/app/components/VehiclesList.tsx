@@ -48,10 +48,12 @@ export default function VehiclesList({
   basePath = "/admin/vehicles",
   canAssignDriver = true,
   canAdd = true,
+  canDelete = true,
 }: {
   basePath?: string;
   canAssignDriver?: boolean;
   canAdd?: boolean;
+  canDelete?: boolean;
 }) {
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
@@ -60,6 +62,8 @@ export default function VehiclesList({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [assigningId, setAssigningId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [plateNumber, setPlateNumber] = useState("");
   const [make, setMake] = useState("");
@@ -157,6 +161,20 @@ export default function VehiclesList({
     }
   }
 
+  async function handleDelete(vehicleId: string, plateNumber: string) {
+    if (!confirm(`Delete vehicle "${plateNumber}"? This can't be undone.`)) return;
+    setDeleteError(null);
+    setDeletingId(vehicleId);
+    try {
+      await apiRequest(`/api/vehicles/${vehicleId}`, { method: "DELETE" });
+      await loadAll();
+    } catch (err: any) {
+      setDeleteError(err.message || "Failed to delete vehicle");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <div className="grid lg:grid-cols-3 gap-4">
       <div className={`${canAdd ? "lg:col-span-2" : "lg:col-span-3"} bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden`}>
@@ -167,6 +185,14 @@ export default function VehiclesList({
             <p className="text-xs text-teal-600 px-5 pt-4">
               Every vehicle on your account, its current status, and assigned driver.
             </p>
+            {deleteError && (
+              <div className="mx-5 mt-3 flex items-start justify-between gap-2 rounded-md bg-red-50 px-3 py-2 text-xs text-red-600">
+                <span>{deleteError}</span>
+                <button onClick={() => setDeleteError(null)} className="shrink-0 font-medium hover:underline">
+                  Dismiss
+                </button>
+              </div>
+            )}
             <table className="w-full text-sm mt-2">
             <thead className="bg-gray-50 text-black text-xs uppercase">
               <tr>
@@ -175,12 +201,13 @@ export default function VehiclesList({
                 <th className="text-left px-5 py-3 font-bold">Status</th>
                 <th className="text-left px-5 py-3 font-bold">Zone</th>
                 <th className="text-left px-5 py-3 font-bold">Driver</th>
+                {canDelete && <th className="text-left px-5 py-3 font-bold"></th>}
               </tr>
             </thead>
             <tbody>
               {vehicles.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-gray-400">
+                  <td colSpan={canDelete ? 6 : 5} className="px-5 py-8 text-center text-gray-400">
                     No vehicles added yet.
                   </td>
                 </tr>
@@ -241,6 +268,17 @@ export default function VehiclesList({
     </div>
   )}
 </td>
+{canDelete && (
+  <td className="px-5 py-3">
+    <button
+      onClick={() => handleDelete(v._id, v.plateNumber)}
+      disabled={deletingId === v._id}
+      className="text-xs text-red-500 hover:underline disabled:opacity-60"
+    >
+      {deletingId === v._id ? "Deleting…" : "Delete"}
+    </button>
+  </td>
+)}
 
                   </tr>
                 ))

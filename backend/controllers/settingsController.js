@@ -1,7 +1,10 @@
 import PlatformSettings from "../models/PlatformSettings.js";
 
-// Gets the single settings document, creating it with defaults if it doesn't exist yet
-async function getOrCreateSettings() {
+// Gets the single settings document, creating it with defaults if it doesn't
+// exist yet. Exported so other controllers (registerCompany, vehicle limit
+// enforcement) read the same live settings a platform admin configures here,
+// instead of each hardcoding its own defaults.
+export async function getPlatformSettings() {
   let settings = await PlatformSettings.findOne();
   if (!settings) {
     settings = await PlatformSettings.create({});
@@ -11,7 +14,7 @@ async function getOrCreateSettings() {
 
 export async function getSettings(req, res) {
   try {
-    const settings = await getOrCreateSettings();
+    const settings = await getPlatformSettings();
     return res.json(settings);
   } catch (err) {
     console.error(err);
@@ -21,7 +24,7 @@ export async function getSettings(req, res) {
 
 export async function updateSettings(req, res) {
   try {
-    const settings = await getOrCreateSettings();
+    const settings = await getPlatformSettings();
 
     const { requireManualApproval, defaultPlan, trialDays, vehicleLimits, supportEmail } = req.body;
 

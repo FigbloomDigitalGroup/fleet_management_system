@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { apiRequest } from "../../lib/api";
@@ -31,6 +31,8 @@ export default function AdminDashboard() {
   const [dailyStats, setDailyStats] = useState<DailyStatPoint[]>([]);
   const [routes, setRoutes] = useState<RouteRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const hasLoadedOnceRef = useRef(false);
 
   const vehicleCounts = {
     total: vehicles.length,
@@ -70,8 +72,14 @@ export default function AdminDashboard() {
         setTrips(tripData);
         setAlerts(alertData);
         setRoutes(routeData);
-      } catch (err) {
+        hasLoadedOnceRef.current = true;
+        setLoadError(null);
+      } catch (err: any) {
         console.error(err);
+        // Only treat this as a hard load failure before we've ever shown real
+        // data — otherwise a single missed 10s poll would replace a working
+        // dashboard with an error screen. Once loaded, just flag it quietly.
+        setLoadError(err.message || "Failed to refresh dashboard data");
       } finally {
         setLoading(false);
       }
@@ -100,6 +108,20 @@ export default function AdminDashboard() {
 
   if (loading) return <FullPageLoading label="Loading dashboard" />;
 
+  if (loadError && !hasLoadedOnceRef.current) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <p className="text-sm text-red-600 mb-4">{loadError}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   const activePct = vehicleCounts.total ? Math.round((vehicleCounts.active / vehicleCounts.total) * 100) : 0;
   const assignedDrivers = vehicles.filter((v) => v.driverId).length;
   const assignedPct = drivers.length ? Math.round((assignedDrivers / drivers.length) * 100) : 0;
@@ -116,6 +138,12 @@ export default function AdminDashboard() {
 
   return (
     <div>
+      {loadError && (
+        <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-2 text-xs text-red-600">
+          Couldn't refresh dashboard data — showing the last loaded values. ({loadError})
+        </div>
+      )}
+
       {/* Live Map preview + Map metrics card — share the row instead of each
           spanning the full width on their own. The map's title/button float
           over it (see LiveMapPreview) instead of sitting above it, so both

@@ -1,10 +1,30 @@
 import crypto from "crypto";
 import Vehicle from "../models/Vehicle.js";
 import Geofence from "../models/Geofence.js";
+import Company from "../models/Company.js";
 import { tenantScope } from "../middleware/auth.js";
 import { parseSpreadsheetRows } from "../lib/spreadsheet.js";
+import { getPlatformSettings } from "./settingsController.js";
 
 const MAX_IMPORT_ROWS = 500;
+
+// How many more vehicles this company's plan allows it to add right now —
+// enforces PlatformSettings.vehicleLimits, which a platform admin configures
+// but nothing previously read. Returns null if the plan has no configured
+// limit (don't block on an unrecognized/custom plan key).
+async function getVehicleLimitStatus(companyId) {
+  const [company, settings] = await Promise.all([
+    Company.findById(companyId).select("subscriptionPlan"),
+    getPlatformSettings(),
+  ]);
+  if (!company) return null;
+
+  const limit = settings.vehicleLimits?.[company.subscriptionPlan];
+  if (limit === undefined || limit === null) return null;
+
+  const currentCount = await Vehicle.countDocuments({ companyId });
+  return { plan: company.subscriptionPlan, limit, currentCount };
+}
 
 const VEHICLE_TYPES = [
   "car",
@@ -30,6 +50,13 @@ export async function createVehicle(req, res) {
     }
 
     const companyId = req.user.role === "PLATFORM_ADMIN" ? req.body.companyId : req.user.companyId;
+
+    const limitStatus = await getVehicleLimitStatus(companyId);
+    if (limitStatus && limitStatus.currentCount >= limitStatus.limit) {
+      return res.status(403).json({
+        error: `Vehicle limit reached for the ${limitStatus.plan} plan (${limitStatus.limit}). Upgrade your plan to add more vehicles.`,
+      });
+    }
 
     const vehicle = await Vehicle.create({ companyId, plateNumber, make, model, deviceId, vehicleType });
     return res.status(201).json(vehicle);
@@ -64,6 +91,9 @@ export async function bulkImportVehicles(req, res) {
 
     const companyId = req.user.role === "PLATFORM_ADMIN" ? req.body.companyId : req.user.companyId;
 
+    const limitStatus = companyId ? await getVehicleLimitStatus(companyId) : null;
+    let remainingSlots = limitStatus ? Math.max(0, limitStatus.limit - limitStatus.currentCount) : Infinity;
+
     const results = [];
     let createdCount = 0;
 
@@ -96,11 +126,21 @@ export async function bulkImportVehicles(req, res) {
         results.push({ row: rowNumber, plateNumber, status: "failed", error: "companyId is required" });
         continue;
       }
+      if (remainingSlots <= 0) {
+        results.push({
+          row: rowNumber,
+          plateNumber,
+          status: "failed",
+          error: `Vehicle limit reached for the ${limitStatus.plan} plan (${limitStatus.limit})`,
+        });
+        continue;
+      }
 
       try {
         await Vehicle.create({ companyId, plateNumber, make, model, deviceId, vehicleType });
         results.push({ row: rowNumber, plateNumber, status: "created" });
         createdCount++;
+        remainingSlots--;
       } catch (err) {
         if (err.code === 11000) {
           results.push({

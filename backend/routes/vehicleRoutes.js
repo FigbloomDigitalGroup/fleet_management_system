@@ -31,7 +31,7 @@ router.post(
   authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"),
   regenerateTrackerToken
 );
-router.delete("/:id", authorize("COMPANY_OWNER", "PLATFORM_ADMIN"), deleteVehicle);
+router.delete("/:id", authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"), deleteVehicle);
 
 export default router;
 
