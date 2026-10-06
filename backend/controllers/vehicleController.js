@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import Vehicle from "../models/Vehicle.js";
 import Geofence from "../models/Geofence.js";
 import { tenantScope } from "../middleware/auth.js";
@@ -212,6 +213,27 @@ export async function deleteVehicle(req, res) {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to delete vehicle" });
+  }
+}
+
+// Issues (or rotates) the secret a hardware GPS tracker presents to
+// authenticate its own pings (x-tracker-token header on POST /api/tracking/ping)
+// — see authenticateTracking in middleware/auth.js. Only returned here, right
+// after generation; it's select:false everywhere else so it's never leaked
+// back out via listVehicles/getVehicle.
+export async function regenerateTrackerToken(req, res) {
+  try {
+    const existing = await Vehicle.findOne({ _id: req.params.id, ...tenantScope(req) });
+    if (!existing) return res.status(404).json({ error: "Vehicle not found" });
+
+    const trackerToken = crypto.randomBytes(24).toString("hex");
+    existing.trackerToken = trackerToken;
+    await existing.save();
+
+    return res.json({ trackerToken });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to generate tracker token" });
   }
 }
 

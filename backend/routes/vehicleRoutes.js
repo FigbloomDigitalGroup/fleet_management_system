@@ -9,6 +9,7 @@ import {
   updateVehicle,
   deleteVehicle,
   getMyVehicle,
+  regenerateTrackerToken,
 } from "../controllers/vehicleController.js";
 
 const router = express.Router();
@@ -25,6 +26,11 @@ router.post(
   bulkImportVehicles
 );
 router.put("/:id", authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"), updateVehicle);
+router.post(
+  "/:id/tracker-token",
+  authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"),
+  regenerateTrackerToken
+);
 router.delete("/:id", authorize("COMPANY_OWNER", "PLATFORM_ADMIN"), deleteVehicle);
 
 export default router;

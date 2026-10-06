@@ -31,13 +31,31 @@ function distanceToRouteKm(lat, lng, waypoints) {
 
 export async function ingestLocation(req, res) {
   try {
-    const { vehicleId, latitude, longitude, speedKph, heading, fuelLevelLiters } = req.body;
-    if (!vehicleId || latitude === undefined || longitude === undefined) {
-      return res.status(400).json({ error: "vehicleId, latitude, and longitude are required" });
+    const { latitude, longitude, speedKph, heading, fuelLevelLiters } = req.body;
+    if (latitude === undefined || longitude === undefined) {
+      return res.status(400).json({ error: "latitude and longitude are required" });
     }
 
-    const vehicle = await Vehicle.findById(vehicleId);
-    if (!vehicle) return res.status(404).json({ error: "Vehicle not found" });
+    // A hardware tracker's token already identifies exactly one vehicle —
+    // trust that resolution over anything a caller could put in the body.
+    // Otherwise (the driver app, or an admin testing manually) resolve from
+    // vehicleId and verify the requester actually owns/drives it.
+    let vehicle = req.trackingVehicle;
+    if (!vehicle) {
+      const { vehicleId: bodyVehicleId } = req.body;
+      if (!bodyVehicleId) return res.status(400).json({ error: "vehicleId is required" });
+
+      vehicle = await Vehicle.findById(bodyVehicleId);
+      if (!vehicle) return res.status(404).json({ error: "Vehicle not found" });
+
+      if (req.user.role === "DRIVER" && String(vehicle.driverId) !== String(req.user.id)) {
+        return res.status(403).json({ error: "This vehicle isn't assigned to you" });
+      }
+      if (req.user.role !== "PLATFORM_ADMIN" && String(vehicle.companyId) !== String(req.user.companyId)) {
+        return res.status(403).json({ error: "You do not have permission to report location for this vehicle" });
+      }
+    }
+    const vehicleId = vehicle._id;
 
     const isMoving = speedKph && speedKph > 2;
 

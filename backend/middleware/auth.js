@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import Vehicle from "../models/Vehicle.js";
 
 // Verifies the JWT and attaches current user info to req.user
 export async function authenticate(req, res, next) {
@@ -26,6 +27,31 @@ export async function authenticate(req, res, next) {
   } catch (err) {
     return res.status(401).json({ error: "Invalid or expired token" });
   }
+}
+
+// Authenticates a location ping from either of two sources, so a future
+// hardware GPS tracker can plug into the same /api/tracking/ping endpoint
+// the driver app already uses, without either side needing to change:
+// - A hardware device presents x-tracker-token (its per-vehicle secret,
+//   see Vehicle.trackerToken) and needs no user account at all. Since the
+//   token already identifies exactly one vehicle, req.trackingVehicle is
+//   resolved here and the controller trusts it over anything in the body.
+// - Everything else (the driver app today, or an admin testing manually)
+//   goes through the normal JWT flow.
+export async function authenticateTracking(req, res, next) {
+  const deviceToken = req.headers["x-tracker-token"];
+  if (deviceToken) {
+    const vehicle = await Vehicle.findOne({ trackerToken: deviceToken }).select("+trackerToken");
+    if (!vehicle) return res.status(401).json({ error: "Invalid tracker token" });
+    req.trackingVehicle = vehicle;
+    req.trackingSource = "device";
+    return next();
+  }
+
+  return authenticate(req, res, () => {
+    req.trackingSource = "driver_app";
+    next();
+  });
 }
 
 // Restricts a route to specific roles
