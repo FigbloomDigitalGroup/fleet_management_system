@@ -6,6 +6,7 @@ import User from "../models/User.js";
 import RefreshToken from "../models/RefreshToken.js";
 import { sendPasswordResetEmail } from "../lib/mailer.js";
 import { parseSpreadsheetRows } from "../lib/spreadsheet.js";
+import { getPlatformSettings } from "./settingsController.js";
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const MAX_IMPORT_ROWS = 500;
@@ -88,11 +89,18 @@ export async function registerCompany(req, res) {
 
     const slug = companyName.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
+    const settings = await getPlatformSettings();
+    const subscriptionPlan = settings.defaultPlan;
+    const trialEndsAt =
+      subscriptionPlan === "trial" ? new Date(Date.now() + settings.trialDays * 24 * 60 * 60 * 1000) : null;
+
     const company = await Company.create({
       name: companyName,
       slug,
-      status: "pending",
+      status: settings.requireManualApproval ? "pending" : "active",
       industry: industry || "other",
+      subscriptionPlan,
+      trialEndsAt,
     });
 
     const passwordHash = await bcrypt.hash(password, 10);
