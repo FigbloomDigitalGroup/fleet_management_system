@@ -30,7 +30,10 @@ export async function listTrips(req, res) {
 
 export async function getTrip(req, res) {
   try {
-    const trip = await Trip.findById(req.params.id)
+    const vehicles = await Vehicle.find(tenantScope(req)).select("_id");
+    const vehicleIds = vehicles.map((v) => v._id);
+
+    const trip = await Trip.findOne({ _id: req.params.id, vehicleId: { $in: vehicleIds } })
       .populate("vehicleId", "plateNumber")
       .populate("driverId", "fullName email");
 
@@ -45,7 +48,10 @@ export async function getTrip(req, res) {
 
 export async function getTripPath(req, res) {
   try {
-    const trip = await Trip.findById(req.params.id);
+    const vehicles = await Vehicle.find(tenantScope(req)).select("_id");
+    const vehicleIds = vehicles.map((v) => v._id);
+
+    const trip = await Trip.findOne({ _id: req.params.id, vehicleId: { $in: vehicleIds } });
     if (!trip) return res.status(404).json({ error: "Trip not found" });
 
     const pings = await LocationPing.find({

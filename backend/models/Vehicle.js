@@ -7,6 +7,11 @@ const vehicleSchema = new mongoose.Schema(
     make: { type: String },
     model: { type: String },
     deviceId: { type: String, unique: true, sparse: true },
+    // Secret credential a hardware GPS tracker presents (x-tracker-token header)
+    // to authenticate pings for this vehicle without a user login — see
+    // authenticateTracking in middleware/auth.js. Excluded from queries by
+    // default; only pulled in explicitly when verifying a ping.
+    trackerToken: { type: String, select: false, index: true, sparse: true },
     // One shared list covering every industry this platform serves (logistics,
     // school/public transport, construction, security, agriculture, oil & gas,
     // rental, etc.) — every company picks from the same list regardless of
