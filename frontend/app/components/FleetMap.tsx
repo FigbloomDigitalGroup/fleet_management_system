@@ -10,6 +10,7 @@ import { FiPlus, FiMinus, FiCrosshair } from "react-icons/fi";
 import { apiRequest } from "../lib/api";
 import { usePulseColor } from "../lib/usePulseColor";
 import { isOutsideGeofences } from "../lib/geofence";
+import { VEHICLE_TYPE_ICONS } from "../lib/vehicleIcons";
 import StatCard from "./StatCard";
 import CircleStat from "./CircleStat";
 import FullPageLoading from "./FullPageLoading";
@@ -110,7 +111,16 @@ function VehicleMarker({
           className="relative w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow hover:scale-110 transition-transform"
           style={{ background: outOfGeofence ? "#ef4444" : color }}
         >
-          <IoCarSportSharp size={14} color="white" />
+          {VEHICLE_TYPE_ICONS[vehicle.vehicleType || ""] ? (
+            <img
+              src={VEHICLE_TYPE_ICONS[vehicle.vehicleType || ""]}
+              alt=""
+              aria-hidden="true"
+              className="h-3.5 w-3.5 brightness-0 invert"
+            />
+          ) : (
+            <IoCarSportSharp size={14} color="white" />
+          )}
         </div>
       </div>
     </div>
