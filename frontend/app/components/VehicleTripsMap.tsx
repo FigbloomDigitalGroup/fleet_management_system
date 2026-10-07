@@ -5,6 +5,7 @@ import Link from "next/link";
 import { GoogleMap, Polyline, useJsApiLoader } from "@react-google-maps/api";
 import { apiRequest } from "../lib/api";
 import { TripRecord } from "../types/auth";
+import { estimateFuelRangeLiters } from "../lib/routeEstimate";
 
 interface PathPoint {
   latitude: number;
@@ -117,6 +118,11 @@ export default function VehicleTripsMap({ vehicleId, basePath }: { vehicleId: st
                 />
                 {new Date(trip.startTime).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                 {trip.distanceKm != null && ` — ${trip.distanceKm.toFixed(1)} km`}
+                {trip.distanceKm != null &&
+                  (() => {
+                    const f = estimateFuelRangeLiters(trip.distanceKm, trip.vehicleId?.avgConsumptionLPer100Km);
+                    return ` (${f.min.toFixed(1)}–${f.max.toFixed(1)} L)`;
+                  })()}
               </span>
               <span className="font-medium text-teal-600">View replay</span>
             </Link>

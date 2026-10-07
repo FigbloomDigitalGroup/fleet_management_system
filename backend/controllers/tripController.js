@@ -16,7 +16,7 @@ export async function listTrips(req, res) {
       : vehicleIds;
 
     const trips = await Trip.find({ vehicleId: { $in: scopedVehicleIds } })
-      .populate("vehicleId", "plateNumber")
+      .populate("vehicleId", "plateNumber avgConsumptionLPer100Km")
       .populate("driverId", "fullName")
       .sort({ startTime: -1 })
       .limit(100);
@@ -34,7 +34,7 @@ export async function getTrip(req, res) {
     const vehicleIds = vehicles.map((v) => v._id);
 
     const trip = await Trip.findOne({ _id: req.params.id, vehicleId: { $in: vehicleIds } })
-      .populate("vehicleId", "plateNumber")
+      .populate("vehicleId", "plateNumber avgConsumptionLPer100Km")
       .populate("driverId", "fullName email");
 
     if (!trip) return res.status(404).json({ error: "Trip not found" });
@@ -75,7 +75,7 @@ export async function listMyTrips(req, res) {
     if (!vehicle) return res.json([]);
 
     const trips = await Trip.find({ vehicleId: vehicle._id })
-      .populate("vehicleId", "plateNumber")
+      .populate("vehicleId", "plateNumber avgConsumptionLPer100Km")
       .sort({ startTime: -1 })
       .limit(50);
 

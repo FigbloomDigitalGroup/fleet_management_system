@@ -43,10 +43,13 @@ const VEHICLE_TYPES = [
 
 export async function createVehicle(req, res) {
   try {
-    const { plateNumber, make, model, deviceId, vehicleType } = req.body;
+    const { plateNumber, make, model, deviceId, vehicleType, avgConsumptionLPer100Km } = req.body;
     if (!plateNumber) return res.status(400).json({ error: "plateNumber is required" });
     if (vehicleType !== undefined && !VEHICLE_TYPES.includes(vehicleType)) {
       return res.status(400).json({ error: `vehicleType must be one of: ${VEHICLE_TYPES.join(", ")}` });
+    }
+    if (avgConsumptionLPer100Km !== undefined && !(Number(avgConsumptionLPer100Km) > 0)) {
+      return res.status(400).json({ error: "avgConsumptionLPer100Km must be a positive number" });
     }
 
     const companyId = req.user.role === "PLATFORM_ADMIN" ? req.body.companyId : req.user.companyId;
@@ -58,7 +61,15 @@ export async function createVehicle(req, res) {
       });
     }
 
-    const vehicle = await Vehicle.create({ companyId, plateNumber, make, model, deviceId, vehicleType });
+    const vehicle = await Vehicle.create({
+      companyId,
+      plateNumber,
+      make,
+      model,
+      deviceId,
+      vehicleType,
+      avgConsumptionLPer100Km: avgConsumptionLPer100Km !== undefined ? Number(avgConsumptionLPer100Km) : undefined,
+    });
     return res.status(201).json(vehicle);
   } catch (err) {
     console.error(err);
@@ -72,7 +83,7 @@ export async function createVehicle(req, res) {
 // Bulk-creates vehicles from an uploaded .xlsx/.csv file — same validation
 // rules as createVehicle, applied per row, so one bad row doesn't block the
 // rest. Expected columns (case/spacing-insensitive): plateNumber (required),
-// make, model, vehicleType, deviceId.
+// make, model, vehicleType, deviceId, avgConsumptionLPer100Km (aka mileage).
 export async function bulkImportVehicles(req, res) {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
@@ -105,9 +116,19 @@ export async function bulkImportVehicles(req, res) {
       const model = row.model || undefined;
       const deviceId = row.deviceid || row.device || undefined;
       let vehicleType = row.vehicletype || row.type || undefined;
+      const mileageRaw = row.avgconsumptionlper100km || row.mileage || row.fuelconsumption || undefined;
 
       if (!plateNumber) {
         results.push({ row: rowNumber, plateNumber: "", status: "failed", error: "plateNumber is required" });
+        continue;
+      }
+      if (mileageRaw !== undefined && !(Number(mileageRaw) > 0)) {
+        results.push({
+          row: rowNumber,
+          plateNumber,
+          status: "failed",
+          error: "mileage (avgConsumptionLPer100Km) must be a positive number",
+        });
         continue;
       }
       if (vehicleType) {
@@ -137,7 +158,15 @@ export async function bulkImportVehicles(req, res) {
       }
 
       try {
-        await Vehicle.create({ companyId, plateNumber, make, model, deviceId, vehicleType });
+        await Vehicle.create({
+          companyId,
+          plateNumber,
+          make,
+          model,
+          deviceId,
+          vehicleType,
+          avgConsumptionLPer100Km: mileageRaw !== undefined ? Number(mileageRaw) : undefined,
+        });
         results.push({ row: rowNumber, plateNumber, status: "created" });
         createdCount++;
         remainingSlots--;
@@ -201,12 +230,19 @@ export async function updateVehicle(req, res) {
     const existing = await Vehicle.findOne({ _id: req.params.id, ...tenantScope(req) });
     if (!existing) return res.status(404).json({ error: "Vehicle not found" });
 
-    const { plateNumber, make, model, deviceId, status, driverId, startGeofenceId, vehicleType } = req.body;
+    const { plateNumber, make, model, deviceId, status, driverId, startGeofenceId, vehicleType, avgConsumptionLPer100Km } =
+      req.body;
     const update = {};
     if (plateNumber !== undefined) update.plateNumber = plateNumber;
     if (make !== undefined) update.make = make;
     if (model !== undefined) update.model = model;
     if (deviceId !== undefined) update.deviceId = deviceId;
+    if (avgConsumptionLPer100Km !== undefined) {
+      if (!(Number(avgConsumptionLPer100Km) > 0)) {
+        return res.status(400).json({ error: "avgConsumptionLPer100Km must be a positive number" });
+      }
+      update.avgConsumptionLPer100Km = Number(avgConsumptionLPer100Km);
+    }
     if (status !== undefined) {
       update.status = status;
       // Marks this as a deliberate admin choice so tracking pings leave it

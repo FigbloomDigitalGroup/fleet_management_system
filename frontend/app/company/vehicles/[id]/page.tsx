@@ -98,6 +98,12 @@ export default function CompanyVehicleDetailPage() {
               )}
             </dd>
           </div>
+          <div>
+            <dt className="text-gray-500">Mileage</dt>
+            <dd className="text-gray-900 font-medium mt-0.5">
+              {vehicle.avgConsumptionLPer100Km != null ? `${vehicle.avgConsumptionLPer100Km} L/100km` : "Not set"}
+            </dd>
+          </div>
         </dl>
         <p className="text-xs text-teal-600 mt-4">Status changes and starting points are managed by your fleet Admin.</p>
       </div>

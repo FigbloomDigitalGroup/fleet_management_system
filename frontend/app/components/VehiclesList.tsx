@@ -22,7 +22,8 @@ interface BulkImportResult {
 }
 
 function downloadVehicleTemplate() {
-  const csv = "plateNumber,make,model,vehicleType,deviceId\nKDA 123A,Toyota,Hiace,van,TRK-001\n";
+  const csv =
+    "plateNumber,make,model,vehicleType,deviceId,avgConsumptionLPer100Km\nKDA 123A,Toyota,Hiace,van,TRK-001,12\n";
   const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -70,6 +71,7 @@ export default function VehiclesList({
   const [model, setModel] = useState("");
   const [deviceId, setDeviceId] = useState("");
   const [vehicleType, setVehicleType] = useState("car");
+  const [mileage, setMileage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -108,13 +110,21 @@ export default function VehiclesList({
     try {
       await apiRequest("/api/vehicles", {
         method: "POST",
-        body: JSON.stringify({ plateNumber, make, model, deviceId: deviceId || undefined, vehicleType }),
+        body: JSON.stringify({
+          plateNumber,
+          make,
+          model,
+          deviceId: deviceId || undefined,
+          vehicleType,
+          avgConsumptionLPer100Km: mileage ? parseFloat(mileage) : undefined,
+        }),
       });
       setPlateNumber("");
       setMake("");
       setModel("");
       setDeviceId("");
       setVehicleType("car");
+      setMileage("");
       await loadAll();
     } catch (err: any) {
       setFormError(err.message || "Failed to add vehicle");
@@ -350,6 +360,21 @@ export default function VehiclesList({
               placeholder="TRK-001"
               className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
             />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Mileage — fuel use (L/100km) <span className="text-gray-400">(optional)</span>
+            </label>
+            <input
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={mileage}
+              onChange={(e) => setMileage(e.target.value)}
+              placeholder="12 (default if left blank)"
+              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+            />
+            <p className="text-xs text-gray-400 mt-1">Used to estimate fuel cost for routes and trips.</p>
           </div>
 
           {formError && <p className="text-xs text-red-600">{formError}</p>}

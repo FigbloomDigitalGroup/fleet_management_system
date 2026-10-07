@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { apiRequest } from "../../../lib/api";
 import FullPageLoading from "@/app/components/FullPageLoading";
@@ -40,11 +40,15 @@ export default function AdminVehicleDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [savingZone, setSavingZone] = useState(false);
+  const [mileageInput, setMileageInput] = useState("");
+  const [savingMileage, setSavingMileage] = useState(false);
+  const [mileageError, setMileageError] = useState<string | null>(null);
 
   async function load() {
     try {
       const data = await apiRequest<VehicleRecord>(`/api/vehicles/${id}`);
       setVehicle(data);
+      setMileageInput(data.avgConsumptionLPer100Km != null ? String(data.avgConsumptionLPer100Km) : "");
     } catch (err: any) {
       setError(err.message || "Failed to load vehicle");
     } finally {
@@ -55,6 +59,23 @@ export default function AdminVehicleDetailPage() {
   useEffect(() => {
     load();
   }, [id]);
+
+  async function updateMileage(e: FormEvent) {
+    e.preventDefault();
+    setMileageError(null);
+    setSavingMileage(true);
+    try {
+      await apiRequest(`/api/vehicles/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({ avgConsumptionLPer100Km: parseFloat(mileageInput) }),
+      });
+      await load();
+    } catch (err: any) {
+      setMileageError(err.message || "Failed to update mileage");
+    } finally {
+      setSavingMileage(false);
+    }
+  }
 
   useEffect(() => {
     apiRequest<GeofenceRecord[]>("/api/geofences").then(setGeofences).catch(() => {});
@@ -157,6 +178,36 @@ export default function AdminVehicleDetailPage() {
           {!vehicle.driverId && (
             <p className="text-xs text-gray-400 mt-3">Assign a driver to this vehicle before setting it active.</p>
           )}
+        </div>
+
+        <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+          <h3 className="text-sm font-medium text-gray-700">Mileage</h3>
+          <p className="text-xs text-teal-600 mt-0.5 mb-3">
+            Expected fuel use for this vehicle — used to estimate fuel cost for its routes and trips.
+          </p>
+          <form onSubmit={updateMileage} className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Liters per 100km</label>
+              <input
+                type="number"
+                min="0.1"
+                step="0.1"
+                required
+                value={mileageInput}
+                onChange={(e) => setMileageInput(e.target.value)}
+                placeholder="12"
+                className="w-40 px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={savingMileage}
+              className="rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-600 disabled:opacity-50"
+            >
+              {savingMileage ? "Saving…" : "Save mileage"}
+            </button>
+          </form>
+          {mileageError && <p className="text-xs text-red-600 mt-2">{mileageError}</p>}
         </div>
 
         <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
