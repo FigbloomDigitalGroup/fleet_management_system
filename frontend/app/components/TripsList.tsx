@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FaRoute } from "react-icons/fa";
 import { apiRequest } from "../lib/api";
 import { TripRecord } from "../types/auth";
+import { estimateFuelRangeLiters } from "../lib/routeEstimate";
 import Skeleton from "./Skeleton";
 import WheelIcon from "./WheelIcon";
 
@@ -37,18 +38,22 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
             <th className="text-left px-5 py-3 font-medium">Start</th>
             <th className="text-left px-5 py-3 font-medium">Status</th>
             <th className="text-left px-5 py-3 font-medium">Distance</th>
+            <th className="text-left px-5 py-3 font-medium">Mileage</th>
             <th className="text-left px-5 py-3 font-medium">Replay</th>
           </tr>
         </thead>
         <tbody>
           {trips.length === 0 ? (
             <tr>
-              <td colSpan={6} className="px-5 py-8 text-center text-gray-400">
+              <td colSpan={7} className="px-5 py-8 text-center text-gray-400">
                 No trips recorded yet.
               </td>
             </tr>
           ) : (
             trips.map((t) => {
+              const fuelEstimate = t.distanceKm
+                ? estimateFuelRangeLiters(t.distanceKm, t.vehicleId?.avgConsumptionLPer100Km)
+                : null;
               return (
                 <tr key={t._id} className="border-t border-gray-100">
                   <td className="px-5 py-3 text-xs font-bold text-teal-600">
@@ -71,6 +76,9 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
                   </td>
                   <td className="px-5 py-3 text-gray-600">
                     {t.distanceKm ? `${t.distanceKm.toFixed(1)} km` : "—"}
+                  </td>
+                  <td className="px-5 py-3 text-gray-600">
+                    {fuelEstimate ? `${fuelEstimate.min.toFixed(1)}–${fuelEstimate.max.toFixed(1)} L` : "—"}
                   </td>
                   <td className="px-5 py-3">
                     <Link

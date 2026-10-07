@@ -115,7 +115,7 @@ export interface DriverRecord {
 
 export interface TripRecord {
   _id: string;
-  vehicleId: { _id: string; plateNumber: string } | null;
+  vehicleId: { _id: string; plateNumber: string; avgConsumptionLPer100Km?: number } | null;
   driverId: { _id: string; fullName: string } | null;
   startTime: string;
   endTime?: string;
