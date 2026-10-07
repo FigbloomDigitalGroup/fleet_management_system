@@ -274,12 +274,23 @@ export async function login(req, res) {
       return res.status(403).json({ error: "This account has been suspended" });
     }
 
-    // Block login if the user's company itself has been suspended
+    // Block login based on the user's company state — status and trial
+    // expiry were previously only ever set, never actually checked anywhere.
     if (user.companyId) {
       const company = await Company.findById(user.companyId);
       if (company && company.status === "suspended") {
         return res.status(403).json({
           error: "Your company's account has been suspended. Please contact support.",
+        });
+      }
+      if (company && company.status === "pending") {
+        return res.status(403).json({
+          error: "Your company's account is awaiting approval. Please check back soon.",
+        });
+      }
+      if (company && company.subscriptionPlan === "trial" && company.trialEndsAt && company.trialEndsAt.getTime() < Date.now()) {
+        return res.status(403).json({
+          error: "Your trial period has ended. Please upgrade your plan to continue.",
         });
       }
     }

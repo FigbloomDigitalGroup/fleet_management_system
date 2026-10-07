@@ -92,7 +92,7 @@ if (!vehicle.driverId) {
 
   // Flag it if the vehicle is actually moving with nobody assigned to it
   if (isMoving) {
-    await Alert.create({
+    await createDebouncedAlert({
       companyId: vehicle.companyId,
       vehicleId,
       type: "unauthorized_movement",

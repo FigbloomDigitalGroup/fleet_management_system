@@ -48,8 +48,7 @@ const PAGE_HINTS: Record<string, string> = {
 };
 const DEFAULT_HINT = "Ask about your fleet.";
 
-// Floating assistant — like the LiveMapWidget's floating button, but opens a
-// small chat panel instead of navigating. Answers are grounded in this
+// Floating assistant — opens a small chat panel. Answers are grounded in this
 // company's own fleet data on the backend (see fleetAssistant.js), not
 // general knowledge.
 export default function AgentChatWidget() {

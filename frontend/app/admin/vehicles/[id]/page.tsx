@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { apiRequest } from "../../../lib/api";
 import FullPageLoading from "@/app/components/FullPageLoading";
@@ -43,12 +43,20 @@ export default function AdminVehicleDetailPage() {
   const [mileageInput, setMileageInput] = useState("");
   const [savingMileage, setSavingMileage] = useState(false);
   const [mileageError, setMileageError] = useState<string | null>(null);
+  // Tracks an in-progress, unsaved edit so a reload triggered by some other
+  // action on this page (changing status, changing the starting zone) can't
+  // silently overwrite what the admin is mid-typing in the Mileage field.
+  // A ref (not state) so every load() call — however it was triggered —
+  // always reads the current value, not a stale one from its own render.
+  const mileageDirtyRef = useRef(false);
 
   async function load() {
     try {
       const data = await apiRequest<VehicleRecord>(`/api/vehicles/${id}`);
       setVehicle(data);
-      setMileageInput(data.avgConsumptionLPer100Km != null ? String(data.avgConsumptionLPer100Km) : "");
+      if (!mileageDirtyRef.current) {
+        setMileageInput(data.avgConsumptionLPer100Km != null ? String(data.avgConsumptionLPer100Km) : "");
+      }
     } catch (err: any) {
       setError(err.message || "Failed to load vehicle");
     } finally {
@@ -69,6 +77,7 @@ export default function AdminVehicleDetailPage() {
         method: "PUT",
         body: JSON.stringify({ avgConsumptionLPer100Km: parseFloat(mileageInput) }),
       });
+      mileageDirtyRef.current = false;
       await load();
     } catch (err: any) {
       setMileageError(err.message || "Failed to update mileage");
@@ -194,7 +203,10 @@ export default function AdminVehicleDetailPage() {
                 step="0.1"
                 required
                 value={mileageInput}
-                onChange={(e) => setMileageInput(e.target.value)}
+                onChange={(e) => {
+                  setMileageInput(e.target.value);
+                  mileageDirtyRef.current = true;
+                }}
                 placeholder="12"
                 className="w-40 px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
               />

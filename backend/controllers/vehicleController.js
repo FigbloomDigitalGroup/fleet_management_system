@@ -70,6 +70,21 @@ export async function createVehicle(req, res) {
       vehicleType,
       avgConsumptionLPer100Km: avgConsumptionLPer100Km !== undefined ? Number(avgConsumptionLPer100Km) : undefined,
     });
+
+    // Closes the race between the limit check above and this create: if two
+    // requests both passed the check at currentCount === limit - 1, only one
+    // of them should actually end up over the limit — re-verify now and roll
+    // this one back if the count has since crept past the limit.
+    if (limitStatus) {
+      const countNow = await Vehicle.countDocuments({ companyId });
+      if (countNow > limitStatus.limit) {
+        await Vehicle.deleteOne({ _id: vehicle._id });
+        return res.status(403).json({
+          error: `Vehicle limit reached for the ${limitStatus.plan} plan (${limitStatus.limit}). Upgrade your plan to add more vehicles.`,
+        });
+      }
+    }
+
     return res.status(201).json(vehicle);
   } catch (err) {
     console.error(err);

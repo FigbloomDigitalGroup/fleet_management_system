@@ -51,9 +51,13 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
             </tr>
           ) : (
             trips.map((t) => {
-              const fuelEstimate = t.distanceKm
-                ? estimateFuelRangeLiters(t.distanceKm, t.vehicleId?.avgConsumptionLPer100Km)
-                : null;
+              // Only compute an estimate when the vehicle's real mileage is
+              // known — falling back to a default consumption rate here
+              // would present a guess as if it were measured.
+              const fuelEstimate =
+                t.distanceKm && t.vehicleId?.avgConsumptionLPer100Km != null
+                  ? estimateFuelRangeLiters(t.distanceKm, t.vehicleId.avgConsumptionLPer100Km)
+                  : null;
               return (
                 <tr key={t._id} className="border-t border-gray-100">
                   <td className="px-5 py-3 text-xs font-bold text-teal-600">
