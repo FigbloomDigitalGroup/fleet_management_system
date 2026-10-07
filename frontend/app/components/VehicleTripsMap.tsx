@@ -119,8 +119,9 @@ export default function VehicleTripsMap({ vehicleId, basePath }: { vehicleId: st
                 {new Date(trip.startTime).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                 {trip.distanceKm != null && ` — ${trip.distanceKm.toFixed(1)} km`}
                 {trip.distanceKm != null &&
+                  trip.vehicleId?.avgConsumptionLPer100Km != null &&
                   (() => {
-                    const f = estimateFuelRangeLiters(trip.distanceKm, trip.vehicleId?.avgConsumptionLPer100Km);
+                    const f = estimateFuelRangeLiters(trip.distanceKm, trip.vehicleId.avgConsumptionLPer100Km);
                     return ` (${f.min.toFixed(1)}–${f.max.toFixed(1)} L)`;
                   })()}
               </span>

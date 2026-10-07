@@ -75,6 +75,8 @@ function VehicleMarker({
   onClick: () => void;
 }) {
   const color = statusColor[vehicle.status] || "#9ca3af";
+  const [iconFailed, setIconFailed] = useState(false);
+  const iconSrc = VEHICLE_TYPE_ICONS[vehicle.vehicleType || ""];
 
   return (
     <div
@@ -111,11 +113,12 @@ function VehicleMarker({
           className="relative w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow hover:scale-110 transition-transform"
           style={{ background: outOfGeofence ? "#ef4444" : color }}
         >
-          {VEHICLE_TYPE_ICONS[vehicle.vehicleType || ""] ? (
+          {iconSrc && !iconFailed ? (
             <img
-              src={VEHICLE_TYPE_ICONS[vehicle.vehicleType || ""]}
+              src={iconSrc}
               alt=""
               aria-hidden="true"
+              onError={() => setIconFailed(true)}
               className="h-3.5 w-3.5 brightness-0 invert"
             />
           ) : (
@@ -477,7 +480,7 @@ export default function FleetMap({
             </div>
 
             {searchMessage && (
-              <div className="absolute left-3 top-16 z-10 max-w-sm rounded-lg bg-white px-3 py-2 text-xs text-gray-600 shadow-lg ring-1 ring-black/5">
+              <div className="absolute left-3 top-28 z-10 max-w-sm rounded-lg bg-white px-3 py-2 text-xs text-gray-600 shadow-lg ring-1 ring-black/5 sm:top-16">
                 {searchMessage}
               </div>
             )}
@@ -487,8 +490,10 @@ export default function FleetMap({
                 the app's styling. Anchored top-right, below the search/layer
                 bar, rather than bottom-right — mapOverlay (e.g. the admin
                 page's "set starting point" sheet) can occupy the full bottom
-                edge, which would otherwise cover them. */}
-            <div className="absolute right-3 top-16 z-10 flex flex-col gap-2">
+                edge, which would otherwise cover them. Offset is taller
+                below the sm breakpoint, where the search/layer bar above
+                wraps onto two rows instead of one. */}
+            <div className="absolute right-3 top-28 z-10 flex flex-col gap-2 sm:top-16">
               <button
                 onClick={handleRecenter}
                 title="Recenter on fleet"
