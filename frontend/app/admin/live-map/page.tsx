@@ -6,7 +6,6 @@ import { apiRequest } from "../../lib/api";
 import { findContainingGeofence } from "../../lib/geofence";
 import { CompanyRecord, GeofenceRecord } from "../../types/auth";
 import StartPointPanel from "../../components/StartPointPanel";
-import { usePageHeader } from "../../components/DashboardShell";
 
 const FleetMap = dynamic(() => import("../../components/FleetMap"), { ssr: false });
 
@@ -60,8 +59,6 @@ export default function AdminLiveMapPage() {
       setSaving(false);
     }
   }
-
-  usePageHeader("Live Map", "Real-time location of every vehicle in your fleet");
 
   return (
     <div>
