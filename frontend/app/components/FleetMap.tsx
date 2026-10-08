@@ -220,10 +220,24 @@ export default function FleetMap({
 
   const withLocation = vehicles.filter((v) => v.lastLocation);
   const visibleVehicles = withLocation;
-  const center =
-    visibleVehicles.length > 0
-      ? { lat: visibleVehicles[0].lastLocation!.latitude, lng: visibleVehicles[0].lastLocation!.longitude }
-      : defaultCenter;
+
+  // The map's center is only ever set here once, the first time a vehicle's
+  // location arrives — NOT recomputed from `vehicles` on every render. It
+  // used to be recalculated from visibleVehicles[0] every render, and since
+  // that's a controlled GoogleMap prop, every 10s poll (or any other
+  // re-render) silently snapped the map back to that one vehicle, fighting
+  // any dragging/zooming the user had just done. The "Recenter on fleet"
+  // button already handles manual re-centering imperatively via mapRef.
+  const [mapCenter, setMapCenter] = useState<LatLng>(defaultCenter);
+  const hasCenteredRef = useRef(false);
+  useEffect(() => {
+    if (hasCenteredRef.current) return;
+    const first = vehicles.find((v) => v.lastLocation);
+    if (first) {
+      setMapCenter({ lat: first.lastLocation!.latitude, lng: first.lastLocation!.longitude });
+      hasCenteredRef.current = true;
+    }
+  }, [vehicles]);
 
   const counts = {
     total: vehicles.length,
@@ -354,7 +368,7 @@ export default function FleetMap({
           <div className="relative h-[calc(100vh-220px)] min-h-[560px] w-full">
             <GoogleMap
               mapContainerStyle={containerStyle}
-              center={center}
+              center={mapCenter}
               zoom={12}
               onLoad={(map) => {
                 mapRef.current = map;
