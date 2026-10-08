@@ -6,28 +6,49 @@ interface ApiRequestOptions extends RequestInit {
   headers?: Record<string, string>;
 }
 
+// Refresh tokens are single-use and rotate on every call. Pages here fire
+// several API calls in parallel (e.g. the dashboards' Promise.all loads), so
+// if the access token happens to expire right as a batch fires, every one of
+// those calls would hit a 401 at the same moment — and without this dedup,
+// each would independently redeem the SAME still-valid refresh token. The
+// first succeeds and rotates it; every other concurrent attempt then arrives
+// with an already-used token, which the server treats as reuse of a revoked
+// token and responds to by revoking the entire session. Sharing one in-flight
+// promise means concurrent callers all await the same single network call
+// and get the same new token, instead of racing each other into a forced
+// logout.
+let refreshPromise: Promise<string | null> | null = null;
+
 async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = localStorage.getItem("refreshToken");
-  if (!refreshToken) return null;
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const refreshToken = localStorage.getItem("refreshToken");
+    if (!refreshToken) return null;
+
+    try {
+      const res = await fetch(`${API_URL}/api/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+      if (!res.ok) return null;
+
+      const data = await res.json();
+      localStorage.setItem("accessToken", data.accessToken);
+      if (data.refreshToken) {
+        localStorage.setItem("refreshToken", data.refreshToken);
+      }
+      return data.accessToken;
+    } catch {
+      return null;
+    }
+  })();
 
   try {
-    const res = await fetch(`${API_URL}/api/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken }),
-    });
-    if (!res.ok) return null;
-
-    const data = await res.json();
-    localStorage.setItem("accessToken", data.accessToken);
-    // Refresh tokens rotate on every use — the old one is now invalid, so the
-    // new one must replace it or the next refresh will fail.
-    if (data.refreshToken) {
-      localStorage.setItem("refreshToken", data.refreshToken);
-    }
-    return data.accessToken;
-  } catch {
-    return null;
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
   }
 }
 
