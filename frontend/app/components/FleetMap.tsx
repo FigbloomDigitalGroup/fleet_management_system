@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GoogleMap, OverlayView, Circle, Polyline, useJsApiLoader } from "@react-google-maps/api";
 import { IoCarSportSharp } from "react-icons/io5";
@@ -11,6 +11,7 @@ import { apiRequest } from "../lib/api";
 import { usePulseColor } from "../lib/usePulseColor";
 import { isOutsideGeofences } from "../lib/geofence";
 import { VEHICLE_TYPE_ICONS } from "../lib/vehicleIcons";
+import { usePageHeader } from "./DashboardShell";
 import StatCard from "./StatCard";
 import CircleStat from "./CircleStat";
 import FullPageLoading from "./FullPageLoading";
@@ -163,6 +164,8 @@ export default function FleetMap({
   pickedStartPoint = null,
   onPickStartPoint,
   mapOverlay,
+  title = "Live Map",
+  subtitle = "Real-time location of every vehicle in your fleet",
 }: {
   basePath?: string;
   pickMode?: boolean;
@@ -170,6 +173,8 @@ export default function FleetMap({
   pickedStartPoint?: LatLng | null;
   onPickStartPoint?: (point: LatLng) => void;
   mapOverlay?: ReactNode;
+  title?: string;
+  subtitle?: string;
 }) {
   const router = useRouter();
 
@@ -226,6 +231,24 @@ export default function FleetMap({
     idle: vehicles.filter((v) => v.status === "idle").length,
     offline: vehicles.filter((v) => v.status === "offline").length,
   };
+
+  // Puts the vehicle-count cards beside the hero banner (squeezing it down
+  // to the same width, same row) instead of in their own column next to the
+  // map — frees the map up to use the page's full width below, instead of
+  // sharing it with a stats sidebar. Memoized so usePageHeader's effect
+  // (keyed on this node's identity) doesn't fire every render.
+  const statsNode = useMemo(
+    () => (
+      <div className="grid grid-cols-2 gap-3 h-full">
+        <StatCard label="Total vehicles" value={counts.total} accent="green" />
+        <StatCard label="Active" value={counts.active} accent="green" />
+        <StatCard label="Idle" value={counts.idle} accent="orange" />
+        <StatCard label="Offline" value={counts.offline} accent="orange" />
+      </div>
+    ),
+    [counts.total, counts.active, counts.idle, counts.offline]
+  );
+  usePageHeader(title, subtitle, statsNode);
 
   const reportingPct = counts.total ? Math.round((withLocation.length / counts.total) * 100) : 0;
 
@@ -323,10 +346,11 @@ export default function FleetMap({
   if (loading || !isLoaded) return <FullPageLoading label="Loading map" />;
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4">
-      {/* Map — takes the big central space */}
-      <div className="flex-1 min-w-0">
-        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden mb-3">
+    <div>
+      {/* The map now uses the page's full width — the vehicle-count cards
+          that used to sit in a column beside it moved up into the hero
+          banner row instead (see statsNode / usePageHeader above). */}
+      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden mb-3">
           <div className="relative h-[calc(100vh-220px)] min-h-[560px] w-full">
             <GoogleMap
               mapContainerStyle={containerStyle}
@@ -590,15 +614,6 @@ export default function FleetMap({
             light
           />
         </div>
-      </div>
-
-      {/* Stat cards — stacked in a column on the right */}
-      <div className="flex flex-col gap-4 lg:w-72 xl:w-80 lg:flex-shrink-0">
-        <StatCard label="Total vehicles" value={counts.total} accent="green" />
-        <StatCard label="Active" value={counts.active} accent="green" />
-        <StatCard label="Idle" value={counts.idle} accent="orange" />
-        <StatCard label="Offline" value={counts.offline} accent="orange" />
-      </div>
     </div>
   );
 }
