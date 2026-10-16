@@ -1,0 +1,14 @@
+services:
+  backend:
+    build: .
+    container_name: fleet-backend-container
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

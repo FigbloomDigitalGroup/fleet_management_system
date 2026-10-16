@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "../../lib/api";
 import { VehicleRecord } from "../../types/auth";
+import { usePageHeader } from "../../components/DashboardShell";
 
 interface PingLog {
   time: string;
@@ -101,22 +102,20 @@ export default function LiveTrackerPage() {
     };
   }, []);
 
+  usePageHeader(
+    "Live Tracker",
+    "Uses your phone's real GPS to send live location pings — open this page on your phone's browser."
+  );
+
   return (
     <div className="max-w-xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Live Tracker</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Uses your phone's real GPS to send live location pings — open this page on your phone's browser.
-        </p>
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-lg p-5 mb-6">
+      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 mb-6">
         <label className="block text-xs font-medium text-gray-600 mb-1">Vehicle</label>
         <select
           value={vehicleId}
           onChange={(e) => setVehicleId(e.target.value)}
           disabled={isTracking}
-          className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-green-400 mb-4"
+          className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400 mb-4"
         >
           {vehicles.map((v) => (
             <option key={v._id} value={v._id}>
@@ -145,14 +144,14 @@ export default function LiveTrackerPage() {
 
         {isTracking && currentPosition && (
           <div className="mt-4 text-sm text-gray-600 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
             Sending live location — {currentPosition.speedKph} km/h
           </div>
         )}
       </div>
 
       {logs.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
           <p className="text-xs font-medium text-gray-500 p-4 pb-0">Recent pings</p>
           <table className="w-full text-sm mt-2">
             <tbody>
@@ -165,11 +164,10 @@ export default function LiveTrackerPage() {
                   <td className="px-4 py-2 text-gray-600">{log.speedKph} km/h</td>
                   <td className="px-4 py-2">
                     <span
-                      className={`text-xs px-2 py-1 rounded-full border ${
-                        log.status === "ok"
-                          ? "bg-green-50 text-green-600 border-green-200"
+                      className={`text-xs px-2 py-1 rounded-full border ${log.status === "ok"
+                          ? "bg-teal-50 text-teal-600 border-teal-200"
                           : "bg-red-50 text-red-600 border-red-200"
-                      }`}
+                        }`}
                     >
                       {log.status}
                     </span>

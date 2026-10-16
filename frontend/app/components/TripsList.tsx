@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { FaRoute } from "react-icons/fa";
 import { apiRequest } from "../lib/api";
 import { TripRecord } from "../types/auth";
-import FullPageLoading from "./FullPageLoading";
+import { estimateFuelRangeLiters } from "../lib/routeEstimate";
+import Skeleton from "./Skeleton";
+import WheelIcon from "./WheelIcon";
 
 export default function TripsList({ basePath = "/admin/trips" }: { basePath?: string }) {
   const [trips, setTrips] = useState<TripRecord[]>([]);
@@ -18,12 +21,16 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <FullPageLoading label="Loading trips" />;
-  if (error) return <p className="text-sm text-red-600">{error}</p>;
-
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <table className="w-full text-sm">
+    <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+      {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
+      {error && <p className="text-sm text-red-600 p-5">{error}</p>}
+      {!loading && !error && (
+        <>
+      <p className="text-xs text-teal-600 px-5 pt-4">
+        Every recorded trip, most recent first — tap a vehicle to see its full route.
+      </p>
+      <table className="w-full text-sm mt-2">
         <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
           <tr>
             <th className="text-left px-5 py-3 font-medium">Vehicle</th>
@@ -31,42 +38,69 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
             <th className="text-left px-5 py-3 font-medium">Start</th>
             <th className="text-left px-5 py-3 font-medium">Status</th>
             <th className="text-left px-5 py-3 font-medium">Distance</th>
+            <th className="text-left px-5 py-3 font-medium">Mileage</th>
+            <th className="text-left px-5 py-3 font-medium">Replay</th>
           </tr>
         </thead>
         <tbody>
           {trips.length === 0 ? (
             <tr>
-              <td colSpan={5} className="px-5 py-8 text-center text-gray-400">
+              <td colSpan={7} className="px-5 py-8 text-center text-gray-400">
                 No trips recorded yet.
               </td>
             </tr>
           ) : (
-            trips.map((t) => (
-              <tr key={t._id} className="border-t border-gray-100">
-                <td className="px-5 py-3 font-medium text-green-600 hover:underline">
-                  <Link href={`${basePath}/${t._id}`}>{t.vehicleId?.plateNumber || "View trip"}</Link>
-                </td>
-                <td className="px-5 py-3 text-gray-600">{t.driverId?.fullName || "Unassigned"}</td>
-                <td className="px-5 py-3 text-gray-600">{new Date(t.startTime).toLocaleString()}</td>
-                <td className="px-5 py-3">
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full border ${
-                      t.endTime
+            trips.map((t) => {
+              // Only compute an estimate when the vehicle's real mileage is
+              // known — falling back to a default consumption rate here
+              // would present a guess as if it were measured.
+              const fuelEstimate =
+                t.distanceKm && t.vehicleId?.avgConsumptionLPer100Km != null
+                  ? estimateFuelRangeLiters(t.distanceKm, t.vehicleId.avgConsumptionLPer100Km)
+                  : null;
+              return (
+                <tr key={t._id} className="border-t border-gray-100">
+                  <td className="px-5 py-3 text-xs font-bold text-teal-600">
+                    <Link href={`${basePath}/${t._id}`} className="inline-flex items-center gap-2 hover:underline">
+                      <WheelIcon size={16} className="spin-slow shrink-0" />
+                      {t.vehicleId?.plateNumber || "View trip"}
+                    </Link>
+                  </td>
+                  <td className="px-5 py-3 text-gray-600">{t.driverId?.fullName || "Unassigned"}</td>
+                  <td className="px-5 py-3 text-gray-600">{new Date(t.startTime).toLocaleString()}</td>
+                  <td className="px-5 py-3">
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full border ${t.endTime
                         ? "bg-gray-100 text-gray-500 border-gray-200"
-                        : "bg-green-50 text-green-600 border-green-200"
-                    }`}
-                  >
-                    {t.endTime ? "completed" : "in progress"}
-                  </span>
-                </td>
-                <td className="px-5 py-3 text-gray-600">
-                  {t.distanceKm ? `${t.distanceKm.toFixed(1)} km` : "—"}
-                </td>
-              </tr>
-            ))
+                        : "bg-teal-50 text-teal-600 border-teal-200"
+                        }`}
+                    >
+                      {t.endTime ? "completed" : "in progress"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 text-gray-600">
+                    {t.distanceKm ? `${t.distanceKm.toFixed(1)} km` : "—"}
+                  </td>
+                  <td className="px-5 py-3 text-gray-600">
+                    {fuelEstimate ? `${fuelEstimate.min.toFixed(1)}–${fuelEstimate.max.toFixed(1)} L` : "—"}
+                  </td>
+                  <td className="px-5 py-3">
+                    <Link
+                      href={`${basePath}/${t._id}`}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-teal-600 hover:text-teal-700 hover:underline"
+                    >
+                      <FaRoute size={12} />
+                      Click to view trip replay
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>
+        </>
+      )}
     </div>
   );
 }

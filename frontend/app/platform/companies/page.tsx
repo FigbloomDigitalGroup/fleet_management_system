@@ -5,9 +5,11 @@ import Link from "next/link";
 import { apiRequest } from "../../lib/api";
 import { CompanyRecord } from "../../types/auth";
 import Skeleton from "../../components/Skeleton";
+import { usePageHeader } from "../../components/DashboardShell";
+import { industryLabel } from "../../lib/industries";
 
 const statusStyles: Record<string, string> = {
-  active: "bg-green-50 text-green-600 border-green-200",
+  active: "bg-teal-50 text-teal-600 border-teal-200",
   pending: "bg-orange-50 text-orange-600 border-orange-200",
   suspended: "bg-gray-100 text-gray-500 border-gray-200",
 };
@@ -31,13 +33,10 @@ export default function CompaniesPage() {
     load();
   }, []);
 
+  usePageHeader("Companies", "Every vehicle company registered on the platform");
+
   return (
     <div>
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-blue-950">Companies</h1>
-        <p className="text-sm text-gray-500 mt-1">Every vehicle company registered on the platform</p>
-      </div>
-
       {loading && <Skeleton rows={5} rowClassName="h-12" />}
 
       {error && (
@@ -47,13 +46,14 @@ export default function CompaniesPage() {
       )}
 
       {!loading && !error && (
-        <div className="bg-white rounded-lg overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
               <tr>
                 <th className="text-left px-5 py-3 font-medium">Company</th>
                 <th className="text-left px-5 py-3 font-medium">Status</th>
                 <th className="text-left px-5 py-3 font-medium">Plan</th>
+                <th className="text-left px-5 py-3 font-medium">Industry</th>
                 <th className="text-left px-5 py-3 font-medium">Users</th>
                 <th className="text-left px-5 py-3 font-medium">Registered</th>
               </tr>
@@ -61,7 +61,7 @@ export default function CompaniesPage() {
             <tbody>
               {companies.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-gray-400">
+                  <td colSpan={6} className="px-5 py-8 text-center text-gray-400">
                     No companies registered yet.
                   </td>
                 </tr>
@@ -82,6 +82,7 @@ export default function CompaniesPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3 text-gray-600">{c.subscriptionPlan}</td>
+                    <td className="px-5 py-3 text-gray-600">{industryLabel(c.industry)}</td>
                     <td className="px-5 py-3 text-gray-600">{c.userCount ?? "-"}</td>
                     <td className="px-5 py-3 text-gray-500">
                       {new Date(c.createdAt).toLocaleDateString()}

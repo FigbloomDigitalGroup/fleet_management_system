@@ -20,8 +20,58 @@ export interface CompanyRecord {
   slug: string;
   status: "active" | "suspended" | "pending";
   subscriptionPlan: string;
+  paymentMethod?: "mpesa" | "paystack" | null;
+  totalRevenue?: number;
+  industry?: string;
   createdAt: string;
   userCount?: number;
+  dailyStartPoint?: {
+    lat: number;
+    lng: number;
+    geofenceId?: string;
+    updatedAt?: string;
+  } | null;
+}
+
+export interface TransactionRecord {
+  _id: string;
+  companyId: { _id: string; name: string } | string;
+  plan: "basic" | "pro";
+  reference: string;
+  amount: number;
+  currency: string;
+  status: "pending" | "success" | "failed" | "abandoned";
+  channel: "card" | "mobile_money" | null;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+export interface ExpenseRecord {
+  _id: string;
+  companyId: string;
+  vehicleId: { _id: string; plateNumber: string } | string;
+  driverId: { _id: string; fullName: string } | string | null;
+  category: "fuel" | "toll" | "parking" | "repair" | "other";
+  amount: number;
+  note: string | null;
+  incurredAt: string;
+  createdAt: string;
+}
+
+export interface CompanyStats {
+  totalDistanceKm: number;
+  totalFuelConsumedLiters: number;
+  estimatedExpenses: number | null;
+  totalRevenue: number;
+  vehicleCount: number;
+  vehicleTypeBreakdown?: Record<string, number>;
+  monthsSinceJoining: number;
+}
+
+export interface DailyStatPoint {
+  date: string;
+  distanceKm: number;
+  fuelConsumedLiters: number;
 }
 
 export interface AdminRecord {
@@ -39,8 +89,11 @@ export interface VehicleRecord {
   make?: string;
   model?: string;
   deviceId?: string;
+  vehicleType?: string;
   status: "active" | "idle" | "offline" | "maintenance";
   driverId?: { _id: string; fullName: string; email: string } | null;
+  startGeofenceId?: { _id: string; name: string } | null;
+  avgConsumptionLPer100Km?: number;
   createdAt: string;
 }
 
@@ -50,11 +103,19 @@ export interface DriverRecord {
   email: string;
   status: string;
   createdAt: string;
+  phone?: string | null;
+  dob?: string | null;
+  nationalId?: string | null;
+  address?: string | null;
+  licenseNumber?: string | null;
+  licenseExpiry?: string | null;
+  emergencyName?: string | null;
+  emergencyPhone?: string | null;
 }
 
 export interface TripRecord {
   _id: string;
-  vehicleId: { _id: string; plateNumber: string } | null;
+  vehicleId: { _id: string; plateNumber: string; avgConsumptionLPer100Km?: number } | null;
   driverId: { _id: string; fullName: string } | null;
   startTime: string;
   endTime?: string;
@@ -71,5 +132,73 @@ export interface AlertRecord {
 }
 
 
+export interface RouteRecord {
+  _id: string;
+  vehicleId: { _id: string; plateNumber: string } | string;
+  name: string;
+  waypoints: { lat: number; lng: number }[];
+  toleranceMeters: number;
+  speedLimitKph: number | null;
+  active: boolean;
+  frequency: "daily" | "weekly";
+  daysOfWeek: number[];
+  source: "manual" | "ai";
+  scheduledToday: boolean;
+  completedToday: boolean;
+  completedAt: string | null;
+  createdAt: string;
+}
 
+export interface GeofenceRecord {
+  _id: string;
+  name: string;
+  type: "circle" | "polygon";
+  centerLat?: number;
+  centerLng?: number;
+  radiusM?: number;
+  polygon?: { lat: number; lng: number }[];
+  createdAt: string;
+}
+
+export interface AgentScanDetail {
+  vehicleId: string;
+  plateNumber: string;
+  anomaly: boolean;
+  reason: string;
+}
+
+export interface AgentScanLogRecord {
+  _id: string;
+  runAt: string;
+  vehiclesScanned: number;
+  anomaliesFound: number;
+  status: "success" | "failed";
+  errorMessage: string | null;
+  details: AgentScanDetail[];
+}
+
+export interface AgentFinding {
+  runAt: string;
+  vehicleId: string;
+  plateNumber: string;
+  anomaly: boolean;
+  reason: string;
+}
+
+export interface AgentDailyActivity {
+  date: string;
+  label: string;
+  vehicleChecks: number;
+  anomalies: number;
+}
+
+export interface AgentSummary {
+  lastScanAt: string | null;
+  lastScanStatus: "success" | "failed" | null;
+  scansCoveringFleet: number;
+  vehicleChecksLogged: number;
+  anomaliesFound: number;
+  recentFindings: AgentFinding[];
+  dailyActivity: AgentDailyActivity[];
+}
 

@@ -2,13 +2,52 @@
 
 @theme {
     --color-blue-950: oklch(25.7% 0.09 281.288);
+
+    /* Teal (the app's "green-blue" brand/accent color) and orange, both
+       dimmed a bit site-wide — mixed slightly toward a neutral gray rather
+       than hand-tuned per shade, so the whole scale stays visually coherent.
+       The sidebar is explicitly exempted below, restoring these same shades
+       to their original Tailwind values scoped to `aside`. */
+    --color-teal-50: color-mix(in oklch, oklch(98.4% 0.014 180.72) 88%, #6b7280 12%);
+    --color-teal-100: color-mix(in oklch, oklch(95.3% 0.051 180.801) 88%, #6b7280 12%);
+    --color-teal-200: color-mix(in oklch, oklch(91% 0.096 180.426) 88%, #6b7280 12%);
+    --color-teal-300: color-mix(in oklch, oklch(85.5% 0.138 181.071) 88%, #6b7280 12%);
+    --color-teal-400: color-mix(in oklch, oklch(77.7% 0.152 181.912) 88%, #6b7280 12%);
+    --color-teal-500: color-mix(in oklch, oklch(70.4% 0.14 182.503) 88%, #6b7280 12%);
+    --color-teal-600: color-mix(in oklch, oklch(60% 0.118 184.704) 88%, #6b7280 12%);
+    --color-teal-700: color-mix(in oklch, oklch(51.1% 0.096 186.391) 88%, #6b7280 12%);
+    --color-teal-800: color-mix(in oklch, oklch(43.7% 0.078 188.216) 88%, #6b7280 12%);
+    --color-teal-900: color-mix(in oklch, oklch(38.6% 0.063 188.416) 88%, #6b7280 12%);
+    --color-teal-950: color-mix(in oklch, oklch(27.7% 0.046 192.524) 88%, #6b7280 12%);
+
+    --color-orange-50: color-mix(in oklch, oklch(98% 0.016 73.684) 88%, #6b7280 12%);
+    --color-orange-100: color-mix(in oklch, oklch(95.4% 0.038 75.164) 88%, #6b7280 12%);
+    --color-orange-200: color-mix(in oklch, oklch(90.1% 0.076 70.697) 88%, #6b7280 12%);
+    --color-orange-300: color-mix(in oklch, oklch(83.7% 0.128 66.29) 88%, #6b7280 12%);
+    --color-orange-400: color-mix(in oklch, oklch(75% 0.183 55.934) 88%, #6b7280 12%);
+    --color-orange-500: color-mix(in oklch, oklch(70.5% 0.213 47.604) 88%, #6b7280 12%);
+    --color-orange-600: color-mix(in oklch, oklch(64.6% 0.222 41.116) 88%, #6b7280 12%);
+    --color-orange-700: color-mix(in oklch, oklch(55.3% 0.195 38.402) 88%, #6b7280 12%);
+    --color-orange-800: color-mix(in oklch, oklch(47% 0.157 37.304) 88%, #6b7280 12%);
+    --color-orange-900: color-mix(in oklch, oklch(40.8% 0.123 38.172) 88%, #6b7280 12%);
+    --color-orange-950: color-mix(in oklch, oklch(26.6% 0.079 36.259) 88%, #6b7280 12%);
+}
+
+/* The sidebar is explicitly excluded from the dimmed teal above — restore
+   the exact shades it uses (background, active/hover nav state, the "AI
+   Agent" ping ring) to their original, undimmed values. CSS variables
+   inherit down the DOM, so redeclaring them here is enough to cover every
+   element inside the sidebar without touching DashboardShell.tsx itself. */
+aside {
+    --color-teal-950: oklch(27.7% 0.046 192.524);
+    --color-teal-900: oklch(38.6% 0.063 188.416);
+    --color-teal-400: oklch(77.7% 0.152 181.912);
 }
 
 
 
 body {
     font-family: var(--font-body), sans-serif;
-    
 }
 
 input,
@@ -23,12 +62,164 @@ textarea::placeholder {
     opacity: 1;
 }
 
+/* Edge (Chromium) bakes its own eye icon into password fields — it sits
+   right where our own PasswordInput toggle button is, so without this the
+   two overlap. Our button already provides the same show/hide behavior. */
+input::-ms-reveal,
+input::-ms-clear {
+    display: none;
+}
+
+/*
+ * Site-wide card treatment. Every card in the app uses this exact
+ * `rounded-lg ... shadow-sm ring-1 ring-black/5` combo (verified: every
+ * card's `rounded-lg` pairs with `ring-black/5`, nothing
+ * else uses that pairing) — so restyling it here reskins every card on
+ * every page at once, without touching dozens of individual files.
+ * Borderless — a soft, understated shadow gives it depth instead.
+ */
+.rounded-lg.ring-black\/5 {
+    border-radius: 0.75rem;
+    border: 1px solid #eef0f3;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+/* Clean white cards sitting on the light grey page background (see
+   DashboardShell's <main>) — cards with an intentional accent color (e.g.
+   StatCard's `background` prop) keep it. */
+.rounded-lg.ring-black\/5.bg-white {
+    background-color: #ffffff;
+}
+
+/*
+ * Portal-wide look (scoped to `.app-content`, DashboardShell's <main>, so
+ * the landing/login pages keep their own style). Every page repeats the same
+ * handful of class combos for card titles, tables, inputs and buttons, so
+ * restyling those combos here updates every page the same way without
+ * touching each file. Unlayered CSS outranks Tailwind's utility layer.
+ */
+
+/* Card titles — dark semibold, like the reference dashboard */
+.app-content h2.text-sm.font-medium.text-gray-700,
+.app-content h3.text-sm.font-medium.text-gray-700,
+.app-content h3.text-sm.font-bold.text-blue-950 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+}
+
+/* Section headings that sit above a card */
+.app-content h2.text-base.font-semibold.text-gray-900 {
+    font-size: 15px;
+    color: #111827;
+}
+
+/* Tables — quiet header row, hairline row dividers, soft hover */
+.app-content table thead {
+    background-color: #f9fafb;
+    border-bottom: 1px solid #eef0f3;
+}
+
+.app-content table thead th {
+    color: #6b7280;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.app-content table tbody tr {
+    border-color: #f1f3f5;
+    transition: background-color 0.15s;
+}
+
+.app-content table tbody tr:hover {
+    background-color: #fafbfc;
+}
+
+/* Square-cornered controls get the same softer radius as the cards */
+.app-content .rounded {
+    border-radius: 0.5rem;
+}
+
+/* Inputs, selects and textareas — lighter border, teal focus kept */
+.app-content input.border-gray-300,
+.app-content select.border-gray-300,
+.app-content textarea.border-gray-300 {
+    border-color: #e5e7eb;
+    background-color: #ffffff;
+}
+
+.app-content input.border-gray-300:focus,
+.app-content select.border-gray-300:focus,
+.app-content textarea.border-gray-300:focus {
+    border-color: var(--color-teal-600);
+}
+
+/*
+ * Tighter spacing rhythm across the dashboard shell (scoped to `main`, the
+ * DashboardShell content area — landing/login/register keep their own
+ * spacious marketing rhythm untouched, since they render outside it).
+ * Only the larger "space between components" utilities are compressed —
+ * grid/section gaps of 1rem and up. Finer spacing (mb-1, mt-0/1/2, gap-2,
+ * label-to-field spacing, etc.) is left alone since it's already tight.
+ */
+main .gap-6 {
+    gap: 1rem;
+}
+
+main .gap-4 {
+    gap: 0.75rem;
+}
+
+main .mb-8 {
+    margin-bottom: 1.25rem;
+}
+
+main .mb-6 {
+    margin-bottom: 1rem;
+}
+
+main .mb-4 {
+    margin-bottom: 0.75rem;
+}
+
+main .mt-6 {
+    margin-top: 1rem;
+}
+
+main .mt-4 {
+    margin-top: 0.75rem;
+}
+
+main .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 1rem;
+}
+
+main .space-y-5 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.875rem;
+}
+
+main .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.75rem;
+}
+
 .font-display {
-    font-family: var(--font-display), sans-serif;
+    font-family: var(--font-body), sans-serif;
 }
 
 .font-mono {
     font-family: var(--font-mono), monospace;
+}
+
+/*
+ * Figures — numbers people act on (stat values, ring percentages, ops
+ * figures, chart axes) use the system font (Inter) with same-width digits,
+ * so live counts don't jiggle on refresh and columns of numbers line up.
+ */
+.font-figures,
+.recharts-cartesian-axis-tick-value,
+.recharts-tooltip-wrapper {
+    font-variant-numeric: tabular-nums;
 }
 
 .landing-section {
@@ -102,4 +293,147 @@ textarea::placeholder {
   padding:5px;
 }
 
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
 
+.spin-slow {
+  animation: spin-slow 9s linear infinite;
+  transform-origin: 50% 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin-slow {
+    animation: none;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-toast-in {
+  animation: toast-in 0.25s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-toast-in {
+    animation: none;
+  }
+}
+
+@keyframes hint-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-hint-in {
+  animation: hint-in 0.25s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hint-in {
+    animation: none;
+  }
+}
+
+@keyframes panel-up {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-panel-up {
+  animation: panel-up 0.3s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-panel-up {
+    animation: none;
+  }
+}
+
+@keyframes shake {
+  0%, 14%, 100% { transform: translateX(0) rotate(0); }
+  2% { transform: translateX(-3px) rotate(-4deg); }
+  4% { transform: translateX(3px) rotate(4deg); }
+  6% { transform: translateX(-3px) rotate(-4deg); }
+  8% { transform: translateX(3px) rotate(4deg); }
+  10% { transform: translateX(-2px) rotate(-2deg); }
+  12% { transform: translateX(2px) rotate(2deg); }
+}
+
+.animate-shake {
+  animation: shake 4s ease-in-out infinite;
+  transform-origin: 50% 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-shake {
+    animation: none;
+  }
+}
+
+/* Shared skeleton-loading shimmer — a soft gray sweep rather than a flat
+   pulse, used by Skeleton.tsx and FullPageLoading.tsx so every loading
+   state in the app reads as one consistent, professional pattern. */
+@keyframes skeleton-shimmer {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
+
+.skeleton-shimmer {
+  background-image: linear-gradient(100deg, #e5e7eb 30%, #f3f4f6 45%, #e5e7eb 60%);
+  background-size: 250% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+    background-image: none;
+    background-color: #e5e7eb;
+  }
+}
+
+
+
+/* Printing (e.g. Reports → Export PDF): landscape so wide tables fit, and
+   keep the coloured badges/backgrounds instead of dropping them. */
+@media print {
+  @page {
+    size: landscape;
+    margin: 12mm;
+  }
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* Scrollable without a visible scrollbar (used by the company sidebar). */
+.no-scrollbar {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* old Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge */
+}

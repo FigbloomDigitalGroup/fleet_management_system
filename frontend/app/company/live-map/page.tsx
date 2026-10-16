@@ -1,17 +1,26 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
+import { apiRequest } from "../../lib/api";
+import { CompanyRecord } from "../../types/auth";
 
 const FleetMap = dynamic(() => import("../../components/FleetMap"), { ssr: false });
 
 export default function CompanyLiveMapPage() {
+  const [company, setCompany] = useState<CompanyRecord | null>(null);
+
+  useEffect(() => {
+    apiRequest<CompanyRecord>("/api/companies/me").then(setCompany).catch(() => {});
+  }, []);
+
   return (
     <div>
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-blue-950">Live Map</h1>
-        <p className="text-sm text-gray-500 mt-1">Real-time overview of your fleet</p>
-      </div>
-      <FleetMap />
+      <FleetMap
+        basePath="/company/vehicles"
+        savedStartPoint={company?.dailyStartPoint ?? null}
+        subtitle="Real-time overview of your fleet"
+      />
     </div>
   );
 }

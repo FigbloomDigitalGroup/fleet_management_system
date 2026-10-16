@@ -4,18 +4,33 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { redirectPathForRole } from "../lib/roleRedirect";
-import { FaCog } from "react-icons/fa";
+import { FaGooglePlay } from "react-icons/fa";
 import BackgroundSlideshow from "../components/BackgroundSlideshow";
+import RobotCheckbox from "../components/RobotCheckbox";
+import BrandIcon from "../components/BrandIcon";
+import PasswordInput from "../components/PasswordInput";
+
+const STEPS = [
+  { n: 1, title: "Register your company", text: "Create your account in minutes and set up your company profile." },
+  { n: 2, title: "Add vehicles & drivers", text: "Register each vehicle, assign a driver, and set up alerts or zones." },
+  { n: 3, title: "Track live, get alerted", text: "Watch your fleet move in real time, and get notified the moment something needs attention." },
+];
+
+const ROLE_OPTIONS: { value: "COMPANY_OWNER" | "ADMIN"; label: string; icon: string }[] = [
+  { value: "COMPANY_OWNER", label: "Company", icon: "/company-role-icon.svg" },
+  { value: "ADMIN", label: "Company Admin", icon: "/admin-role-icon.svg" },
+];
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isHuman, setIsHuman] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<"COMPANY_OWNER" | "ADMIN">("COMPANY_OWNER");
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -24,6 +39,19 @@ export default function LoginPage() {
 
     try {
       const user = await login(email, password);
+
+      // Purely a client-side sanity check — nothing here is sent to the
+      // backend or stored. Only enforced for the two company-side roles the
+      // picker offers; platform admins and drivers sign in unaffected by it.
+      const isCompanyRole = user.role === "COMPANY_OWNER" || user.role === "ADMIN";
+      if (isCompanyRole && user.role !== selectedRole) {
+        logout();
+        const pickedLabel = ROLE_OPTIONS.find((r) => r.value === selectedRole)?.label;
+        setError(`Not authorized — this account isn't a "${pickedLabel}" account.`);
+        setIsSubmitting(false);
+        return;
+      }
+
       router.push(redirectPathForRole(user.role));
     } catch (err: any) {
       setError(err.message || "Unable to sign in. Check your details and try again.");
@@ -37,19 +65,34 @@ export default function LoginPage() {
 
 
       {/* LEFT — Hero panel */}
-      <BackgroundSlideshow className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16 border-r border-gray-200">
+      <BackgroundSlideshow className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16">
         {/* dark overlay so text stays readable over the image */}
         <div className="absolute inset-0 z-10 bg-black/50" />
 
         {/* wrap all existing content in a relative div so it sits above the overlay */}
         <div className="relative z-20 flex flex-col justify-between h-full">
           <span className="flex items-center gap-2 text-xl font-bold text-white">
-            <FaCog aria-hidden="true" />
+            <BrandIcon variant="light" className="h-6 w-6" />
             FIGBLOOM FLEET
           </span>
 
-          <div className="flex-1 flex items-center justify-center py-16">
-            {/* ...keep the existing svg exactly as it is... */}
+          <div className="flex-1 flex flex-col justify-center py-16">
+            <span className="text-xs uppercase tracking-wide text-teal-300 font-bold mb-5 block">
+              How it works
+            </span>
+            <div className="space-y-5">
+              {STEPS.map((step) => (
+                <div key={step.n} className="flex gap-4">
+                  <div className="shrink-0 w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center text-sm font-bold">
+                    {step.n}
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold text-sm">{step.title}</h3>
+                    <p className="text-gray-300 text-xs mt-1">{step.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -62,6 +105,20 @@ export default function LoginPage() {
               Live tracking, trip history, and fleet analytics in one place
               for owners, admins and drivers alike.
             </p>
+
+            <div className="mt-5">
+              <p className="text-xs text-gray-300 mb-2">Drivers — get the app</p>
+              <a
+                href="#"
+                className="inline-flex items-center gap-3 bg-black hover:bg-gray-900 text-white px-4 py-2 rounded-xl transition-colors"
+              >
+                <FaGooglePlay size={22} />
+                <span className="text-left">
+                  <span className="block text-[9px] uppercase tracking-wide text-gray-300">Get it on</span>
+                  <span className="block text-sm font-semibold leading-tight">Google Play</span>
+                </span>
+              </a>
+            </div>
           </div>
         </div>
       </BackgroundSlideshow>
@@ -69,10 +126,36 @@ export default function LoginPage() {
       {/* RIGHT — Form panel */}
       <div className="lg:w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-sm">
-          <h2 className="text-5xl font-extrabold text-blue-950 mb-2">Sign in</h2>
+          <h2 className="text-5xl font-extrabold text-teal-950 mb-2">Sign in</h2>
           <p className="text-sm text-gray-500 mb-8">Enter your details to reach your dashboard.</p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Sign in as</label>
+              <div className="grid grid-cols-2 gap-2">
+                {ROLE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setSelectedRole(option.value)}
+                    className={`flex flex-col items-center justify-center gap-2 py-4 rounded-md text-sm font-medium border transition-colors ${
+                      selectedRole === option.value
+                        ? "bg-teal-600 border-teal-600 text-white"
+                        : "bg-white border-gray-300 text-gray-600 hover:border-teal-400"
+                    }`}
+                  >
+                    <img
+                      src={option.icon}
+                      alt=""
+                      aria-hidden="true"
+                      className={`h-10 w-10 shrink-0 ${selectedRole === option.value ? "brightness-0 invert" : ""}`}
+                    />
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
                 Email
@@ -84,35 +167,32 @@ export default function LoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                placeholder="Your email"
+                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  required
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-3.5 py-2.5 pr-16 rounded-md text-sm border border-gray-300 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((s) => !s)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500"
-                >
-                  {showPassword ? "hide" : "show"}
-                </button>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <a href="/forgot-password" className="text-xs text-teal-600 font-medium hover:underline">
+                  Forgot password?
+                </a>
               </div>
+              <PasswordInput
+                id="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Your password"
+                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+              />
             </div>
+
+            <RobotCheckbox checked={isHuman} onChange={setIsHuman} />
 
             {error && (
               <div className="text-sm px-3.5 py-2.5 rounded-md bg-red-50 text-red-600 border border-red-200" role="alert">
@@ -122,7 +202,7 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isHuman}
               className="w-full py-2.5 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
             >
               {isSubmitting ? "Signing in…" : "Sign in"}
@@ -131,7 +211,7 @@ export default function LoginPage() {
 
           <p className="text-sm text-gray-500 mt-8">
             Registering a new company?{" "}
-            <a href="/register" className="text-green-500 font-medium hover:underline">
+            <a href="/register" className="text-teal-500 font-medium hover:underline">
               Set up your account
             </a>
           </p>

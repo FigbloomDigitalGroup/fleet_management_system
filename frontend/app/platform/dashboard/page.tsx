@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { apiRequest } from "../../lib/api";
-import { useAuth } from "../../context/AuthContext";
 import StatCard from "../../components/StatCard";
 import CircleStat from "../../components/CircleStat";
 import BarChartCard from "../../components/BarChartCard";
@@ -26,7 +25,7 @@ interface AnalyticsData {
 }
 
 const statusStyles: Record<string, string> = {
-  active: "bg-green-50 text-green-600 border-green-200",
+  active: "bg-teal-50 text-teal-600 border-teal-200",
   pending: "bg-orange-50 text-orange-600 border-orange-200",
   suspended: "bg-gray-100 text-gray-500 border-gray-200",
 };
@@ -35,38 +34,67 @@ const statusStyles: Record<string, string> = {
 const planStyles: Record<string, string> = {
   trial: "bg-gray-100 text-gray-600 border-gray-200",
   basic: "bg-blue-50 text-blue-600 border-blue-200",
-  pro: "bg-green-50 text-green-600 border-green-200",
+  pro: "bg-teal-50 text-teal-600 border-teal-200",
   enterprise: "bg-orange-50 text-orange-600 border-orange-200",
 };
 
 export default function PlatformDashboard() {
-  const { user } = useAuth();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [companies, setCompanies] = useState<CompanyRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  usePageHeader("Platform overview", `Signed in as ${user?.email}`);
+  const statsNode = useMemo(() => {
+    if (!analytics) return undefined;
+    const { totals } = analytics;
+    return (
+      <div className="grid grid-cols-2 gap-3 h-full">
+        <StatCard label="Total companies" value={totals.totalCompanies} accent="blue" description="Companies registered on the platform" />
+        <StatCard label="Total vehicles" value={totals.totalVehicles} accent="green" description="Vehicles across all companies" />
+        <StatCard label="Total users" value={totals.totalUsers} accent="green" description="Admins and drivers combined" />
+        <StatCard label="Pending approval" value={totals.pendingCompanies} accent="orange" description="Companies awaiting review" />
+      </div>
+    );
+  }, [analytics]);
 
-  useEffect(() => {
-    async function loadAll() {
-      try {
-        const [analyticsData, companyData] = await Promise.all([
-          apiRequest<AnalyticsData>("/api/analytics/platform"),
-          apiRequest<CompanyRecord[]>("/api/companies"),
-        ]);
+  usePageHeader("Platform overview", "Your platform, your network.", statsNode);
+
+  function loadAll() {
+    setLoading(true);
+    Promise.all([
+      apiRequest<AnalyticsData>("/api/analytics/platform"),
+      apiRequest<CompanyRecord[]>("/api/companies"),
+    ])
+      .then(([analyticsData, companyData]) => {
         setAnalytics(analyticsData);
         setCompanies(companyData);
-      } catch (err) {
+        setLoadError(null);
+      })
+      .catch((err) => {
         console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
+        setLoadError(err.message || "Failed to load dashboard data");
+      })
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
     loadAll();
   }, []);
 
   if (loading) return <FullPageLoading label="Loading dashboard" />;
-  if (!analytics) return null;
+  if (loadError || !analytics) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <p className="text-sm text-red-600 mb-4">{loadError || "Failed to load dashboard data."}</p>
+        <button
+          onClick={loadAll}
+          className="rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   const { totals, vehiclesPerCompany, growth } = analytics;
 
@@ -84,23 +112,16 @@ export default function PlatformDashboard() {
 
   return (
     <div>
-      {/* Top stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <StatCard label="Total companies" value={totals.totalCompanies} accent="blue" />
-        <StatCard label="Total vehicles" value={totals.totalVehicles} accent="green" />
-        <StatCard label="Total users" value={totals.totalUsers} accent="green" />
-        <StatCard label="Pending approval" value={totals.pendingCompanies} accent="orange" />
-      </div>
-
       {/* Recently registered companies */}
       <div className="mb-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Recently registered</h2>
-          <Link href="/platform/companies" className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700">
+          <Link href="/platform/companies" className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
             View all
           </Link>
         </div>
-        <div className="bg-white rounded-lg overflow-hidden">
+        <p className="text-xs text-teal-600 mb-3">The 5 most recently signed-up companies</p>
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
           {recentCompanies.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">No companies registered yet.</p>
           ) : (
@@ -146,32 +167,40 @@ export default function PlatformDashboard() {
         <div className="lg:col-span-2">
           <BarChartCard
             title="Vehicles per company"
+            description="How fleet size compares across your companies"
             data={vehiclesPerCompany.map((v) => ({ name: v.name, vehicles: v.count }))}
             dataKey="vehicles"
             color="#ea580c"
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <CircleStat percentage={activeCompanyPct} label="Companies active" color="#16a34a" />
-          <CircleStat percentage={activeVehiclePct} label="Vehicles active" color="#16a34a" />
+          <CircleStat percentage={activeCompanyPct} label="Companies active" color="#0d9488" description="Share of companies in active status" />
+          <CircleStat percentage={activeVehiclePct} label="Vehicles active" color="#0d9488" description="Share of vehicles currently active" />
         </div>
       </div>
 
       {/* Growth chart */}
       <div className="mb-4">
-        <BarChartCard title="New companies — last 6 months" data={growth} dataKey="companies" color="#16a34a" />
+        <BarChartCard
+          title="New companies — last 6 months"
+          description="Sign-ups per month across the platform"
+          data={growth}
+          dataKey="companies"
+          color="#0d9488"
+        />
       </div>
 
       {/* Pending approvals — needs attention */}
       {pendingCompanies.length > 0 && (
         <div className="mb-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-1">
             <h2 className="text-base font-semibold text-gray-900">Needs approval</h2>
-            <Link href="/platform/companies" className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700">
+            <Link href="/platform/companies" className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
               View all
             </Link>
           </div>
-          <div className="bg-white rounded-lg overflow-hidden">
+          <p className="text-xs text-teal-600 mb-3">Companies waiting on a decision, oldest signups included</p>
+          <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
             <table className="w-full text-sm">
               <tbody>
                 {pendingCompanies.map((c) => (

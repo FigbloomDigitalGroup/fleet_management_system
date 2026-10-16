@@ -7,6 +7,7 @@ import { User, LoginResponse } from "../types/auth";
 
 interface RegisterPayload {
   companyName: string;
+  industry?: string;
   ownerName: string;
   email: string;
   password: string;
@@ -46,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login(email: string, password: string): Promise<User> {
     const data = await apiRequest<LoginResponse>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, platform: "web" }),
     });
     persistSession(data);
     return data.user;
@@ -62,6 +63,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function logout() {
+    const refreshToken = localStorage.getItem("refreshToken");
+    if (refreshToken) {
+      // Best-effort — revoke the refresh token server-side so it can't be
+      // replayed later. Sign-out proceeds locally either way.
+      apiRequest("/api/auth/logout", {
+        method: "POST",
+        body: JSON.stringify({ refreshToken }),
+      }).catch(() => {});
+    }
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");

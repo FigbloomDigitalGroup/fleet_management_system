@@ -4,10 +4,15 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { apiRequest } from "../../../lib/api";
 import FullPageLoading from "@/app/components/FullPageLoading";
-import { CompanyRecord, AdminRecord } from "../../../types/auth";
+import { usePageHeader } from "@/app/components/DashboardShell";
+import IndustryBanner from "@/app/components/IndustryBanner";
+import { CompanyRecord, AdminRecord, CompanyStats } from "../../../types/auth";
+import { industryLabel } from "../../../lib/industries";
+import { vehicleTypeLabel } from "../../../lib/vehicleTypes";
+import { formatKes } from "../../../lib/pricing";
 
 const statusStyles: Record<string, string> = {
-  active: "bg-green-50 text-green-600 border-green-200",
+  active: "bg-teal-50 text-teal-600 border-teal-200",
   pending: "bg-orange-50 text-orange-600 border-orange-200",
   suspended: "bg-gray-100 text-gray-500 border-gray-200",
 };
@@ -18,6 +23,7 @@ export default function CompanyDetailPage() {
 
   const [company, setCompany] = useState<CompanyRecord | null>(null);
   const [users, setUsers] = useState<AdminRecord[]>([]);
+  const [stats, setStats] = useState<CompanyStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
@@ -40,6 +46,12 @@ export default function CompanyDetailPage() {
     load();
   }, [id]);
 
+  useEffect(() => {
+    apiRequest<CompanyStats>(`/api/companies/${id}/stats`)
+      .then(setStats)
+      .catch(() => {});
+  }, [id]);
+
   async function updateStatus(status: string) {
     setUpdating(true);
     try {
@@ -55,6 +67,8 @@ export default function CompanyDetailPage() {
     }
   }
 
+  usePageHeader(company?.name ?? "Company", company ? `/${company.slug}` : undefined);
+
   if (loading) return <FullPageLoading />;
   if (error) return <p className="text-sm text-red-600">{error}</p>;
   if (!company) return null;
@@ -68,25 +82,28 @@ export default function CompanyDetailPage() {
         Back to companies
       </button>
 
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-blue-950">{company.name}</h1>
-          <p className="text-sm text-gray-500 mt-1">/{company.slug}</p>
-        </div>
+      <div className="mb-6 flex justify-end">
         <span className={`text-xs px-3 py-1.5 rounded-full border font-medium ${statusStyles[company.status]}`}>
           {company.status}
         </span>
       </div>
 
+      <IndustryBanner industry={company.industry} />
+
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Details + users */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white border border-gray-200 rounded-lg p-5">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Company details</h3>
+          <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+            <h3 className="text-sm font-medium text-gray-700">Company details</h3>
+            <p className="text-xs text-teal-600 mt-0.5 mb-3">Plan, sign-up date, and user count</p>
             <dl className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <dt className="text-gray-500">Subscription plan</dt>
                 <dd className="text-gray-900 font-medium mt-0.5">{company.subscriptionPlan}</dd>
+              </div>
+              <div>
+                <dt className="text-gray-500">Industry</dt>
+                <dd className="text-gray-900 font-medium mt-0.5">{industryLabel(company.industry)}</dd>
               </div>
               <div>
                 <dt className="text-gray-500">Registered</dt>
@@ -101,8 +118,53 @@ export default function CompanyDetailPage() {
             </dl>
           </div>
 
-          <div className="bg-white rounded-lg overflow-hidden">
-            <h3 className="text-sm font-medium text-gray-700 p-5 pb-0">Users</h3>
+          {stats && (
+            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+              <h3 className="text-sm font-medium text-gray-700">Fleet</h3>
+              <p className="text-xs text-teal-600 mt-0.5 mb-3">Vehicles, distance, and money on this company's account</p>
+
+              <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-4">
+                <div>
+                  <dt className="text-gray-500">Vehicles</dt>
+                  <dd className="text-gray-900 font-medium mt-0.5">{stats.vehicleCount}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500">Distance covered</dt>
+                  <dd className="text-gray-900 font-medium mt-0.5">{stats.totalDistanceKm} km</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500">Expenses</dt>
+                  <dd className="text-gray-900 font-medium mt-0.5">
+                    {stats.estimatedExpenses === null ? "Custom plan" : formatKes(stats.estimatedExpenses)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500">Revenue</dt>
+                  <dd className="text-gray-900 font-medium mt-0.5">{formatKes(stats.totalRevenue)}</dd>
+                </div>
+              </dl>
+
+              {stats.vehicleTypeBreakdown && Object.keys(stats.vehicleTypeBreakdown).length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-2">Vehicle types</p>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(stats.vehicleTypeBreakdown).map(([type, count]) => (
+                      <span
+                        key={type}
+                        className="text-xs px-2.5 py-1 rounded-full border bg-blue-50 text-blue-600 border-blue-200"
+                      >
+                        {vehicleTypeLabel(type)} · {count}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+            <h3 className="text-sm font-medium text-gray-700 px-5 pt-5">Users</h3>
+            <p className="text-xs text-teal-600 px-5">Admins and drivers on this company's account</p>
             <table className="w-full text-sm mt-3">
               <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
                 <tr>
@@ -133,13 +195,14 @@ export default function CompanyDetailPage() {
         </div>
 
         {/* Status controls */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 h-fit">
-          <h3 className="text-sm font-medium text-gray-700 mb-4">Manage status</h3>
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 h-fit">
+          <h3 className="text-sm font-medium text-gray-700">Manage status</h3>
+          <p className="text-xs text-teal-600 mt-0.5 mb-4">Controls whether this company can access the platform</p>
           <div className="space-y-2">
             <button
               onClick={() => updateStatus("active")}
               disabled={updating || company.status === "active"}
-              className="w-full py-2 rounded-md text-sm font-medium text-white bg-green-500 hover:bg-green-600 disabled:opacity-40"
+              className="w-full py-2 rounded-md text-sm font-medium text-white bg-teal-500 hover:bg-teal-600 disabled:opacity-40"
             >
               Approve / Activate
             </button>
