@@ -5,6 +5,12 @@ import { answerFleetQuestion } from "../services/fleetAssistant.js";
 import { looksLikeRouteRequest, tryHandleRouteRequest } from "../services/routeAssistant.js";
 import { looksLikeGeofenceRequest, tryHandleGeofenceRequest } from "../services/geofenceAssistant.js";
 
+// Scans are bucketed by the fleet's own calendar day (Africa/Nairobi), not
+// the server's — otherwise anything that runs in the first few hours after
+// midnight Nairobi time still falls on the previous UTC date and gets
+// charted under "yesterday" even though it happened today for the fleet.
+const dayKeyNairobi = (date) => date.toLocaleDateString("en-CA", { timeZone: "Africa/Nairobi" });
+
 export async function listScans(req, res) {
   try {
     const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
@@ -49,7 +55,7 @@ export async function getAgentSummary(req, res) {
       scansCoveringFleet += 1;
       vehicleChecksLogged += relevant.length;
 
-      const dayKey = scan.runAt.toISOString().slice(0, 10);
+      const dayKey = dayKeyNairobi(scan.runAt);
       const bucket = dailyBuckets.get(dayKey) || { vehicleChecks: 0, anomalies: 0 };
       bucket.vehicleChecks += relevant.length;
 
@@ -78,11 +84,11 @@ export async function getAgentSummary(req, res) {
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const dayKey = d.toISOString().slice(0, 10);
+      const dayKey = dayKeyNairobi(d);
       const bucket = dailyBuckets.get(dayKey) || { vehicleChecks: 0, anomalies: 0 };
       dailyActivity.push({
         date: dayKey,
-        label: d.toLocaleDateString(undefined, { weekday: "short" }),
+        label: d.toLocaleDateString(undefined, { weekday: "short", timeZone: "Africa/Nairobi" }),
         vehicleChecks: bucket.vehicleChecks,
         anomalies: bucket.anomalies,
       });
