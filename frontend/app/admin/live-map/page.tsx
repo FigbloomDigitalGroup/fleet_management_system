@@ -6,6 +6,7 @@ import { apiRequest } from "../../lib/api";
 import { findContainingGeofence } from "../../lib/geofence";
 import { CompanyRecord, GeofenceRecord } from "../../types/auth";
 import StartPointPanel from "../../components/StartPointPanel";
+import { useAdminAccess } from "../../lib/adminAccess";
 
 const FleetMap = dynamic(() => import("../../components/FleetMap"), { ssr: false });
 
@@ -15,6 +16,7 @@ interface LatLng {
 }
 
 export default function AdminLiveMapPage() {
+  const { canManageFleet } = useAdminAccess();
   const [company, setCompany] = useState<CompanyRecord | null>(null);
   const [geofences, setGeofences] = useState<GeofenceRecord[]>([]);
   // Only auto-opens the first time we learn there's no starting point set
@@ -63,7 +65,7 @@ export default function AdminLiveMapPage() {
   return (
     <div>
       <FleetMap
-        pickMode={panelOpen}
+        pickMode={canManageFleet && panelOpen}
         savedStartPoint={savedPoint}
         pickedStartPoint={pickedPoint}
         onPickStartPoint={(point) => {
@@ -71,6 +73,8 @@ export default function AdminLiveMapPage() {
           setError(null);
         }}
         mapOverlay={
+          // The start point is a company setting — limited admins can't change it.
+          canManageFleet && (
           <StartPointPanel
             open={panelOpen}
             pickedPoint={pickedPoint}
@@ -82,6 +86,7 @@ export default function AdminLiveMapPage() {
             saving={saving}
             error={error}
           />
+          )
         }
       />
     </div>
