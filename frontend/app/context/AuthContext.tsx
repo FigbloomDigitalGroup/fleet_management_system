@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login(email: string, password: string): Promise<User> {
     const data = await apiRequest<LoginResponse>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, platform: "web" }),
     });
     persistSession(data);
     return data.user;
