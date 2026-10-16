@@ -72,22 +72,87 @@ input::-ms-clear {
 
 /*
  * Site-wide card treatment. Every card in the app uses this exact
- * `rounded-2xl ... shadow-sm ring-1 ring-black/5` combo (verified: every
- * `rounded-2xl` usage in the codebase pairs with `ring-black/5`, nothing
+ * `rounded-lg ... shadow-sm ring-1 ring-black/5` combo (verified: every
+ * card's `rounded-lg` pairs with `ring-black/5`, nothing
  * else uses that pairing) — so restyling it here reskins every card on
  * every page at once, without touching dozens of individual files.
  * Borderless — a soft, understated shadow gives it depth instead.
  */
-.rounded-2xl.ring-black\/5 {
-    border-radius: 0.875rem;
-    border: none;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 10px rgba(15, 23, 42, 0.06);
+.rounded-lg.ring-black\/5 {
+    border-radius: 0.75rem;
+    border: 1px solid #eef0f3;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
-/* Only the plain white cards pick up the site-wide tint — cards with an
-   intentional accent color (e.g. StatCard's `background` prop) keep it. */
-.rounded-2xl.ring-black\/5.bg-white {
-    background-color: var(--color-blue-50);
+/* Clean white cards sitting on the light grey page background (see
+   DashboardShell's <main>) — cards with an intentional accent color (e.g.
+   StatCard's `background` prop) keep it. */
+.rounded-lg.ring-black\/5.bg-white {
+    background-color: #ffffff;
+}
+
+/*
+ * Portal-wide look (scoped to `.app-content`, DashboardShell's <main>, so
+ * the landing/login pages keep their own style). Every page repeats the same
+ * handful of class combos for card titles, tables, inputs and buttons, so
+ * restyling those combos here updates every page the same way without
+ * touching each file. Unlayered CSS outranks Tailwind's utility layer.
+ */
+
+/* Card titles — dark semibold, like the reference dashboard */
+.app-content h2.text-sm.font-medium.text-gray-700,
+.app-content h3.text-sm.font-medium.text-gray-700,
+.app-content h3.text-sm.font-bold.text-blue-950 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+}
+
+/* Section headings that sit above a card */
+.app-content h2.text-base.font-semibold.text-gray-900 {
+    font-size: 15px;
+    color: #111827;
+}
+
+/* Tables — quiet header row, hairline row dividers, soft hover */
+.app-content table thead {
+    background-color: #f9fafb;
+    border-bottom: 1px solid #eef0f3;
+}
+
+.app-content table thead th {
+    color: #6b7280;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.app-content table tbody tr {
+    border-color: #f1f3f5;
+    transition: background-color 0.15s;
+}
+
+.app-content table tbody tr:hover {
+    background-color: #fafbfc;
+}
+
+/* Square-cornered controls get the same softer radius as the cards */
+.app-content .rounded {
+    border-radius: 0.5rem;
+}
+
+/* Inputs, selects and textareas — lighter border, teal focus kept */
+.app-content input.border-gray-300,
+.app-content select.border-gray-300,
+.app-content textarea.border-gray-300 {
+    border-color: #e5e7eb;
+    background-color: #ffffff;
+}
+
+.app-content input.border-gray-300:focus,
+.app-content select.border-gray-300:focus,
+.app-content textarea.border-gray-300:focus {
+    border-color: var(--color-teal-600);
 }
 
 /*
@@ -144,6 +209,17 @@ main .space-y-4 > :not([hidden]) ~ :not([hidden]) {
 
 .font-mono {
     font-family: var(--font-mono), monospace;
+}
+
+/*
+ * Figures — numbers people act on (stat values, ring percentages, ops
+ * figures, chart axes) use the system font (Inter) with same-width digits,
+ * so live counts don't jiggle on refresh and columns of numbers line up.
+ */
+.font-figures,
+.recharts-cartesian-axis-tick-value,
+.recharts-tooltip-wrapper {
+    font-variant-numeric: tabular-nums;
 }
 
 .landing-section {
@@ -339,3 +415,25 @@ main .space-y-4 > :not([hidden]) ~ :not([hidden]) {
 }
 
 
+
+/* Printing (e.g. Reports → Export PDF): landscape so wide tables fit, and
+   keep the coloured badges/backgrounds instead of dropping them. */
+@media print {
+  @page {
+    size: landscape;
+    margin: 12mm;
+  }
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* Scrollable without a visible scrollbar (used by the company sidebar). */
+.no-scrollbar {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* old Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge */
+}
