@@ -21,23 +21,37 @@ export default function TripReplayMap({ tripId }: { tripId: string }) {
 
     const [path, setPath] = useState<PathPoint[]>([]);
     const [loading, setLoading] = useState(true);
-    const [scrubIndex, setScrubIndex] = useState(0);
+    const [scrubIndex, setScrubIndexState] = useState(0);
+
+    // The full path is always re-fetched fresh from the server on every load
+    // (nothing is ever actually lost), but the scrub position itself used to
+    // reset to the latest point on every refresh — which looked exactly like
+    // "my place in the trip got lost" even though the underlying data didn't
+    // change. Persisted per-trip so a refresh resumes where you left off.
+    const scrubStorageKey = `fleet:trip-scrub:${tripId}`;
+    function setScrubIndex(index: number) {
+        setScrubIndexState(index);
+        sessionStorage.setItem(scrubStorageKey, String(index));
+    }
 
     useEffect(() => {
         apiRequest<PathPoint[]>(`/api/trips/${tripId}/path`)
             .then((data) => {
                 setPath(data);
-                setScrubIndex(Math.max(data.length - 1, 0));
+                const saved = Number(sessionStorage.getItem(scrubStorageKey));
+                const restored = Number.isFinite(saved) && saved >= 0 && saved < data.length ? saved : data.length - 1;
+                setScrubIndexState(Math.max(restored, 0));
             })
             .catch((err) => console.error(err))
             .finally(() => setLoading(false));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tripId]);
 
     if (loading || !isLoaded) return <p className="text-sm text-gray-500">Loading route…</p>;
 
     if (path.length === 0) {
         return (
-            <div className="bg-gray-50 rounded-lg p-8 text-center text-sm text-gray-400">
+            <div className="bg-gray-50 rounded p-8 text-center text-sm text-gray-400">
                 No location data recorded for this trip.
             </div>
         );
@@ -52,7 +66,7 @@ export default function TripReplayMap({ tripId }: { tripId: string }) {
             <p className="text-xs text-teal-600 mb-2">
                 Full GPS route for this trip — drag the slider below to scrub through it.
             </p>
-            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden mb-3">
+            <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden mb-3">
                 <div className="h-[400px] w-full">
                     <GoogleMap mapContainerStyle={containerStyle} center={center} zoom={13}>
                         {/* The full path, drawn as a line */}
@@ -93,7 +107,7 @@ export default function TripReplayMap({ tripId }: { tripId: string }) {
             </div>
 
             {/* Scrubber */}
-            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-4">
+            <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-4">
                 <input
                     type="range"
                     min={0}

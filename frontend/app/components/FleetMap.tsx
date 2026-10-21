@@ -2,7 +2,7 @@
 
 import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GoogleMap, OverlayView, Circle, Polyline, useJsApiLoader } from "@react-google-maps/api";
+import { GoogleMap, OverlayView, Circle, Polyline, TrafficLayer, useJsApiLoader } from "@react-google-maps/api";
 import { IoCarSportSharp } from "react-icons/io5";
 import { ImLocation2 } from "react-icons/im";
 import { FaSearch } from "react-icons/fa";
@@ -22,21 +22,32 @@ interface LiveVehicle {
   plateNumber: string;
   status: string;
   vehicleType?: string;
-  lastLocation: { latitude: number; longitude: number; recordedAt: string } | null;
+  driverId?: { _id: string; fullName: string } | null;
+  lastLocation:
+    | {
+        latitude: number;
+        longitude: number;
+        recordedAt: string;
+        isMocked?: boolean;
+        heading?: number | null;
+        speedKph?: number | null;
+      }
+    | null;
+  device?: { batteryLevel: number | null; isCharging: boolean | null } | null;
   recentTrail?: { latitude: number; longitude: number; recordedAt: string }[];
 }
 
 const statusColor: Record<string, string> = {
   active: "#2dd4bf",
   idle: "#fb923c",
-  offline: "#9ca3af",
+  offline: "#000000",
   maintenance: "#f87171",
 };
 
 const LEGEND_ITEMS = [
   { label: "Active — currently moving", color: "#2dd4bf" },
   { label: "Idle — stationary, engine on", color: "#fb923c" },
-  { label: "Offline — no recent signal", color: "#9ca3af" },
+  { label: "Offline — no recent signal", color: "#000000" },
   { label: "Maintenance — out of service", color: "#f87171" },
 ];
 
@@ -46,15 +57,63 @@ const defaultCenter = { lat: -1.2921, lng: 36.8219 };
 // Toggle-pill styling shared by the Zones/Routes/Trails layer controls —
 // filled when the layer is visible, muted text when hidden, same idea as a
 // real mapping product's layer switcher.
-const PILL_ACTIVE_STYLES: Record<"teal" | "blue" | "purple", string> = {
+const PILL_ACTIVE_STYLES: Record<"teal" | "blue" | "purple" | "green" | "orange", string> = {
   teal: "bg-teal-50 text-teal-700",
   blue: "bg-blue-50 text-blue-700",
   purple: "bg-purple-50 text-purple-700",
+  green: "bg-emerald-50 text-emerald-700",
+  orange: "bg-orange-50 text-orange-700",
 };
-function layerPillClass(active: boolean, color: "teal" | "blue" | "purple") {
+function layerPillClass(active: boolean, color: "teal" | "blue" | "purple" | "green" | "orange") {
   return `rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors ${
     active ? PILL_ACTIVE_STYLES[color] : "text-gray-400 hover:text-gray-600"
   }`;
+}
+
+// Eases a marker's displayed position toward wherever its last GPS ping
+// actually put it, instead of snapping there instantly. Vehicle data only
+// refreshes once per poll (every 10s), so without this every poll was a
+// visible "teleport" from the old spot to the new one — this makes that gap
+// read as smooth, continuous travel instead of a jump.
+const MARKER_TRANSITION_MS = 1500;
+
+function useSmoothLatLng(target: { lat: number; lng: number } | null) {
+  const [display, setDisplay] = useState(target);
+  const fromRef = useRef(target);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!target) return;
+    const from = fromRef.current ?? target;
+
+    if (from.lat === target.lat && from.lng === target.lng) {
+      setDisplay(target);
+      return;
+    }
+
+    const start = performance.now();
+    function tick(now: number) {
+      const t = Math.min((now - start) / MARKER_TRANSITION_MS, 1);
+      const eased = 1 - Math.pow(1 - t, 2); // ease-out — fast start, gentle stop
+      setDisplay({
+        lat: from.lat + (target!.lat - from.lat) * eased,
+        lng: from.lng + (target!.lng - from.lng) * eased,
+      });
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        fromRef.current = target;
+      }
+    }
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target?.lat, target?.lng]);
+
+  return display;
 }
 
 function timeAgo(dateStr: string) {
@@ -68,41 +127,46 @@ function timeAgo(dateStr: string) {
 
 function VehicleMarker({
   vehicle,
+  position,
   outOfGeofence,
   onClick,
 }: {
   vehicle: LiveVehicle;
+  position: { lat: number; lng: number };
   outOfGeofence: boolean;
   onClick: () => void;
 }) {
   const color = statusColor[vehicle.status] || "#9ca3af";
   const [iconFailed, setIconFailed] = useState(false);
   const iconSrc = VEHICLE_TYPE_ICONS[vehicle.vehicleType || ""];
+  const heading = vehicle.lastLocation?.heading;
+  const speedKph = vehicle.lastLocation?.speedKph;
+  const smoothPosition = useSmoothLatLng(position);
 
   return (
+    <OverlayView position={smoothPosition ?? position} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
     <div
       className="flex flex-col items-center cursor-pointer"
       style={{ transform: "translate(-50%, -100%)" }}
       onClick={onClick}
     >
-      <div
-        className="mb-1 px-2 py-1 rounded-md shadow-sm bg-white border text-xs whitespace-nowrap"
-        style={{ borderColor: outOfGeofence ? "#ef4444" : color }}
-      >
-        <span className="font-semibold text-gray-900">{vehicle.plateNumber}</span>
-        <span className="text-gray-400"> · </span>
-        <span style={{ color }}>{vehicle.status}</span>
-        {vehicle.lastLocation && (
-          <>
-            <span className="text-gray-400"> · </span>
-            <span className="text-gray-500">{timeAgo(vehicle.lastLocation.recordedAt)}</span>
-          </>
+      <div className="mb-1 w-[84px] flex flex-col items-center gap-0.5 rounded-lg bg-orange-500 px-1.5 py-1.5 shadow-sm">
+        <span className="font-bold text-white text-[11px] leading-tight">{vehicle.plateNumber}</span>
+        <span className="flex items-center gap-1 text-[10px] font-semibold leading-tight text-white">
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
+          {vehicle.status}
+        </span>
+        {speedKph != null && speedKph > 0 && (
+          <span className="text-[10px] font-bold leading-tight text-white">{Math.round(speedKph)} km/h</span>
         )}
-        {outOfGeofence && (
-          <>
-            <span className="text-gray-400"> · </span>
-            <span className="text-red-500 font-medium">outside zone</span>
-          </>
+        {vehicle.lastLocation && (
+          <span className="text-[9px] leading-tight text-orange-100">{timeAgo(vehicle.lastLocation.recordedAt)}</span>
+        )}
+        {outOfGeofence && <span className="text-[9px] font-bold leading-tight text-red-900">OUTSIDE ZONE</span>}
+        {vehicle.lastLocation?.isMocked && (
+          <span className="rounded bg-red-900 px-1 text-[9px] font-bold leading-tight text-white" title="Location came from a fake-GPS app">
+            FAKE GPS
+          </span>
         )}
       </div>
 
@@ -111,8 +175,16 @@ function VehicleMarker({
           <span className="absolute inset-0 rounded-full bg-red-500 opacity-75 animate-ping" />
         )}
         <div
-          className="relative w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow hover:scale-110 transition-transform"
-          style={{ background: outOfGeofence ? "#ef4444" : color }}
+          className="relative w-8 h-8 transform rounded-full flex items-center justify-center border-2 border-white shadow hover:scale-110 transition-transform"
+          style={{
+            background: outOfGeofence ? "#ef4444" : color,
+            // Composes with the hover:scale-110 utility above via Tailwind's
+            // shared --tw-rotate transform variable, rather than overriding
+            // it with a plain inline `transform` (which would fight the
+            // hover scale instead of combining with it). Only rotates while
+            // actually moving — heading is noisy/meaningless when stopped.
+            ["--tw-rotate" as string]: heading != null && speedKph && speedKph > 2 ? `${heading}deg` : "0deg",
+          }}
         >
           {iconSrc && !iconFailed ? (
             <img
@@ -128,6 +200,7 @@ function VehicleMarker({
         </div>
       </div>
     </div>
+    </OverlayView>
   );
 }
 
@@ -137,7 +210,7 @@ function StartPointMarker({ variant }: { variant: "saved" | "preview" }) {
   return (
     <div className="flex flex-col items-center" style={{ transform: "translate(-50%, -100%)" }}>
       <div
-        className="mb-1 px-2 py-1 rounded-md shadow-sm bg-white border text-xs font-semibold whitespace-nowrap"
+        className="mb-1 px-2 py-1 rounded shadow-sm bg-white border text-xs font-semibold whitespace-nowrap"
         style={{ borderColor: color, color }}
       >
         {variant === "saved" ? "Start point" : "New start point"}
@@ -190,6 +263,9 @@ export default function FleetMap({
   const [showGeofences, setShowGeofences] = useState(true);
   const [showRoutes, setShowRoutes] = useState(true);
   const [showTrails, setShowTrails] = useState(true);
+  const [showVehicles, setShowVehicles] = useState(true);
+  const [showTraffic, setShowTraffic] = useState(false);
+  const [satelliteView, setSatelliteView] = useState(false);
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -239,6 +315,40 @@ export default function FleetMap({
     }
   }, [vehicles]);
 
+  // Jumps the map to a specific vehicle — used when an alert toast is
+  // clicked. Handed off two ways, same pattern as the AI route/geofence
+  // draft handoff: sessionStorage for a fresh navigation to this page, and a
+  // CustomEvent for when we're already sitting on it (a push to the same URL
+  // is a no-op, so the toast dispatches the event directly instead).
+  function jumpToVehicle(vehicleId: string) {
+    const map = mapRef.current;
+    const target = vehicles.find((v) => v.vehicleId === vehicleId);
+    if (!map || !target?.lastLocation) return false;
+    map.panTo({ lat: target.lastLocation.latitude, lng: target.lastLocation.longitude });
+    map.setZoom(15);
+    return true;
+  }
+
+  useEffect(() => {
+    const pendingVehicleId = sessionStorage.getItem("fleet:jump-to-vehicle");
+    if (pendingVehicleId && jumpToVehicle(pendingVehicleId)) {
+      sessionStorage.removeItem("fleet:jump-to-vehicle");
+    }
+  }, [vehicles]);
+
+  // Deliberately no dependency array — jumpToVehicle closes over `vehicles`,
+  // which changes every poll, so this must re-attach each render to avoid
+  // calling a stale version that can never find a vehicle added/updated
+  // after the first render. The re-attach cost is negligible either way.
+  useEffect(() => {
+    function handleJumpEvent(e: Event) {
+      const vehicleId = (e as CustomEvent).detail?.vehicleId;
+      if (vehicleId) jumpToVehicle(vehicleId);
+    }
+    window.addEventListener("fleet:jump-to-vehicle", handleJumpEvent);
+    return () => window.removeEventListener("fleet:jump-to-vehicle", handleJumpEvent);
+  });
+
   const counts = {
     total: vehicles.length,
     active: vehicles.filter((v) => v.status === "active").length,
@@ -248,9 +358,10 @@ export default function FleetMap({
 
   // Puts the vehicle-count cards beside the hero banner (squeezing it down
   // to the same width, same row) instead of in their own column next to the
-  // map — frees the map up to use the page's full width below, instead of
-  // sharing it with a stats sidebar. Memoized so usePageHeader's effect
-  // (keyed on this node's identity) doesn't fire every render.
+  // map, so the map gets the page's full width. The banner row is moved
+  // below the page ("bottom") so the map sits at the very top. Memoized so
+  // usePageHeader's effect (keyed on this node's identity) doesn't fire
+  // every render.
   const statsNode = useMemo(
     () => (
       <div className="grid grid-cols-2 gap-3 h-full">
@@ -262,7 +373,7 @@ export default function FleetMap({
     ),
     [counts.total, counts.active, counts.idle, counts.offline]
   );
-  usePageHeader(title, subtitle, statsNode);
+  usePageHeader(title, subtitle, statsNode, "bottom");
 
   const reportingPct = counts.total ? Math.round((withLocation.length / counts.total) * 100) : 0;
 
@@ -361,11 +472,11 @@ export default function FleetMap({
 
   return (
     <div>
-      {/* The map now uses the page's full width — the vehicle-count cards
-          that used to sit in a column beside it moved up into the hero
-          banner row instead (see statsNode / usePageHeader above). */}
-      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden mb-3">
-          <div className="relative h-[calc(100vh-220px)] min-h-[560px] w-full">
+      {/* The map uses the page's full width and sits at the top — the
+          vehicle-count cards live in the hero banner row, which the shell
+          renders below this page (see statsNode / usePageHeader above). */}
+      <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden mb-3">
+          <div className="relative h-[calc(100vh-140px)] min-h-[560px] w-full">
             <GoogleMap
               mapContainerStyle={containerStyle}
               center={mapCenter}
@@ -380,6 +491,7 @@ export default function FleetMap({
                     }
                   : undefined
               }
+              mapTypeId={satelliteView ? "satellite" : "roadmap"}
               options={{
                 disableDefaultUI: true,
                 mapTypeControl: false,
@@ -392,6 +504,8 @@ export default function FleetMap({
                 draggableCursor: pickMode ? "crosshair" : undefined,
               }}
             >
+              {showTraffic && <TrafficLayer />}
+
               {/* Geofence zones */}
               {showGeofences &&
                 geofences.map(
@@ -444,22 +558,18 @@ export default function FleetMap({
                   ))}
 
               {/* Vehicles — plotted as soon as they have a GPS fix, independent of geofences */}
-              {visibleVehicles.map((v) => (
-                <OverlayView
+              {showVehicles && visibleVehicles.map((v) => (
+                <VehicleMarker
                   key={v.vehicleId}
+                  vehicle={v}
                   position={{ lat: v.lastLocation!.latitude, lng: v.lastLocation!.longitude }}
-                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
-                >
-                  <VehicleMarker
-                    vehicle={v}
-                    outOfGeofence={isOutsideGeofences(
-                      v.lastLocation!.latitude,
-                      v.lastLocation!.longitude,
-                      geofences
-                    )}
-                    onClick={() => router.push(`${basePath}/${v.vehicleId}`)}
-                  />
-                </OverlayView>
+                  outOfGeofence={isOutsideGeofences(
+                    v.lastLocation!.latitude,
+                    v.lastLocation!.longitude,
+                    geofences
+                  )}
+                  onClick={() => router.push(`${basePath}/${v.vehicleId}`)}
+                />
               ))}
 
               {/* Driver daily starting point */}
@@ -498,27 +608,34 @@ export default function FleetMap({
                 )}
               </form>
 
-              {(geofences.length > 0 || routes.length > 0) && (
-                <div className="flex shrink-0 items-center gap-1 rounded-full bg-white px-2 py-1.5 shadow-lg ring-1 ring-black/5">
-                  {geofences.length > 0 && (
-                    <button onClick={() => setShowGeofences((s) => !s)} className={layerPillClass(showGeofences, "teal")}>
-                      Zones
-                    </button>
-                  )}
-                  {routes.length > 0 && (
-                    <button onClick={() => setShowRoutes((s) => !s)} className={layerPillClass(showRoutes, "blue")}>
-                      Routes
-                    </button>
-                  )}
-                  <button onClick={() => setShowTrails((s) => !s)} className={layerPillClass(showTrails, "purple")}>
-                    Trails
+              <div className="flex shrink-0 flex-wrap items-center gap-1 rounded-full bg-white px-2 py-1.5 shadow-lg ring-1 ring-black/5">
+                <button onClick={() => setShowVehicles((s) => !s)} className={layerPillClass(showVehicles, "green")}>
+                  Vehicles
+                </button>
+                {geofences.length > 0 && (
+                  <button onClick={() => setShowGeofences((s) => !s)} className={layerPillClass(showGeofences, "teal")}>
+                    Zones
                   </button>
-                </div>
-              )}
+                )}
+                {routes.length > 0 && (
+                  <button onClick={() => setShowRoutes((s) => !s)} className={layerPillClass(showRoutes, "blue")}>
+                    Routes
+                  </button>
+                )}
+                <button onClick={() => setShowTrails((s) => !s)} className={layerPillClass(showTrails, "purple")}>
+                  Trails
+                </button>
+                <button onClick={() => setShowTraffic((s) => !s)} className={layerPillClass(showTraffic, "orange")}>
+                  Traffic
+                </button>
+                <button onClick={() => setSatelliteView((s) => !s)} className={layerPillClass(satelliteView, "teal")}>
+                  Satellite
+                </button>
+              </div>
             </div>
 
             {searchMessage && (
-              <div className="absolute left-3 top-28 z-10 max-w-sm rounded-lg bg-white px-3 py-2 text-xs text-gray-600 shadow-lg ring-1 ring-black/5 sm:top-16">
+              <div className="absolute left-3 top-28 z-10 max-w-sm rounded bg-white px-3 py-2 text-xs text-gray-600 shadow-lg ring-1 ring-black/5 sm:top-16">
                 {searchMessage}
               </div>
             )}
@@ -568,7 +685,7 @@ export default function FleetMap({
         </div>
 
         {/* Legend */}
-        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-4 mb-3">
+        <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-4 mb-3">
           <p className="text-xs font-medium text-gray-500 mb-2">Marker colors</p>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             {LEGEND_ITEMS.map((item) => (
@@ -624,8 +741,6 @@ export default function FleetMap({
             value={mostRecent ? timeAgo(mostRecent.lastLocation!.recordedAt) : "—"}
             accent="green"
             description={mostRecent ? `From ${mostRecent.plateNumber}` : "No GPS pings received yet"}
-            background="bg-teal-300"
-            light
           />
         </div>
     </div>

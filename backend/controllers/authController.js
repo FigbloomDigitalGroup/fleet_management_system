@@ -134,6 +134,7 @@ export async function createUserUnderCompany(req, res) {
     const { email, password, fullName, role } = req.body;
     const normalizedEmail = email?.trim().toLowerCase();
     const allowedRoles = ["ADMIN", "DRIVER"];
+    const adminAccess = ["full", "dispatcher", "viewer"].includes(req.body.adminAccess) ? req.body.adminAccess : "full";
 
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({ error: `role must be one of: ${allowedRoles.join(", ")}` });
@@ -159,7 +160,14 @@ export async function createUserUnderCompany(req, res) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({ email: normalizedEmail, passwordHash, fullName, role, companyId });
+    const user = await User.create({
+      email: normalizedEmail,
+      passwordHash,
+      fullName,
+      role,
+      companyId,
+      ...(role === "ADMIN" ? { adminAccess } : {}),
+    });
 
     return res.status(201).json({
       message: `${role} account created`,
@@ -254,7 +262,7 @@ export async function bulkImportDrivers(req, res) {
 // Login for any role, including Drivers (mobile app)
 export async function login(req, res) {
   try {
-    const { email, password } = req.body;
+    const { email, password, platform } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: "email and password are required" });
     }
@@ -268,6 +276,22 @@ export async function login(req, res) {
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
       return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    // One account, one app: the mobile app is drivers-only and the web
+    // dashboard is everyone else. Each client identifies itself via
+    // `platform` so this is enforced here — the previous checks lived only
+    // in each app's UI *after* a token had already been issued, which didn't
+    // actually stop that token from being used.
+    if (platform === "mobile" && user.role !== "DRIVER") {
+      return res.status(403).json({
+        error: "This account isn't a driver account. Sign in from the FIGBLOOM FLEET web dashboard instead.",
+      });
+    }
+    if (platform === "web" && user.role === "DRIVER") {
+      return res.status(403).json({
+        error: "Driver accounts sign in from the FIGBLOOM FLEET mobile app, not the web dashboard.",
+      });
     }
 
     if (user.status !== "active") {
@@ -305,6 +329,7 @@ export async function login(req, res) {
         fullName: user.fullName,
         role: user.role,
         companyId: user.companyId,
+        adminAccess: user.role === "ADMIN" ? user.adminAccess || "full" : null,
       },
       accessToken,
       refreshToken,
