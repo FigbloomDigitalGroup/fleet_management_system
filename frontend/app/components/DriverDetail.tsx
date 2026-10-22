@@ -7,6 +7,7 @@ import { apiRequest } from "../lib/api";
 import FullPageLoading from "./FullPageLoading";
 import WheelIcon from "./WheelIcon";
 import { usePageHeader } from "./DashboardShell";
+import DriverScoreCard from "./DriverScoreCard";
 import { DriverRecord, VehicleRecord } from "../types/auth";
 
 type ProfileField = { key: keyof DriverRecord; label: string };
@@ -32,7 +33,7 @@ const ALL_PROFILE_FIELDS = [...PERSONAL_FIELDS, ...LICENSE_FIELDS, ...EMERGENCY_
 
 function ProfileCard({ title, fields, driver }: { title: string; fields: ProfileField[]; driver: DriverRecord }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+    <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
       <h3 className="text-sm font-medium text-gray-700">{title}</h3>
       <dl className="mt-3 space-y-3 text-sm">
         {fields.map((f) => (
@@ -79,12 +80,12 @@ export default function DriverDetail({ basePath }: { basePath: string }) {
     <div>
       <button
         onClick={() => router.back()}
-        className="mb-4 rounded-md bg-gray-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-600"
+        className="mb-4 rounded bg-gray-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-600"
       >
         Back
       </button>
 
-      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+      <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
         <h3 className="text-sm font-medium text-gray-700">Driver details</h3>
         <p className="text-xs text-teal-600 mt-0.5 mb-3">Account info and vehicle assignment</p>
         <dl className="grid grid-cols-2 gap-3 text-sm">
@@ -116,8 +117,12 @@ export default function DriverDetail({ basePath }: { basePath: string }) {
         </dl>
       </div>
 
+      <div className="mt-4">
+        <DriverScoreCard driverId={driver._id} />
+      </div>
+
       {!hasProfile ? (
-        <div className="mt-4 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+        <div className="mt-4 bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
           <p className="text-sm text-gray-400">This driver hasn't completed their profile in the mobile app yet.</p>
         </div>
       ) : (

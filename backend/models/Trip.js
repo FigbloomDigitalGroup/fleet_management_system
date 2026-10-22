@@ -11,6 +11,12 @@ const tripSchema = new mongoose.Schema(
     endLat: { type: Number },
     endLng: { type: Number },
     distanceKm: { type: Number },
+    // Set by the driver from the app (see tripController's /me/current).
+    purpose: { type: String, enum: ["business", "private"], default: null },
+    note: { type: String, trim: true, maxlength: 500, default: "" },
+    // "driver" when ended with the app's End trip button — such a trip is
+    // never reopened by later movement (see trackingController processPing).
+    endedBy: { type: String, enum: ["auto", "driver"], default: null },
   },
   { timestamps: true }
 );

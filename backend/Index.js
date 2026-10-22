@@ -16,13 +16,29 @@ import routeRoutes from "./routes/routeRoutes.js";
 import geofenceRoutes from "./routes/geofenceRoutes.js";
 import agentRoutes from "./routes/agentRoutes.js";
 import expenseRoutes from "./routes/expenseRoutes.js";
+import jobRoutes from "./routes/jobRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
+import inspectionRoutes from "./routes/inspectionRoutes.js";
+import messageRoutes from "./routes/messageRoutes.js";
+import maintenanceRoutes from "./routes/maintenanceRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
+import publicRoutes from "./routes/publicRoutes.js";
 import { runAiAnomalyScan } from "./services/aiAnomalyDetector.js";
-import { closeStaleTrips } from "./controllers/trackingController.js";
+import { closeStaleTrips, sweepOfflineDevices } from "./controllers/trackingController.js";
+import { sweepMaintenanceReminders } from "./controllers/maintenanceController.js";
+import { purgeExpiredLocationData } from "./controllers/settingsCompanyController.js";
 
 
 import cors from "cors";
 import helmet from "helmet";
 const app = express();
+
+// Requests reach the API through ngrok and Docker's network, so without
+// this every user appears to come from the same internal address — and one
+// person's failed logins rate-limited everyone. Only private/loopback hops
+// are trusted to report the real client IP (X-Forwarded-For), so a public
+// client can't spoof its address. Override with TRUST_PROXY behind other proxies.
+app.set("trust proxy", process.env.TRUST_PROXY || "loopback, linklocal, uniquelocal");
 
 const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:3000")
   .split(",")
@@ -34,6 +50,8 @@ app.use(
   cors({
     origin: allowedOrigins,
     credentials: true,
+    // Lets the dashboard read the Excel report's filename
+    exposedHeaders: ["Content-Disposition"],
   })
 );
 
@@ -44,7 +62,10 @@ app.use(
 // that one path and lets express.json() handle every other route as before.
 app.use((req, res, next) => {
   if (req.originalUrl === "/api/billing/webhook") return next();
-  express.json()(req, res, next);
+  // Photos (base64) and batches of offline-buffered GPS points need more
+  // than express's 100kb default.
+  const limit = req.originalUrl.startsWith("/api/uploads") ? "4mb" : "1mb";
+  express.json({ limit })(req, res, next);
 });
 app.get("/health", (req, res) => {
   res.json({ status: "ok", server: "running" })
@@ -64,6 +85,13 @@ app.use("/api/routes", routeRoutes);
 app.use("/api/geofences", geofenceRoutes);
 app.use("/api/agent", agentRoutes);
 app.use("/api/expenses", expenseRoutes);
+app.use("/api/jobs", jobRoutes);
+app.use("/api/uploads", uploadRoutes);
+app.use("/api/inspections", inspectionRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api/maintenance", maintenanceRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/public", publicRoutes);
 
 
 
@@ -100,6 +128,32 @@ connectDB().then(() => {
       })
       .catch((err) => console.error("[trips] stale-trip sweep crashed:", err));
   });
+
+  // Phones/trackers that went silent without saying so (app killed, phone
+  // off, battery dead) — see sweepOfflineDevices.
+  cron.schedule("*/5 * * * *", () => {
+    sweepOfflineDevices()
+      .then((n) => n > 0 && console.log(`[devices] flagged ${n} offline device(s)`))
+      .catch((err) => console.error("[devices] offline sweep crashed:", err));
+  });
+
+  // Service reminders that came due by date or mileage.
+  cron.schedule("0 * * * *", () => {
+    sweepMaintenanceReminders()
+      .then((n) => n > 0 && console.log(`[maintenance] ${n} reminder(s) due`))
+      .catch((err) => console.error("[maintenance] reminder sweep crashed:", err));
+  });
+
+  // Data retention — nightly at 02:30 Nairobi time.
+  cron.schedule(
+    "30 2 * * *",
+    () => {
+      purgeExpiredLocationData()
+        .then((n) => n > 0 && console.log(`[retention] deleted ${n} expired location record(s)`))
+        .catch((err) => console.error("[retention] purge crashed:", err));
+    },
+    { timezone: "Africa/Nairobi" }
+  );
 });
 
 

@@ -66,7 +66,7 @@ export default function AgentSummaryPanel() {
   return (
     <div>
       {/* Presence */}
-      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 mb-4 flex items-center gap-4">
+      <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5 mb-4 flex items-center gap-4">
         <div className="relative shrink-0">
           {isActive && <span className="absolute inset-0 rounded-full bg-teal-500 opacity-75 animate-ping" />}
           <span
@@ -111,7 +111,7 @@ export default function AgentSummaryPanel() {
       </div>
 
       {/* Recent findings */}
-      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
         <p className="text-xs font-medium text-gray-500 p-4 pb-0">Recent findings for your fleet</p>
         {summary.recentFindings.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-8">

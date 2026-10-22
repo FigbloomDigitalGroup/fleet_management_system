@@ -88,7 +88,7 @@ export default function PlatformDashboard() {
         <p className="text-sm text-red-600 mb-4">{loadError || "Failed to load dashboard data."}</p>
         <button
           onClick={loadAll}
-          className="rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
+          className="rounded bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
         >
           Retry
         </button>
@@ -116,12 +116,12 @@ export default function PlatformDashboard() {
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-gray-900">Recently registered</h2>
-          <Link href="/platform/companies" className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
+          <Link href="/platform/companies" className="rounded bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
             View all
           </Link>
         </div>
         <p className="text-xs text-teal-600 mb-3">The 5 most recently signed-up companies</p>
-        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
           {recentCompanies.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-6">No companies registered yet.</p>
           ) : (
@@ -132,7 +132,7 @@ export default function PlatformDashboard() {
                     <td className="px-5 py-3">
                       <Link
                         href={`/platform/companies/${c._id}`}
-                        className="inline-block cursor-pointer rounded-md bg-blue-950 px-3 py-1.5 text-[12px] font-medium text-white"
+                        className="inline-block cursor-pointer rounded bg-blue-950 px-3 py-1.5 text-[12px] font-medium text-white"
                       >
                         {c.name}
                       </Link>
@@ -195,12 +195,12 @@ export default function PlatformDashboard() {
         <div className="mb-4">
           <div className="flex items-center justify-between mb-1">
             <h2 className="text-base font-semibold text-gray-900">Needs approval</h2>
-            <Link href="/platform/companies" className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
+            <Link href="/platform/companies" className="rounded bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
               View all
             </Link>
           </div>
           <p className="text-xs text-teal-600 mb-3">Companies waiting on a decision, oldest signups included</p>
-          <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+          <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
             <table className="w-full text-sm">
               <tbody>
                 {pendingCompanies.map((c) => (
@@ -208,7 +208,7 @@ export default function PlatformDashboard() {
                     <td className="px-5 py-3">
                       <Link
                         href={`/platform/companies/${c._id}`}
-                        className="inline-block cursor-pointer rounded-md bg-blue-950 px-3 py-1.5 text-sm font-medium text-white"
+                        className="inline-block cursor-pointer rounded bg-blue-950 px-3 py-1.5 text-sm font-medium text-white"
                       >
                         {c.name}
                       </Link>

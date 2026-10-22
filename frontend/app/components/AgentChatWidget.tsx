@@ -122,7 +122,7 @@ export default function AgentChatWidget() {
   return (
     <>
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 flex h-[28rem] w-[22rem] max-w-[90vw] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/10">
+        <div className="fixed bottom-24 right-6 z-50 flex h-[28rem] w-[22rem] max-w-[90vw] flex-col overflow-hidden rounded-lg bg-white shadow-2xl ring-1 ring-black/10">
           <div className="flex items-center justify-between bg-gradient-to-br from-teal-600 via-teal-500 to-cyan-600 px-4 py-3">
             <div className="flex items-center gap-2 text-white">
               <RiRobot3Fill size={18} />
@@ -137,7 +137,7 @@ export default function AgentChatWidget() {
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                  className={`max-w-[85%] rounded-md px-3 py-2 text-xs leading-relaxed ${
                     m.role === "user" ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-800"
                   }`}
                 >
@@ -145,7 +145,7 @@ export default function AgentChatWidget() {
                   {m.routeDraft && (
                     <button
                       onClick={() => openRouteDraft(m.routeDraft!)}
-                      className="mt-2 block w-full rounded-md bg-orange-500 px-2 py-1.5 text-center text-xs font-medium text-white hover:bg-orange-600"
+                      className="mt-2 block w-full rounded bg-orange-500 px-2 py-1.5 text-center text-xs font-medium text-white hover:bg-orange-600"
                     >
                       Click to view the route
                     </button>
@@ -153,7 +153,7 @@ export default function AgentChatWidget() {
                   {m.geofenceDraft && (
                     <button
                       onClick={() => openGeofenceDraft(m.geofenceDraft!)}
-                      className="mt-2 block w-full rounded-md bg-orange-500 px-2 py-1.5 text-center text-xs font-medium text-white hover:bg-orange-600"
+                      className="mt-2 block w-full rounded bg-orange-500 px-2 py-1.5 text-center text-xs font-medium text-white hover:bg-orange-600"
                     >
                       Click to view the geofence
                     </button>
@@ -163,7 +163,7 @@ export default function AgentChatWidget() {
             ))}
             {sending && (
               <div className="flex justify-start">
-                <div className="rounded-xl bg-gray-100 px-3 py-2 text-xs text-gray-500">Frolicking…</div>
+                <div className="rounded-md bg-gray-100 px-3 py-2 text-xs text-gray-500">Frolicking…</div>
               </div>
             )}
             {error && <p className="text-xs text-red-600">{error}</p>}
@@ -176,13 +176,13 @@ export default function AgentChatWidget() {
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder="Ask about your fleet…"
               disabled={sending}
-              className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-xs outline-none focus:border-teal-400 disabled:opacity-60"
+              className="flex-1 rounded border border-gray-300 px-3 py-2 text-xs outline-none focus:border-teal-400 disabled:opacity-60"
             />
             <button
               onClick={handleSend}
               disabled={sending || !input.trim()}
               aria-label="Send"
-              className="rounded-md bg-teal-600 p-2 text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
+              className="rounded bg-teal-600 p-2 text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
             >
               <FiSend size={14} />
             </button>
@@ -194,7 +194,7 @@ export default function AgentChatWidget() {
         {!open && (
           <div
             key={pageSegment}
-            className="animate-hint-in flex max-w-[210px] items-start gap-1.5 rounded-xl bg-gradient-to-br from-violet-50 to-indigo-50 px-3 py-2 text-xs text-violet-800 shadow-lg ring-1 ring-violet-200"
+            className="animate-hint-in flex max-w-[210px] items-start gap-1.5 rounded-md bg-gradient-to-br from-violet-50 to-indigo-50 px-3 py-2 text-xs text-violet-800 shadow-lg ring-1 ring-violet-200"
           >
             <BsStars className="mt-0.5 shrink-0 text-violet-500" size={13} aria-hidden="true" />
             <span>{hint}</span>

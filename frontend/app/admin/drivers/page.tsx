@@ -2,13 +2,15 @@
 
 import DriversList from "../../components/DriversList";
 import { usePageHeader } from "../../components/DashboardShell";
+import { useAdminAccess } from "../../lib/adminAccess";
 
 export default function AdminDriversPage() {
+  const { canManageFleet } = useAdminAccess();
   usePageHeader("Drivers", "Add drivers and assign them to vehicles");
 
   return (
     <div>
-      <DriversList canAdd={true} canAssignVehicle={true} />
+      <DriversList canAdd={canManageFleet} canAssignVehicle={canManageFleet} />
     </div>
   );
 }

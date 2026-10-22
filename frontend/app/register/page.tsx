@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { redirectPathForRole } from "../lib/roleRedirect";
 import { FaGooglePlay } from "react-icons/fa";
-import BackgroundSlideshow from "../components/BackgroundSlideshow";
+import AuthHeroPanel from "../components/AuthHeroPanel";
 import RobotCheckbox from "../components/RobotCheckbox";
 import BrandIcon from "../components/BrandIcon";
 import PasswordInput from "../components/PasswordInput";
@@ -46,8 +46,7 @@ export default function RegisterPage() {
     return (
         <div className="min-h-screen bg-white flex flex-col lg:flex-row">
             {/* LEFT — Info panel */}
-            <BackgroundSlideshow className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16">
-                <div className="absolute inset-0 z-10 bg-black/50" />
+            <AuthHeroPanel className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16">
 
                 <div className="relative z-20 flex flex-col justify-between h-full">
                     <span className="flex items-center gap-2 text-xl font-bold text-white">
@@ -70,7 +69,7 @@ export default function RegisterPage() {
                             <p className="text-xs text-gray-300 mb-2">Drivers — get the app</p>
                             <a
                                 href="#"
-                                className="inline-flex items-center gap-3 bg-black hover:bg-gray-900 text-white px-4 py-2 rounded-xl transition-colors"
+                                className="inline-flex items-center gap-3 bg-black hover:bg-gray-900 text-white px-4 py-2 rounded-md transition-colors"
                             >
                                 <FaGooglePlay size={22} />
                                 <span className="text-left">
@@ -83,12 +82,12 @@ export default function RegisterPage() {
 
                     <p className="text-sm text-gray-200">
                         Already have an account?{" "}
-                        <a href="/login" className="text-teal-600 font-medium hover:underline">
+                        <a href="/login" className="text-teal-200 font-medium hover:underline">
                             Sign in
                         </a>
                     </p>
                 </div>
-            </BackgroundSlideshow>
+            </AuthHeroPanel>
 
             {/* RIGHT — Form panel */}
             <div className="lg:w-1/2 flex items-center justify-center p-8">
@@ -108,7 +107,7 @@ export default function RegisterPage() {
                                 value={companyName}
                                 onChange={(e) => setCompanyName(e.target.value)}
                                 placeholder="Your company name"
-                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                                className="w-full px-3.5 py-2.5 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                             />
                         </div>
 
@@ -120,7 +119,7 @@ export default function RegisterPage() {
                                 id="industry"
                                 value={industry}
                                 onChange={(e) => setIndustry(e.target.value)}
-                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                                className="w-full px-3.5 py-2.5 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                             >
                                 <option value="">Select your industry</option>
                                 {INDUSTRIES.map((i) => (
@@ -137,7 +136,7 @@ export default function RegisterPage() {
                                         key={slug}
                                         onClick={() => setIndustry(slug)}
                                         title={INDUSTRIES.find((i) => i.value === slug)?.label}
-                                        className={`aspect-square overflow-hidden rounded-md ring-1 transition-all ${industry === slug ? "ring-2 ring-teal-600" : "ring-gray-200 hover:ring-teal-400"
+                                        className={`aspect-square overflow-hidden rounded ring-1 transition-all ${industry === slug ? "ring-2 ring-teal-600" : "ring-gray-200 hover:ring-teal-400"
                                             }`}
                                     >
                                         <img
@@ -161,7 +160,7 @@ export default function RegisterPage() {
                                 value={fullName}
                                 onChange={(e) => setFullName(e.target.value)}
                                 placeholder="Your full name"
-                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                                className="w-full px-3.5 py-2.5 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                             />
                         </div>
 
@@ -177,7 +176,7 @@ export default function RegisterPage() {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="Your work email"
-                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                                className="w-full px-3.5 py-2.5 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                             />
                         </div>
 
@@ -192,14 +191,14 @@ export default function RegisterPage() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="Your password"
-                                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                                className="w-full px-3.5 py-2.5 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                             />
                         </div>
 
                         <RobotCheckbox checked={isHuman} onChange={setIsHuman} />
 
                         {error && (
-                            <div className="text-sm px-3.5 py-2.5 rounded-md bg-red-50 text-red-600 border border-red-200" role="alert">
+                            <div className="text-sm px-3.5 py-2.5 rounded bg-red-50 text-red-600 border border-red-200" role="alert">
                                 {error}
                             </div>
                         )}
@@ -207,7 +206,7 @@ export default function RegisterPage() {
                         <button
                             type="submit"
                             disabled={isSubmitting || !isHuman}
-                            className="w-full py-2.5 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+                            className="w-full py-2.5 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
                         >
                             {isSubmitting ? "Submitting…" : "Create account"}
                         </button>

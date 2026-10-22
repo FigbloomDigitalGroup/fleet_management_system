@@ -91,7 +91,7 @@ export default function AgentOverviewPage() {
         <button
           onClick={handleRunScan}
           disabled={running}
-          className="rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-600 disabled:opacity-60"
+          className="rounded bg-orange-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-600 disabled:opacity-60"
         >
           {running ? "Running…" : "Run scan now"}
         </button>
@@ -99,7 +99,7 @@ export default function AgentOverviewPage() {
 
       {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
 
-      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
         {scans.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-8">
             No scans yet — they run automatically every 15 minutes, or click &quot;Run scan now&quot;.

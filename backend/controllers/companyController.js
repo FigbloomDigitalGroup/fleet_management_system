@@ -214,12 +214,6 @@ async function computeFuelDrops(vehicleIds, since) {
   return drops;
 }
 
-async function computeFuelConsumedLiters(vehicleIds) {
-  const drops = await computeFuelDrops(vehicleIds);
-  const total = drops.reduce((sum, d) => sum + d.liters, 0);
-  return Math.round(total * 10) / 10;
-}
-
 // Shared by getMyCompanyStats (COMPANY_OWNER/ADMIN, "me") and getCompanyStats
 // (PLATFORM_ADMIN, any company by id) — distance is summed straight from
 // recorded trips; expenses are an estimate (plan price × vehicle count ×
@@ -247,8 +241,6 @@ async function computeCompanyStats(companyId) {
   ]);
   const totalDistanceKm = Math.round((distanceResult?.total || 0) * 10) / 10;
 
-  const totalFuelConsumedLiters = await computeFuelConsumedLiters(vehicleIds);
-
   const monthsSinceJoining = Math.max(1, Math.ceil((Date.now() - company.createdAt.getTime()) / MS_PER_MONTH));
   const pricePerVehicle = PLAN_PRICE_PER_VEHICLE[company.subscriptionPlan];
   const estimatedExpenses =
@@ -258,7 +250,6 @@ async function computeCompanyStats(companyId) {
 
   return {
     totalDistanceKm,
-    totalFuelConsumedLiters,
     estimatedExpenses,
     totalRevenue: company.totalRevenue,
     vehicleCount,
@@ -270,9 +261,8 @@ async function computeCompanyStats(companyId) {
 const DAILY_STATS_DAYS = 7;
 
 // Day-by-day distance vs. fuel consumed for the dashboard's comparison
-// chart. Distance comes straight from trips; fuel from the same drop
-// detection used by computeFuelConsumedLiters, just bucketed by day instead
-// of summed into one total. Note: a fuel drop spanning the `since` boundary
+// chart. Distance comes straight from trips; fuel from computeFuelDrops,
+// bucketed by day. Note: a fuel drop spanning the `since` boundary
 // (first ping before it, second after) is missed — an acceptable rounding
 // edge for a 7-day dashboard chart, not a billing figure.
 async function computeDailyStats(companyId, days) {

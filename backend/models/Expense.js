@@ -13,6 +13,7 @@ const expenseSchema = new mongoose.Schema(
     amount: { type: Number, required: true, min: 0 }, // KES
     note: { type: String, default: null },
     incurredAt: { type: Date, default: Date.now },
+    receiptUploadId: { type: mongoose.Schema.Types.ObjectId, ref: "Upload", default: null },
   },
   { timestamps: true }
 );

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { redirectPathForRole } from "../lib/roleRedirect";
 import { FaGooglePlay } from "react-icons/fa";
-import BackgroundSlideshow from "../components/BackgroundSlideshow";
+import AuthHeroPanel from "../components/AuthHeroPanel";
 import RobotCheckbox from "../components/RobotCheckbox";
 import BrandIcon from "../components/BrandIcon";
 import PasswordInput from "../components/PasswordInput";
@@ -65,11 +65,9 @@ export default function LoginPage() {
 
 
       {/* LEFT — Hero panel */}
-      <BackgroundSlideshow className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16">
-        {/* dark overlay so text stays readable over the image */}
-        <div className="absolute inset-0 z-10 bg-black/50" />
+      <AuthHeroPanel className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16">
 
-        {/* wrap all existing content in a relative div so it sits above the overlay */}
+        {/* content sits above the panel's dark overlay */}
         <div className="relative z-20 flex flex-col justify-between h-full">
           <span className="flex items-center gap-2 text-xl font-bold text-white">
             <BrandIcon variant="light" className="h-6 w-6" />
@@ -110,7 +108,7 @@ export default function LoginPage() {
               <p className="text-xs text-gray-300 mb-2">Drivers — get the app</p>
               <a
                 href="#"
-                className="inline-flex items-center gap-3 bg-black hover:bg-gray-900 text-white px-4 py-2 rounded-xl transition-colors"
+                className="inline-flex items-center gap-3 bg-black hover:bg-gray-900 text-white px-4 py-2 rounded-md transition-colors"
               >
                 <FaGooglePlay size={22} />
                 <span className="text-left">
@@ -121,7 +119,7 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-      </BackgroundSlideshow>
+      </AuthHeroPanel>
 
       {/* RIGHT — Form panel */}
       <div className="lg:w-1/2 flex items-center justify-center p-8">
@@ -138,7 +136,7 @@ export default function LoginPage() {
                     key={option.value}
                     type="button"
                     onClick={() => setSelectedRole(option.value)}
-                    className={`flex flex-col items-center justify-center gap-2 py-4 rounded-md text-sm font-medium border transition-colors ${
+                    className={`flex flex-col items-center justify-center gap-2 py-4 rounded text-sm font-medium border transition-colors ${
                       selectedRole === option.value
                         ? "bg-teal-600 border-teal-600 text-white"
                         : "bg-white border-gray-300 text-gray-600 hover:border-teal-400"
@@ -168,7 +166,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Your email"
-                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                className="w-full px-3.5 py-2.5 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
               />
             </div>
 
@@ -188,14 +186,14 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Your password"
-                className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                className="w-full px-3.5 py-2.5 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
               />
             </div>
 
             <RobotCheckbox checked={isHuman} onChange={setIsHuman} />
 
             {error && (
-              <div className="text-sm px-3.5 py-2.5 rounded-md bg-red-50 text-red-600 border border-red-200" role="alert">
+              <div className="text-sm px-3.5 py-2.5 rounded bg-red-50 text-red-600 border border-red-200" role="alert">
                 {error}
               </div>
             )}
@@ -203,7 +201,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isSubmitting || !isHuman}
-              className="w-full py-2.5 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+              className="w-full py-2.5 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
             >
               {isSubmitting ? "Signing in…" : "Sign in"}
             </button>

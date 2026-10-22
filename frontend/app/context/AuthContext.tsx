@@ -32,7 +32,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const savedUser = localStorage.getItem("user");
     const savedToken = localStorage.getItem("accessToken");
     if (savedUser && savedToken) {
-      setUser(JSON.parse(savedUser));
+      const parsed: User = JSON.parse(savedUser);
+      setUser(parsed);
+      // An owner can change an admin's access level at any time, and the
+      // stored session only knows the level from login — re-read it so the
+      // UI matches what the server will actually allow.
+      if (parsed.role === "ADMIN") {
+        apiRequest<{ adminAccess?: User["adminAccess"] }>("/api/users/me")
+          .then((me) => {
+            const adminAccess = me.adminAccess || "full";
+            if (adminAccess === parsed.adminAccess) return;
+            const next = { ...parsed, adminAccess };
+            localStorage.setItem("user", JSON.stringify(next));
+            setUser(next);
+          })
+          .catch(() => {});
+      }
     }
     setLoading(false);
   }, []);

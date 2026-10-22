@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
-import { GoogleMap, Polyline, useJsApiLoader } from "@react-google-maps/api";
+import { GoogleMap, OverlayView, Polyline, useJsApiLoader } from "@react-google-maps/api";
 import { apiRequest } from "../lib/api";
 import { RouteRecord, VehicleRecord } from "../types/auth";
 import { routeDistanceKm, estimateFuelRangeLiters } from "../lib/routeEstimate";
@@ -33,6 +33,9 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
   const [isDrawing, setIsDrawing] = useState(false);
   const [waypoints, setWaypoints] = useState<LatLng[]>([]);
   const [draftSource, setDraftSource] = useState<"manual" | "ai">("manual");
+  // Where to centre the map when a draft arrives (AI route, or a starting
+  // point picked on the Live Map).
+  const [draftFocus, setDraftFocus] = useState<LatLng | null>(null);
   const [vehicleId, setVehicleId] = useState("");
   const [name, setName] = useState("");
   const [toleranceMeters, setToleranceMeters] = useState("300");
@@ -62,12 +65,21 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
     load();
   }, []);
 
-  function applyDraft(draft: { waypoints?: LatLng[]; name?: string }) {
+  function applyDraft(draft: { waypoints?: LatLng[]; name?: string; start?: LatLng }) {
     if (Array.isArray(draft.waypoints) && draft.waypoints.length >= 2) {
       setWaypoints(draft.waypoints);
       setName(draft.name || "");
       setDraftSource("ai");
       setIsDrawing(true);
+      setDraftFocus(draft.waypoints[0]);
+    } else if (draft.start && typeof draft.start.lat === "number" && typeof draft.start.lng === "number") {
+      // "Start a route here" from the Live Map: drawing begins with that
+      // point, and the user clicks on to add the rest.
+      setWaypoints([draft.start]);
+      setName("");
+      setDraftSource("manual");
+      setIsDrawing(true);
+      setDraftFocus(draft.start);
     }
   }
 
@@ -187,7 +199,7 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
   if (error) return <p className="text-sm text-red-600">{error}</p>;
 
   const firstRouteWithPoints = routes.find((r) => r.waypoints.length > 0);
-  const mapCenter = firstRouteWithPoints ? firstRouteWithPoints.waypoints[0] : defaultCenter;
+  const mapCenter = draftFocus ?? (firstRouteWithPoints ? firstRouteWithPoints.waypoints[0] : defaultCenter);
 
   const drawnDistanceKm = waypoints.length > 1 ? routeDistanceKm(waypoints) : 0;
   const selectedVehicle = vehicles.find((v) => v._id === vehicleId);
@@ -199,15 +211,18 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
   return (
     <div className="grid lg:grid-cols-3 gap-6">
       {canManage && (
-        <div className="lg:col-span-3 rounded-md border border-purple-200 bg-purple-50 px-4 py-2.5 text-xs text-purple-700">
-          <span className="font-semibold">NB:</span> If you're asking the AI assistant to create a route, use the
-          exact spelling of the place name as it appears on the map — a misspelled name can't be matched to a real
-          location.
+        <div className="lg:col-span-3 flex items-center gap-3 rounded border border-purple-200 bg-purple-50 px-4 py-2.5 text-xs text-purple-700">
+          <img src="/danger.png" alt="Warning" className="h-6 w-auto shrink-0 animate-bounce" />
+          <p>
+            <span className="font-semibold">NB:</span> If you're asking the AI assistant to create a route, use the
+            exact spelling of the place name as it appears on the map — a misspelled name can't be matched to a real
+            location.
+          </p>
         </div>
       )}
 
       {/* Map */}
-      <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+      <div className="lg:col-span-2 bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
         <div className="h-[450px] w-full">
           <GoogleMap mapContainerStyle={containerStyle} center={mapCenter} zoom={12} onClick={handleMapClick}>
             {/* Existing active routes — purple if AI-drafted, orange if hand-drawn */}
@@ -237,6 +252,16 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
                 }}
               />
             )}
+            {/* Where the route starts — the line alone shows nothing until a
+                second point is placed (e.g. a start picked on the Live Map). */}
+            {canManage && isDrawing && waypoints.length > 0 && (
+              <OverlayView position={waypoints[0]} mapPaneName={OverlayView.OVERLAY_LAYER}>
+                <div className="flex flex-col items-center" style={{ transform: "translate(-50%, -50%)" }}>
+                  <span className="h-3.5 w-3.5 rounded-full border-2 border-white bg-orange-500 shadow" />
+                  <span className="mt-0.5 rounded bg-white px-1 text-[10px] font-semibold text-orange-600 shadow-sm">Start</span>
+                </div>
+              </OverlayView>
+            )}
           </GoogleMap>
         </div>
         {canManage && (
@@ -259,14 +284,14 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
       {/* Sidebar: list + create form */}
       <div className="space-y-4">
         {canManage && (
-          <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+          <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
             <h3 className="text-sm font-medium text-gray-700 mb-4">Add a route</h3>
 
             {!isDrawing ? (
               <button
                 type="button"
                 onClick={startDrawing}
-                className="w-full py-2 rounded-md text-sm font-medium text-white bg-teal-600 hover:bg-teal-700"
+                className="w-full py-2 rounded text-sm font-medium text-white bg-teal-600 hover:bg-teal-700"
               >
                 Draw a new route
               </button>
@@ -285,7 +310,7 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
                 </div>
 
                 {drawnDistanceKm > 0 && (
-                  <div className="rounded-md bg-purple-50 px-3 py-2 text-xs text-purple-700">
+                  <div className="rounded bg-purple-50 px-3 py-2 text-xs text-purple-700">
                     <p>Distance: {drawnDistanceKm.toFixed(1)} km</p>
                     <p>
                       Estimated fuel:{" "}
@@ -302,7 +327,7 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
                   <select
                     value={vehicleId}
                     onChange={(e) => setVehicleId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
+                    className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-400"
                   >
                     <option value="">Select a vehicle…</option>
                     {vehicles.map((v) => (
@@ -320,7 +345,7 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Depot to warehouse"
-                    className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
+                    className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-400"
                   />
                 </div>
 
@@ -332,7 +357,7 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
                     type="number"
                     value={toleranceMeters}
                     onChange={(e) => setToleranceMeters(e.target.value)}
-                    className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
+                    className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-400"
                   />
                 </div>
 
@@ -345,7 +370,7 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
                     value={speedLimitKph}
                     onChange={(e) => setSpeedLimitKph(e.target.value)}
                     placeholder="No override"
-                    className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
+                    className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-400"
                   />
                 </div>
 
@@ -357,7 +382,7 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
                         key={f}
                         type="button"
                         onClick={() => setFrequency(f)}
-                        className={`flex-1 py-2 rounded-md text-xs font-medium border ${
+                        className={`flex-1 py-2 rounded text-xs font-medium border ${
                           frequency === f
                             ? "bg-teal-600 border-teal-600 text-white"
                             : "bg-white border-gray-300 text-gray-600 hover:border-teal-400"
@@ -374,7 +399,7 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
                           key={i}
                           type="button"
                           onClick={() => toggleDay(i)}
-                          className={`flex-1 py-1.5 rounded-md text-[11px] font-medium border ${
+                          className={`flex-1 py-1.5 rounded text-[11px] font-medium border ${
                             daysOfWeek.includes(i)
                               ? "bg-teal-50 border-teal-400 text-teal-700"
                               : "bg-white border-gray-300 text-gray-500 hover:border-teal-400"
@@ -392,7 +417,7 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-2 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+                  className="w-full py-2 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
                 >
                   {isSubmitting ? "Saving…" : "Save route"}
                 </button>
@@ -401,10 +426,10 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
           <p className="text-xs font-medium text-gray-500 p-4 pb-0">Existing routes</p>
           {deleteError && (
-            <div className="mx-4 mt-3 flex items-start justify-between gap-2 rounded-md bg-red-50 px-3 py-2 text-xs text-red-600">
+            <div className="mx-4 mt-3 flex items-start justify-between gap-2 rounded bg-red-50 px-3 py-2 text-xs text-red-600">
               <span>{deleteError}</span>
               <button onClick={() => setDeleteError(null)} className="shrink-0 font-medium hover:underline">
                 Dismiss

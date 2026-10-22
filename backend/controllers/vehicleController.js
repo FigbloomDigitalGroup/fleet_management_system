@@ -258,6 +258,11 @@ export async function updateVehicle(req, res) {
       }
       update.avgConsumptionLPer100Km = Number(avgConsumptionLPer100Km);
     }
+    if (req.body.odometerBaseKm !== undefined) {
+      const km = Number(req.body.odometerBaseKm);
+      if (!Number.isFinite(km) || km < 0) return res.status(400).json({ error: "odometerBaseKm must be 0 or more" });
+      update.odometerBaseKm = km;
+    }
     if (status !== undefined) {
       update.status = status;
       // Marks this as a deliberate admin choice so tracking pings leave it

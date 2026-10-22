@@ -11,6 +11,16 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
     companyId: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null },
+    // Only meaningful for role ADMIN: "full" can change everything,
+    // "dispatcher" runs jobs/routes/messages, "viewer" is read-only.
+    // Enforced centrally in middleware/auth.js (enforceAdminAccess).
+    adminAccess: { type: String, enum: ["full", "dispatcher", "viewer"], default: "full" },
+    // Drivers must accept location tracking in the mobile app before it
+    // shares their position (Kenya Data Protection Act — informed consent).
+    trackingConsent: {
+      acceptedAt: { type: Date, default: null },
+      version: { type: String, default: null },
+    },
     status: { type: String, default: "active" },
     resetPasswordTokenHash: { type: String, default: null },
     resetPasswordExpires: { type: Date, default: null },

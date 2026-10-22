@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  FaCog,
   FaTwitter,
   FaLinkedin,
   FaFacebook,
@@ -12,8 +11,18 @@ import {
   FaTachometerAlt,
   FaShieldAlt,
   FaGooglePlay,
+  FaClipboardCheck,
+  FaRoute,
+  FaTools,
+  FaWifi,
+  FaBatteryQuarter,
+  FaUserShield,
+  FaMobileAlt,
+  FaUserLock,
+  FaFileExcel,
 } from "react-icons/fa";
 import { useState } from "react";
+import BrandIcon from "./components/BrandIcon";
 import { PLAN_PRICING_KES, SPECIAL_OFFER, priceForPlan, formatKes, offerLabel } from "./lib/pricing";
 
 const FAQS = [
@@ -38,6 +47,22 @@ const FAQS = [
     a: "No. Every company's vehicles, drivers, trips, and alerts are fully isolated — no other company on the platform can see your data.",
   },
   {
+    q: "What if my drivers lose network signal?",
+    a: "The driver app keeps recording the route while offline and uploads it, with the real times, as soon as the phone reconnects, so trip history has no gaps. Tracking also keeps running in the background with the screen off.",
+  },
+  {
+    q: "Can my customers see where their delivery is?",
+    a: "Yes. Every job has a private tracking link you can send to the customer. It shows the driver's live position and estimated arrival while they're on the way, with no login needed.",
+  },
+  {
+    q: "How do you handle driver privacy?",
+    a: "Drivers accept a clear tracking notice in the app before anything is shared, you can limit tracking to working hours, and location history is deleted automatically after the retention period you choose, in line with Kenya's Data Protection Act.",
+  },
+  {
+    q: "Can I give office staff limited access?",
+    a: "Yes. Each admin can be a full admin, a dispatcher (runs jobs, routes and driver messages) or a view-only user, so everyone sees what they need without being able to change everything.",
+  },
+  {
     q: "How does the AI assistant differ from regular alerts?",
     a: "Standard alerts fire on fixed rules, like a set speed limit. The AI layer instead learns each vehicle's normal pattern and flags behavior that's unusual for that specific vehicle, even if it stays within fixed limits.",
   },
@@ -45,6 +70,7 @@ const FAQS = [
 
 const NAV_LINKS = [
   { label: "Features", href: "#features" },
+  { label: "Deliveries", href: "#deliveries" },
   { label: "Routes & fuel", href: "#routes" },
   { label: "Industries", href: "#industries" },
   { label: "Pricing", href: "#pricing" },
@@ -71,7 +97,7 @@ const FEATURES = [
     iconBg: "bg-green-50",
     iconColor: "text-green-600",
     title: "Fleet analytics",
-    description: "Track trips, mileage, and driver activity with clear reports.",
+    description: "Distance, hours, stops, idle time and deliveries per vehicle or driver — export to Excel or PDF.",
   },
   {
     icon: FaMapMarkedAlt,
@@ -85,7 +111,7 @@ const FEATURES = [
     iconBg: "bg-yellow-50",
     iconColor: "text-yellow-600",
     title: "Driver behavior",
-    description: "Catch harsh braking, harsh acceleration, and excessive idling automatically.",
+    description: "Catch speeding, harsh braking and cornering, idling and phone use while driving — rolled into a safety score per driver.",
   },
   {
     icon: FaShieldAlt,
@@ -94,6 +120,38 @@ const FEATURES = [
     title: "SOS emergency alerts",
     description: "Drivers can send an emergency alert straight to your dashboard in one tap.",
   },
+  {
+    icon: FaRoute,
+    iconBg: "bg-blue-50",
+    iconColor: "text-blue-700",
+    title: "Jobs & proof of delivery",
+    description: "Dispatch stops to drivers, order them efficiently, and get photo and signature proof for every drop.",
+  },
+  {
+    icon: FaClipboardCheck,
+    iconBg: "bg-teal-50",
+    iconColor: "text-teal-700",
+    title: "Vehicle inspections",
+    description: "Drivers complete a pre-trip checklist with photos — you're alerted the moment something fails.",
+  },
+  {
+    icon: FaTools,
+    iconBg: "bg-gray-100",
+    iconColor: "text-gray-700",
+    title: "Maintenance reminders",
+    description: "Service records and reminders by date or mileage, so no vehicle misses its next service.",
+  },
+];
+
+// Why phone-based tracking holds up in the real world — the reliability and
+// privacy features drivers' phones need.
+const RELIABILITY = [
+  { icon: FaMobileAlt, title: "Tracks in the background", text: "Keeps sharing location with the screen off or the app minimised, and resumes when the app is reopened." },
+  { icon: FaWifi, title: "Works through dead zones", text: "Points recorded offline are uploaded with their real times once the signal returns — no gaps in trip history." },
+  { icon: FaBatteryQuarter, title: "Easy on the battery", text: "Updates often while moving and backs off when parked, so a shift doesn't drain the phone." },
+  { icon: FaBell, title: "Tamper & health alerts", text: "Know when location is switched off, the battery is low, the driver logs out, or a phone goes silent." },
+  { icon: FaUserShield, title: "Fake GPS detection", text: "Positions from mock-location apps are flagged, so a driver can't fake where they are." },
+  { icon: FaUserLock, title: "Privacy by design", text: "Driver consent, optional tracking hours and automatic deletion after your retention period." },
 ];
 
 const STEPS = [
@@ -148,7 +206,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 bg-white">
         <nav className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
           <span className="flex items-center gap-2 text-xl font-bold text-teal-950">
-            <FaCog aria-hidden="true" />
+            <BrandIcon variant="dark" className="h-6 w-6" />
             FIGBLOOM FLEET
           </span>
           <div className="hidden lg:flex items-center gap-6">
@@ -287,6 +345,11 @@ export default function LandingPage() {
               something needs your attention such as a vehicle idling too long or straying off
               route, you will know before it becomes a problem.
             </p>
+            <ul className="mt-4 text-sm text-teal-50/90 space-y-2">
+              <li>• Today's jobs, safety score, inspections, maintenance and driver phones at a glance</li>
+              <li>• Chat with any driver, and choose which alerts reach your email</li>
+              <li>• Give staff full, dispatcher or view-only access</li>
+            </ul>
           </div>
         </div>
       </section>
@@ -305,9 +368,12 @@ export default function LandingPage() {
           </p>
           <ul className="text-sm text-gray-600 space-y-2">
             <li>• One-tap SOS — sends an emergency alert straight to your fleet admin's dashboard</li>
-            <li>• See your assigned vehicle's status and zone at a glance</li>
-            <li>• Review your trip history anytime</li>
-            <li>• Get real-time alerts for your vehicle as they happen</li>
+            <li>• Your jobs for the day in order, with one-tap navigation in Google Maps or Waze</li>
+            <li>• Capture proof of delivery — photos, signature and notes</li>
+            <li>• Pre-trip vehicle inspection checklist</li>
+            <li>• Chat with dispatch, and log fuel and expenses with a receipt photo</li>
+            <li>• See your own safety score and how to improve it</li>
+            <li>• See your assigned vehicle's status and zone, your trips and real-time alerts</li>
             <li>• Reset your password right from the app if you ever get locked out</li>
           </ul>
         </div>
@@ -324,7 +390,7 @@ export default function LandingPage() {
             <img
               src="/driver-app-phone.jpg"
               alt="FIGBLOOM FLEET driver app on a phone"
-              className="w-full max-w-sm rounded-2xl shadow-2xl object-cover"
+              className="w-full max-w-sm rounded-lg shadow-2xl object-cover"
             />
           </div>
 
@@ -336,12 +402,13 @@ export default function LandingPage() {
               Take FIGBLOOM FLEET on the road.
             </h2>
             <p className="text-sm text-teal-50/90 mb-8">
-              Download the driver app to check in on your vehicle, review your trips, and send
-              an SOS alert in one tap — right from your pocket.
+              Download the driver app to get your jobs, navigate to each stop, capture proof of
+              delivery, run your pre-trip inspection and send an SOS alert in one tap — right
+              from your pocket, even where the signal drops.
             </p>
             <a
               href="#"
-              className="inline-flex items-center gap-3 bg-black hover:bg-gray-900 text-white px-5 py-3 rounded-xl transition-colors"
+              className="inline-flex items-center gap-3 bg-black hover:bg-gray-900 text-white px-5 py-3 rounded-md transition-colors"
             >
               <FaGooglePlay size={28} />
               <span className="text-left">
@@ -369,10 +436,88 @@ export default function LandingPage() {
             </h2>
             <p className="text-sm text-teal-50/90">
               Play back any past trip on a map, point by point, with speed and time at every
-              step. See a snapshot of a vehicle's recent routes right from its own page, or
-              open the full replay to scrub through exactly what happened.
+              step — or pick any date and time range to see everywhere a vehicle went, where it
+              stopped and for how long.
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* DISPATCH & DELIVERIES */}
+      <section id="deliveries" className="max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center scroll-mt-20">
+        <div>
+          <span className="text-sm uppercase tracking-wide text-teal-950 font-bold mb-3 block">
+            Dispatch & deliveries
+          </span>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
+            From job sheet to signed delivery, in one flow.
+          </h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Send stops straight to a driver's app and let FIGBLOOM FLEET put them in the most
+            efficient order, respecting each customer's time window.
+          </p>
+          <ul className="text-sm text-gray-600 space-y-2">
+            <li>• Create jobs from just an address — we find it on the map</li>
+            <li>• Optimise each driver's stops in one click</li>
+            <li>• Drivers navigate with Google Maps or Waze and update the status as they go</li>
+            <li>• Photo, signature and notes as proof of delivery, with time and place</li>
+            <li>• Failed stops come back with a reason, so nothing goes missing</li>
+            <li>• Send customers a live tracking link with the driver's ETA</li>
+          </ul>
+        </div>
+
+        <div className="w-full aspect-video bg-gray-100 overflow-hidden">
+          <img src="/skica911-driver-3978839_1920.jpg" alt="Driver completing a delivery" className="w-full h-full object-cover" />
+        </div>
+      </section>
+
+      {/* RELIABILITY & PRIVACY */}
+      <section className="bg-gradient-to-br from-blue-950 via-blue-900 to-blue-900 py-20">
+        <div className="max-w-6xl mx-auto px-6">
+          <span className="text-sm uppercase tracking-wide text-teal-300 font-bold mb-3 block text-center">
+            Built for the road
+          </span>
+          <h2 className="text-3xl font-bold text-white mb-10 leading-tight text-center">
+            Phone tracking you can actually rely on.
+          </h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {RELIABILITY.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.title} className="rounded-lg bg-white/5 p-6 ring-1 ring-white/10">
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-teal-400/15 text-teal-300">
+                    <Icon size={18} />
+                  </div>
+                  <h3 className="text-base font-semibold text-white mb-1">{item.title}</h3>
+                  <p className="text-sm text-teal-50/80">{item.text}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* REPORTS & DRIVER SCORES */}
+      <section className="max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center">
+        <div className="order-2 md:order-1 w-full aspect-video bg-gray-100 overflow-hidden">
+          <img src="/zdrsoft-highway-7213206_1920.jpg" alt="Fleet on the highway" className="w-full h-full object-cover" />
+        </div>
+        <div className="order-1 md:order-2">
+          <span className="text-sm uppercase tracking-wide text-teal-950 font-bold mb-3 block">
+            Reports & driver scores
+          </span>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4 leading-tight">
+            Numbers you can coach with.
+          </h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Every driver gets a 0–100 safety score from speeding, harsh braking and cornering,
+            and phone use per 100 km — so you can compare fairly and coach the right people.
+            Reports cover distance, hours, stops, idle time, deliveries completed and late, and
+            expenses, per vehicle or per driver.
+          </p>
+          <p className="inline-flex items-center gap-2 text-sm font-medium text-teal-700">
+            <FaFileExcel /> Export to Excel or PDF in one click
+          </p>
         </div>
       </section>
 
@@ -453,7 +598,7 @@ export default function LandingPage() {
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Trial */}
-          <div className="rounded-lg p-6 flex flex-col">
+          <div className="rounded p-6 flex flex-col">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Trial</h3>
             <p className="text-3xl font-bold text-gray-900 mb-1">Free</p>
             <p className="text-xs text-gray-400 mb-6">14 days</p>
@@ -473,7 +618,7 @@ export default function LandingPage() {
           </div>
 
           {/* Basic */}
-          <div className="rounded-lg p-6 flex flex-col">
+          <div className="rounded p-6 flex flex-col">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Basic</h3>
             <p className="text-3xl font-bold text-gray-900 mb-1">{formatKes(PLAN_PRICING_KES.basic)}</p>
             <p className="text-xs text-gray-400 mb-6">per vehicle / month</p>
@@ -495,7 +640,7 @@ export default function LandingPage() {
           </div>
 
           {/* Pro — highlighted */}
-          <div className="rounded-lg p-6 flex flex-col relative ring-2 ring-orange-500">
+          <div className="rounded p-6 flex flex-col relative ring-2 ring-orange-500">
             <span className="absolute -top-3 left-6 bg-orange-500 text-white text-xs font-medium px-3 py-1 rounded-full">
               {SPECIAL_OFFER.active && SPECIAL_OFFER.plan === "pro" ? `Save ${SPECIAL_OFFER.discountPercent}%` : "Most popular"}
             </span>
@@ -524,7 +669,7 @@ export default function LandingPage() {
           </div>
 
           {/* Enterprise */}
-          <div className="rounded-lg p-6 flex flex-col">
+          <div className="rounded p-6 flex flex-col">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Enterprise</h3>
             <p className="text-3xl font-bold text-gray-900 mb-1">Custom</p>
             <p className="text-xs text-gray-400 mb-6">contact us</p>
@@ -589,7 +734,7 @@ export default function LandingPage() {
           {FAQS.map((item, i) => {
             const isOpen = openFaq === i;
             return (
-              <div key={i} className="border border-gray-200 rounded-lg">
+              <div key={i} className="border border-gray-200 rounded">
                 <button
                   onClick={() => setOpenFaq(isOpen ? null : i)}
                   className="w-full flex items-center justify-between px-5 py-4 text-left"
@@ -626,7 +771,7 @@ export default function LandingPage() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
               <div>
                 <span className="flex items-center gap-2 text-lg font-bold text-teal-950 mb-3">
-                  <FaCog aria-hidden="true" />
+                  <BrandIcon variant="dark" className="h-5 w-5" />
                   FIGBLOOM FLEET
                 </span>
                 <p className="text-sm text-gray-500 mb-4">

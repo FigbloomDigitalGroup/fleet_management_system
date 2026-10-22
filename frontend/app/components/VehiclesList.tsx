@@ -187,7 +187,7 @@ export default function VehiclesList({
 
   return (
     <div className="grid lg:grid-cols-3 gap-4">
-      <div className={`${canAdd ? "lg:col-span-2" : "lg:col-span-3"} bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden`}>
+      <div className={`${canAdd ? "lg:col-span-2" : "lg:col-span-3"} bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden`}>
         {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
         {error && <p className="text-sm text-red-600 p-5">{error}</p>}
         {!loading && !error && (
@@ -196,7 +196,7 @@ export default function VehiclesList({
               Every vehicle on your account, its current status, and assigned driver.
             </p>
             {deleteError && (
-              <div className="mx-5 mt-3 flex items-start justify-between gap-2 rounded-md bg-red-50 px-3 py-2 text-xs text-red-600">
+              <div className="mx-5 mt-3 flex items-start justify-between gap-2 rounded bg-red-50 px-3 py-2 text-xs text-red-600">
                 <span>{deleteError}</span>
                 <button onClick={() => setDeleteError(null)} className="shrink-0 font-medium hover:underline">
                   Dismiss
@@ -252,7 +252,7 @@ export default function VehiclesList({
         value={v.driverId?._id || ""}
         disabled={assigningId === v._id}
         onChange={(e) => handleAssignDriver(v._id, e.target.value)}
-        className="text-sm border border-gray-300 rounded-md px-2 py-1 outline-none focus:border-teal-400"
+        className="text-sm border border-gray-300 rounded px-2 py-1 outline-none focus:border-teal-400"
       >
         <option value="">Unassigned</option>
         {drivers.map((d) => (
@@ -300,7 +300,7 @@ export default function VehiclesList({
       </div>
 
       {canAdd && (
-      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 h-fit">
+      <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5 h-fit">
         <h3 className="text-sm font-medium text-gray-700">Add a vehicle</h3>
         <p className="text-xs text-teal-600 mt-0.5 mb-4">Register a vehicle to start tracking it.</p>
         <form onSubmit={handleAddVehicle} className="space-y-4">
@@ -312,7 +312,7 @@ export default function VehiclesList({
               value={plateNumber}
               onChange={(e) => setPlateNumber(e.target.value)}
               placeholder="KDA 123A"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+              className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
             />
           </div>
           <div>
@@ -322,7 +322,7 @@ export default function VehiclesList({
               value={make}
               onChange={(e) => setMake(e.target.value)}
               placeholder="Toyota"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+              className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
             />
           </div>
           <div>
@@ -332,7 +332,7 @@ export default function VehiclesList({
               value={model}
               onChange={(e) => setModel(e.target.value)}
               placeholder="Hiace"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+              className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
             />
           </div>
           <div>
@@ -340,7 +340,7 @@ export default function VehiclesList({
             <select
               value={vehicleType}
               onChange={(e) => setVehicleType(e.target.value)}
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+              className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
             >
               {VEHICLE_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
@@ -358,7 +358,7 @@ export default function VehiclesList({
               value={deviceId}
               onChange={(e) => setDeviceId(e.target.value)}
               placeholder="TRK-001"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+              className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
             />
           </div>
           <div>
@@ -372,7 +372,7 @@ export default function VehiclesList({
               value={mileage}
               onChange={(e) => setMileage(e.target.value)}
               placeholder="12 (default if left blank)"
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+              className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
             />
             <p className="text-xs text-gray-400 mt-1">Used to estimate fuel cost for routes and trips.</p>
           </div>
@@ -382,7 +382,7 @@ export default function VehiclesList({
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-2 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+            className="w-full py-2 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
           >
             {isSubmitting ? "Adding…" : "Add vehicle"}
           </button>
@@ -406,7 +406,7 @@ export default function VehiclesList({
             type="file"
             accept=".xlsx,.csv"
             onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-            className="w-full text-xs text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-gray-700 hover:file:bg-gray-200"
+            className="w-full text-xs text-gray-600 file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-gray-700 hover:file:bg-gray-200"
           />
 
           {importError && <p className="text-xs text-red-600">{importError}</p>}
@@ -414,14 +414,14 @@ export default function VehiclesList({
           <button
             type="submit"
             disabled={isImporting || !importFile}
-            className="w-full py-2 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+            className="w-full py-2 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
           >
             {isImporting ? "Importing…" : "Import vehicles"}
           </button>
         </form>
 
         {importResult && (
-          <div className="mt-3 rounded-md border border-gray-200 p-3">
+          <div className="mt-3 rounded border border-gray-200 p-3">
             <p className="text-xs font-medium text-gray-700">
               {importResult.createdCount} added
               {importResult.failedCount > 0 ? `, ${importResult.failedCount} failed` : ""}

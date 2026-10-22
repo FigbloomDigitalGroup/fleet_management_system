@@ -40,13 +40,13 @@ export default function CompaniesPage() {
       {loading && <Skeleton rows={5} rowClassName="h-12" />}
 
       {error && (
-        <div className="text-sm px-3.5 py-2.5 rounded-md bg-red-50 text-red-600 border border-red-200 mb-4">
+        <div className="text-sm px-3.5 py-2.5 rounded bg-red-50 text-red-600 border border-red-200 mb-4">
           {error}
         </div>
       )}
 
       {!loading && !error && (
-        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
               <tr>
@@ -71,7 +71,7 @@ export default function CompaniesPage() {
                     <td className="px-5 py-3">
                       <Link
                         href={`/platform/companies/${c._id}`}
-                        className="inline-block cursor-pointer rounded-md bg-blue-950 px-3 py-1.5 text-sm font-medium text-white"
+                        className="inline-block cursor-pointer rounded bg-blue-950 px-3 py-1.5 text-sm font-medium text-white"
                       >
                         {c.name}
                       </Link>

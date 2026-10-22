@@ -50,7 +50,7 @@ export default function CompanyTripDetailPage() {
         </span>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 max-w-xl mb-6">
+      <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5 max-w-xl mb-6">
         <p className="text-xs text-teal-600 mb-3">Key details recorded for this trip</p>
         <dl className="grid grid-cols-2 gap-5 text-sm">
           <div>
@@ -77,6 +77,24 @@ export default function CompanyTripDetailPage() {
               {trip.distanceKm ? `${trip.distanceKm.toFixed(1)} km` : "Not yet calculated"}
             </dd>
           </div>
+          <div>
+            <dt className="text-gray-500">Purpose</dt>
+            <dd className="text-gray-900 font-medium mt-0.5 capitalize">{trip.purpose || "Not set"}</dd>
+          </div>
+          {trip.endTime && (
+            <div>
+              <dt className="text-gray-500">Ended by</dt>
+              <dd className="text-gray-900 font-medium mt-0.5">
+                {trip.endedBy === "driver" ? "Driver, from the app" : "Automatically"}
+              </dd>
+            </div>
+          )}
+          {trip.note && (
+            <div className="col-span-2">
+              <dt className="text-gray-500">Driver&apos;s note</dt>
+              <dd className="text-gray-900 mt-0.5 whitespace-pre-line">{trip.note}</dd>
+            </div>
+          )}
         </dl>
       </div>
 

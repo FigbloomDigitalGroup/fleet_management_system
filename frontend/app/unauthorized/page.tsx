@@ -18,13 +18,13 @@ export default function UnauthorizedPage() {
         <div className="flex items-center justify-center gap-3">
           <button
             onClick={() => (user ? router.push(redirectPathForRole(user.role)) : router.push("/login"))}
-            className="px-5 py-2.5 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600"
+            className="px-5 py-2.5 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600"
           >
             Go to my dashboard
           </button>
           <button
             onClick={logout}
-            className="px-5 py-2.5 rounded-md text-sm border border-gray-300 text-gray-600 hover:border-gray-400"
+            className="px-5 py-2.5 rounded text-sm border border-gray-300 text-gray-600 hover:border-gray-400"
           >
             Sign out
           </button>

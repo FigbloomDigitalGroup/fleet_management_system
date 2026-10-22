@@ -1,17 +1,20 @@
 
 "use client";
 
-import { useEffect, useRef, useState, FormEvent } from "react";
+import { createElement, useEffect, useRef, useState, FormEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { apiRequest } from "../lib/api";
 import { AlertRecord, VehicleRecord } from "../types/auth";
 import Skeleton from "./Skeleton";
 import WheelIcon from "./WheelIcon";
+import { alertTypeIcon, alertTypeLabel, isCriticalAlert } from "../lib/alertTypes";
+import { useAdminAccess } from "../lib/adminAccess";
 
 export default function AlertsList() {
   const pathname = usePathname();
   const basePath = pathname?.startsWith("/admin") ? "/admin/vehicles" : "/company/vehicles";
+  const { canDispatch } = useAdminAccess();
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,13 +100,13 @@ export default function AlertsList() {
   return (
     <div className="grid lg:grid-cols-3 gap-6">
       {/* Alerts list */}
-      <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+      <div className="lg:col-span-2 bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
         {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
         {error && <p className="text-sm text-red-600 p-5">{error}</p>}
         {!loading && !error && (
           <>
         <p className="text-xs text-teal-600 px-5 pt-4">
-          Speeding, geofence, and offline alerts raised across your fleet.
+          Driving, phone, zone, job and inspection alerts raised across your fleet.
         </p>
         <table className="w-full text-sm mt-2">
           <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
@@ -135,7 +138,15 @@ export default function AlertsList() {
                       "—"
                     )}
                   </td>
-                  <td className="px-5 py-3 text-gray-600">{a.type.replace(/_/g, " ")}</td>
+                  <td className="px-5 py-3 text-gray-600">
+                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                      {createElement(alertTypeIcon(a.type), {
+                        size: 13,
+                        className: isCriticalAlert(a.type) ? "text-red-500" : "text-orange-500",
+                      })}
+                      {alertTypeLabel(a.type)}
+                    </span>
+                  </td>
                   <td className="px-5 py-3 text-xs text-teal-600">{a.message}</td>
                   <td className="px-5 py-3">
                     <span
@@ -148,7 +159,7 @@ export default function AlertsList() {
                     </span>
                   </td>
                   <td className="px-5 py-3">
-                    {!a.resolved && (
+                    {!a.resolved && canDispatch && (
                       <button
                         onClick={() => handleResolve(a._id)}
                         disabled={resolvingId === a._id}
@@ -168,8 +179,8 @@ export default function AlertsList() {
       </div>
 
       {/* Message driver form */}
-      {!loading && !error && (
-      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 h-fit">
+      {!loading && !error && canDispatch && (
+      <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5 h-fit">
         <h3 className="text-sm font-medium text-gray-700">Message driver</h3>
         <p className="text-xs text-teal-600 mt-0.5 mb-4">
           Sends straight to this vehicle's driver in the mobile app — it won't appear in the list on the left.
@@ -180,7 +191,7 @@ export default function AlertsList() {
             <select
               value={vehicleId}
               onChange={(e) => setVehicleId(e.target.value)}
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
+              className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
             >
               {vehicles.length === 0 && <option value="">No vehicles yet</option>}
               {vehicles.map((v) => (
@@ -199,7 +210,7 @@ export default function AlertsList() {
               onChange={(e) => setMessage(e.target.value)}
               placeholder="e.g. Please return to the depot by 5pm…"
               rows={3}
-              className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
+              className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
             />
           </div>
 
@@ -211,7 +222,7 @@ export default function AlertsList() {
           <button
             type="submit"
             disabled={isSubmitting || vehicles.length === 0}
-            className="w-full py-2 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+            className="w-full py-2 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
           >
             {isSubmitting ? "Sending…" : "Send message"}
           </button>

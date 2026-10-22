@@ -48,6 +48,29 @@ const companySchema = new mongoose.Schema(
       geofenceId: { type: mongoose.Schema.Types.ObjectId, ref: "Geofence" },
       updatedAt: { type: Date },
     },
+    // Thresholds and routing for automatic alerts — read through
+    // lib/companySettings.js, which fills in defaults for older companies.
+    alertSettings: {
+      speedLimitKph: { type: Number, default: 80, min: 20, max: 200 },
+      idleMinutes: { type: Number, default: 10, min: 1, max: 240 },
+      offlineMinutes: { type: Number, default: 15, min: 5, max: 1440 },
+      lowBatteryPercent: { type: Number, default: 15, min: 5, max: 50 },
+      harshBrakingKphPerSec: { type: Number, default: 8, min: 3, max: 30 },
+      harshAccelerationKphPerSec: { type: Number, default: 6, min: 3, max: 30 },
+      disabledTypes: { type: [String], default: [] }, // alert types that are never raised
+      emailRecipientIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+      emailTypes: { type: [String], default: [] }, // alert types that also get emailed
+    },
+    // When drivers' phones are allowed to share location. Disabled = any time
+    // the driver turns sharing on. Times are HH:MM in Africa/Nairobi.
+    trackingHours: {
+      enabled: { type: Boolean, default: false },
+      start: { type: String, default: "06:00" },
+      end: { type: String, default: "20:00" },
+      days: { type: [Number], default: [1, 2, 3, 4, 5, 6] }, // 0 = Sunday
+    },
+    // Location pings and driving events older than this are deleted nightly.
+    dataRetentionDays: { type: Number, default: 180, min: 30, max: 3650 },
   },
   { timestamps: true } // automatically adds createdAt and updatedAt
 );

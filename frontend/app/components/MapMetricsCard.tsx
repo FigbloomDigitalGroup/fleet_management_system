@@ -21,10 +21,10 @@ export default function MapMetricsCard({
   dailyStats: DailyPoint[];
 }) {
   return (
-    <div className="flex h-full flex-col gap-3 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
+    <div className="flex h-full flex-col gap-3 rounded-lg bg-white p-5 shadow-sm ring-1 ring-black/5">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Fleet on the map</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-[15px] font-semibold text-gray-900">Fleet on the map</h2>
+        <p className="mt-0.5 text-xs text-teal-600">
           {active} of {total} vehicles active right now
         </p>
       </div>

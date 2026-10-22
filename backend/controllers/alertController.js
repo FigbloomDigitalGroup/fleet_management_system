@@ -18,6 +18,10 @@ const DRIVER_VISIBLE_TYPES = [
   "harsh_acceleration",
   "excessive_idling",
   "admin_message",
+  "harsh_cornering",
+  "phone_use",
+  "mock_location",
+  "inspection_failed",
 ];
 
 // admin_message is a message TO a driver, not an operational alert ABOUT a
@@ -40,7 +44,7 @@ export async function resolveAlert(req, res) {
   try {
     const alert = await Alert.findOneAndUpdate(
       { _id: req.params.id, ...tenantScope(req) },
-      { resolved: true },
+      { resolved: true, resolvedAt: new Date() },
       { new: true }
     );
     if (!alert) return res.status(404).json({ error: "Alert not found" });

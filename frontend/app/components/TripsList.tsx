@@ -22,7 +22,7 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
   }, []);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+    <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
       {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
       {error && <p className="text-sm text-red-600 p-5">{error}</p>}
       {!loading && !error && (
@@ -77,6 +77,16 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
                     >
                       {t.endTime ? "completed" : "in progress"}
                     </span>
+                    {t.endedBy === "driver" && (
+                      <span className="ml-1.5 text-[11px] text-gray-400" title="Ended from the driver app">
+                        by driver
+                      </span>
+                    )}
+                    {t.purpose && (
+                      <span className="ml-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium capitalize text-blue-700">
+                        {t.purpose}
+                      </span>
+                    )}
                   </td>
                   <td className="px-5 py-3 text-gray-600">
                     {t.distanceKm ? `${t.distanceKm.toFixed(1)} km` : "—"}

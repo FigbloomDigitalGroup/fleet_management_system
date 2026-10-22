@@ -5,9 +5,9 @@ export function redirectPathForRole(role: Role): string {
     case "PLATFORM_ADMIN":
       return "/platform/dashboard";
     case "COMPANY_OWNER":
-      return "/company/dashboard";
+      return "/company/live-map";
     case "ADMIN":
-      return "/admin/dashboard";
+      return "/admin/live-map";
     case "DRIVER":
       return "/driver/dashboard";
     default:

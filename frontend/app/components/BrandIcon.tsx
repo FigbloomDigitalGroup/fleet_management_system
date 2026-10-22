@@ -1,6 +1,6 @@
 // The Fig Fleet glyph used wherever the brand mark appears next to the
 // wordmark. "light" (white fill) is for dark/colored backgrounds — sidebar,
-// the login/register hero overlay. "dark" (teal fill) is for white
+// the login/register hero overlay. "dark" (green fill) is for white
 // backgrounds, where a white glyph would be invisible.
 export default function BrandIcon({
   variant = "light",

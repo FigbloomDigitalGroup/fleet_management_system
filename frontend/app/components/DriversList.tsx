@@ -4,7 +4,8 @@ import { useEffect, useState, FormEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { apiRequest } from "../lib/api";
-import { DriverRecord, VehicleRecord } from "../types/auth";
+import { DriverRecord, DriverScore, VehicleRecord } from "../types/auth";
+import { scoreBadgeClass } from "./DriverScoreCard";
 import Skeleton from "./Skeleton";
 import WheelIcon from "./WheelIcon";
 import PasswordInput from "./PasswordInput";
@@ -39,6 +40,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
   const driversBasePath = pathname?.startsWith("/admin") ? "/admin/drivers" : "/company/drivers";
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
+  const [scores, setScores] = useState<Record<string, DriverScore>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [assigningId, setAssigningId] = useState<string | null>(null);
@@ -71,6 +73,10 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
 
   useEffect(() => {
     loadAll();
+    // Scores are a nice-to-have column — the list still works without them.
+    apiRequest<DriverScore[]>("/api/users/drivers/scores?days=30")
+      .then((rows) => setScores(Object.fromEntries(rows.map((r) => [String(r.driverId), r]))))
+      .catch(() => {});
   }, []);
 
   // Find which vehicle (if any) is currently assigned to a given driver
@@ -149,7 +155,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
 
   return (
     <div className={canAdd ? "grid lg:grid-cols-3 gap-4" : ""}>
-      <div className={`${canAdd ? "lg:col-span-2" : ""} bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden`}>
+      <div className={`${canAdd ? "lg:col-span-2" : ""} bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden`}>
         {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
         {error && <p className="text-sm text-red-600 p-5">{error}</p>}
         {!loading && !error && (
@@ -163,12 +169,13 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                 <th className="text-left px-5 py-3 font-bold">Name</th>
                 <th className="text-left px-5 py-3 font-bold">Email</th>
                 <th className="text-left px-5 py-3 font-bold">Vehicle</th>
+                <th className="text-left px-5 py-3 font-bold" title="Safety score over the last 30 days">Score</th>
               </tr>
             </thead>
             <tbody>
               {drivers.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-5 py-8 text-center text-gray-400">
+                  <td colSpan={4} className="px-5 py-8 text-center text-gray-400">
                     No drivers added yet.
                   </td>
                 </tr>
@@ -189,7 +196,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                             value={assigned?._id || ""}
                             disabled={assigningId === d._id}
                             onChange={(e) => handleAssignVehicle(d._id, e.target.value)}
-                            className="text-sm border border-gray-300 rounded-md px-2 py-1 outline-none focus:border-teal-600"
+                            className="text-sm border border-gray-300 rounded px-2 py-1 outline-none focus:border-teal-600"
                           >
                             <option value="">No vehicle</option>
                             {vehicles.map((v) => (
@@ -210,6 +217,20 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                           <span className="text-xs font-bold text-blue-950">No vehicle</span>
                         )}
                       </td>
+                      <td className="px-5 py-3">
+                        {(() => {
+                          const s = scores[d._id];
+                          if (!s) return <span className="text-xs text-gray-400">—</span>;
+                          return (
+                            <span
+                              className={`text-xs px-2 py-1 rounded-full border font-medium ${scoreBadgeClass(s.score)}`}
+                              title={s.score == null ? `Needs ${s.minDistanceKm} km of driving` : `${s.grade} · ${s.distanceKm} km in 30 days`}
+                            >
+                              {s.score == null ? "Too little driving" : Math.round(s.score)}
+                            </span>
+                          );
+                        })()}
+                      </td>
                     </tr>
                   );
                 })
@@ -221,7 +242,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
       </div>
 
       {canAdd && (
-        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 h-fit">
+        <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5 h-fit">
           <h3 className="text-sm font-medium text-gray-700">Add a driver</h3>
           <p className="text-xs text-teal-600 mt-0.5 mb-4">Creates a driver login they can use on their phone.</p>
           <form onSubmit={handleAddDriver} className="space-y-4">
@@ -232,7 +253,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
               />
             </div>
             <div>
@@ -242,7 +263,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
               />
             </div>
             <div>
@@ -251,7 +272,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
               />
             </div>
 
@@ -260,7 +281,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-2 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+              className="w-full py-2 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
             >
               {isSubmitting ? "Adding…" : "Add driver"}
             </button>
@@ -285,7 +306,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
               type="file"
               accept=".xlsx,.csv"
               onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-              className="w-full text-xs text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-gray-700 hover:file:bg-gray-200"
+              className="w-full text-xs text-gray-600 file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-gray-700 hover:file:bg-gray-200"
             />
 
             {importError && <p className="text-xs text-red-600">{importError}</p>}
@@ -293,14 +314,14 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
             <button
               type="submit"
               disabled={isImporting || !importFile}
-              className="w-full py-2 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+              className="w-full py-2 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
             >
               {isImporting ? "Importing…" : "Import drivers"}
             </button>
           </form>
 
           {importResult && (
-            <div className="mt-3 rounded-md border border-gray-200 p-3">
+            <div className="mt-3 rounded border border-gray-200 p-3">
               <p className="text-xs font-medium text-gray-700">
                 {importResult.createdCount} added
                 {importResult.failedCount > 0 ? `, ${importResult.failedCount} failed` : ""}

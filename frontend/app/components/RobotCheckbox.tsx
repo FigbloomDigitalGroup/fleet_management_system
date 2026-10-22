@@ -26,14 +26,14 @@ export default function RobotCheckbox({
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-gray-300 bg-gray-50 px-4 py-3">
+    <div className="flex items-center justify-between gap-3 rounded border border-gray-300 bg-gray-50 px-4 py-3">
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={handleClick}
           aria-pressed={checked}
           aria-label="Confirm you're not a robot"
-          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded border-2 transition-colors ${
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border-2 transition-colors ${
             checked ? "border-teal-600 bg-teal-600" : "border-gray-400 bg-white hover:border-teal-500"
           }`}
         >

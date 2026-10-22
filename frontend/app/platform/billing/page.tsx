@@ -100,7 +100,7 @@ export default function BillingPage() {
 
   return (
     <div>
-      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
             <tr>
@@ -129,7 +129,7 @@ export default function BillingPage() {
                     value={c.subscriptionPlan}
                     disabled={updatingId === c._id}
                     onChange={(e) => changePlan(c._id, e.target.value)}
-                    className="text-sm border border-gray-300 rounded-md px-2 py-1 outline-none focus:border-teal-600"
+                    className="text-sm border border-gray-300 rounded px-2 py-1 outline-none focus:border-teal-600"
                   >
                     {PLAN_OPTIONS.map((p) => (
                       <option key={p} value={p}>
@@ -148,7 +148,7 @@ export default function BillingPage() {
         <h2 className="text-base font-semibold text-gray-900 mb-1">Transactions</h2>
         <p className="text-xs text-teal-600 mb-4">Every real Paystack charge across every company, most recent first.</p>
 
-        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
           {transactions.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">No payments yet.</p>
           ) : (

@@ -58,9 +58,9 @@ export default function DriverDashboard() {
       </div>
 
       {loading && !hasLoadedOnce.current ? (
-        <div className="skeleton-shimmer h-40 rounded-2xl" />
+        <div className="skeleton-shimmer h-40 rounded-lg" />
       ) : vehicle ? (
-        <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5">
+        <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-black/5">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-50">
@@ -80,13 +80,13 @@ export default function DriverDashboard() {
             </span>
           </div>
 
-          <div className="mt-5 flex items-center gap-2 rounded-lg bg-teal-50/60 px-3.5 py-2.5 text-sm text-teal-700">
+          <div className="mt-5 flex items-center gap-2 rounded bg-teal-50/60 px-3.5 py-2.5 text-sm text-teal-700">
             <FiCheckCircle size={16} />
             You&apos;re assigned to this vehicle, {user?.fullName?.split(" ")[0] || "driver"}.
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center">
+        <div className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
             <IoCarSportSharp size={26} className="text-gray-400" />
           </div>

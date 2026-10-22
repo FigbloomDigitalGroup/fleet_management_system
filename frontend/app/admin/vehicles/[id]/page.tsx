@@ -7,6 +7,8 @@ import FullPageLoading from "@/app/components/FullPageLoading";
 import ZoneStatusBadge from "@/app/components/ZoneStatusBadge";
 import VehicleTripsMap from "@/app/components/VehicleTripsMap";
 import { usePageHeader } from "@/app/components/DashboardShell";
+import VehicleExtras from "@/app/components/VehicleExtras";
+import { useAdminAccess } from "@/app/lib/adminAccess";
 import { CompanyRecord, GeofenceRecord, VehicleRecord } from "../../../types/auth";
 
 interface LiveLocation {
@@ -31,6 +33,7 @@ const STATUS_OPTIONS = [
 export default function AdminVehicleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { canManageFleet } = useAdminAccess();
 
   const [vehicle, setVehicle] = useState<VehicleRecord | null>(null);
   const [geofences, setGeofences] = useState<GeofenceRecord[]>([]);
@@ -132,7 +135,7 @@ export default function AdminVehicleDetailPage() {
 
   return (
     <div>
-      <button onClick={() => router.back()} className="mb-4 rounded-md bg-gray-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-600">
+      <button onClick={() => router.back()} className="mb-4 rounded bg-gray-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-600">
         Back
       </button>
 
@@ -144,7 +147,7 @@ export default function AdminVehicleDetailPage() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
           <h3 className="text-sm font-medium text-gray-700">Vehicle details</h3>
           <p className="text-xs text-teal-600 mt-0.5 mb-3">Registration info for this vehicle</p>
           <dl className="grid grid-cols-2 gap-3 text-sm">
@@ -165,7 +168,7 @@ export default function AdminVehicleDetailPage() {
           </dl>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 h-fit">
+        <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5 h-fit">
           <h3 className="text-sm font-medium text-gray-700">Change status</h3>
           <p className="text-xs text-teal-600 mt-0.5 mb-4">Updates how this vehicle shows up across the fleet</p>
           <div className="space-y-2">
@@ -175,9 +178,9 @@ export default function AdminVehicleDetailPage() {
                 <button
                   key={opt.value}
                   onClick={() => updateStatus(opt.value)}
-                  disabled={updating || vehicle.status === opt.value || blocked}
+                  disabled={!canManageFleet || updating || vehicle.status === opt.value || blocked}
                   title={blocked ? "Assign a driver to this vehicle before setting it active" : undefined}
-                  className={`w-full py-2 rounded-md text-sm font-medium text-white disabled:opacity-40 ${opt.color}`}
+                  className={`w-full py-2 rounded text-sm font-medium text-white disabled:opacity-40 ${opt.color}`}
                 >
                   {opt.label}
                 </button>
@@ -189,7 +192,7 @@ export default function AdminVehicleDetailPage() {
           )}
         </div>
 
-        <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+        <div className="lg:col-span-3 bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
           <h3 className="text-sm font-medium text-gray-700">Mileage</h3>
           <p className="text-xs text-teal-600 mt-0.5 mb-3">
             Expected fuel use for this vehicle — used to estimate fuel cost for its routes and trips.
@@ -202,19 +205,20 @@ export default function AdminVehicleDetailPage() {
                 min="0.1"
                 step="0.1"
                 required
+                disabled={!canManageFleet}
                 value={mileageInput}
                 onChange={(e) => {
                   setMileageInput(e.target.value);
                   mileageDirtyRef.current = true;
                 }}
                 placeholder="12"
-                className="w-40 px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
+                className="w-40 px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
               />
             </div>
             <button
               type="submit"
-              disabled={savingMileage}
-              className="rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-600 disabled:opacity-50"
+              disabled={savingMileage || !canManageFleet}
+              className="rounded bg-orange-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-600 disabled:opacity-50"
             >
               {savingMileage ? "Saving…" : "Save mileage"}
             </button>
@@ -222,13 +226,13 @@ export default function AdminVehicleDetailPage() {
           {mileageError && <p className="text-xs text-red-600 mt-2">{mileageError}</p>}
         </div>
 
-        <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+        <div className="lg:col-span-3 bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
           <h3 className="text-sm font-medium text-gray-700">Recent trips</h3>
           <p className="text-xs text-teal-600 mt-0.5 mb-3">Routes this vehicle has traveled recently</p>
           <VehicleTripsMap vehicleId={vehicle._id} basePath="/admin/trips" />
         </div>
 
-        <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+        <div className="lg:col-span-3 bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
           <h3 className="text-sm font-medium text-gray-700">Daily starting point</h3>
           <p className="text-xs text-teal-600 mt-0.5 mb-3">Where this vehicle's driver should start their day</p>
 
@@ -250,8 +254,8 @@ export default function AdminVehicleDetailPage() {
               <select
                 value={vehicle.startGeofenceId?._id || ""}
                 onChange={(e) => updateStartZone(e.target.value)}
-                disabled={savingZone}
-                className="w-full max-w-sm px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400 disabled:opacity-60"
+                disabled={savingZone || !canManageFleet}
+                className="w-full max-w-sm px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400 disabled:opacity-60"
               >
                 <option value="">
                   {(() => {
@@ -272,7 +276,8 @@ export default function AdminVehicleDetailPage() {
           )}
         </div>
       </div>
+
+      <VehicleExtras vehicleId={vehicle._id} canEdit={canManageFleet} />
     </div>
   );
 }
-

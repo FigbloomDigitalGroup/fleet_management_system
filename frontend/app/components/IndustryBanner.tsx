@@ -8,7 +8,7 @@ export default function IndustryBanner({ industry }: { industry?: string | null 
   if (!industry) return null;
 
   return (
-    <div className="relative h-64 overflow-hidden rounded-2xl shadow-sm ring-1 ring-black/5 bg-orange-500">
+    <div className="relative h-64 overflow-hidden rounded-lg shadow-sm ring-1 ring-black/5 bg-orange-500">
       <FaIndustry
         className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 text-white/25"
         size={88}

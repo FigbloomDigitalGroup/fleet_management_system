@@ -1,21 +1,24 @@
 "use client";
 
-import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GoogleMap, OverlayView, Circle, Polyline, TrafficLayer, useJsApiLoader } from "@react-google-maps/api";
 import { IoCarSportSharp } from "react-icons/io5";
 import { ImLocation2 } from "react-icons/im";
 import { FaSearch } from "react-icons/fa";
-import { FiPlus, FiMinus, FiCrosshair } from "react-icons/fi";
+import { FiPlus, FiMinus, FiCrosshair, FiLayers, FiX, FiBell, FiCircle, FiNavigation } from "react-icons/fi";
+import { FaLocationPinLock } from "react-icons/fa6";
 import { apiRequest } from "../lib/api";
 import { usePulseColor } from "../lib/usePulseColor";
 import { isOutsideGeofences } from "../lib/geofence";
 import { VEHICLE_TYPE_ICONS } from "../lib/vehicleIcons";
-import { usePageHeader } from "./DashboardShell";
-import StatCard from "./StatCard";
-import CircleStat from "./CircleStat";
+import { BottomMenu, useAppShell } from "./AppShell";
+import BrandIcon from "./BrandIcon";
 import FullPageLoading from "./FullPageLoading";
 import { GeofenceRecord, RouteRecord } from "../types/auth";
+import Switch from "./Switch";
+import { useAdminAccess } from "../lib/adminAccess";
 
 interface LiveVehicle {
   vehicleId: string;
@@ -33,8 +36,6 @@ interface LiveVehicle {
         speedKph?: number | null;
       }
     | null;
-  device?: { batteryLevel: number | null; isCharging: boolean | null } | null;
-  recentTrail?: { latitude: number; longitude: number; recordedAt: string }[];
 }
 
 const statusColor: Record<string, string> = {
@@ -54,21 +55,6 @@ const LEGEND_ITEMS = [
 const containerStyle = { width: "100%", height: "100%" };
 const defaultCenter = { lat: -1.2921, lng: 36.8219 };
 
-// Toggle-pill styling shared by the Zones/Routes/Trails layer controls —
-// filled when the layer is visible, muted text when hidden, same idea as a
-// real mapping product's layer switcher.
-const PILL_ACTIVE_STYLES: Record<"teal" | "blue" | "purple" | "green" | "orange", string> = {
-  teal: "bg-teal-50 text-teal-700",
-  blue: "bg-blue-50 text-blue-700",
-  purple: "bg-purple-50 text-purple-700",
-  green: "bg-emerald-50 text-emerald-700",
-  orange: "bg-orange-50 text-orange-700",
-};
-function layerPillClass(active: boolean, color: "teal" | "blue" | "purple" | "green" | "orange") {
-  return `rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors ${
-    active ? PILL_ACTIVE_STYLES[color] : "text-gray-400 hover:text-gray-600"
-  }`;
-}
 
 // Eases a marker's displayed position toward wherever its last GPS ping
 // actually put it, instead of snapping there instantly. Vehicle data only
@@ -116,6 +102,12 @@ function useSmoothLatLng(target: { lat: number; lng: number } | null) {
   return display;
 }
 
+// Clicks on things drawn over the map (markers, the "create here" menu)
+// otherwise also reach the map itself and would open the menu underneath.
+function blockMapClicks(el: HTMLElement | null) {
+  if (el) google.maps.OverlayView.preventMapHitsAndGesturesFrom(el);
+}
+
 function timeAgo(dateStr: string) {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
   if (seconds < 60) return `${seconds}s ago`;
@@ -146,6 +138,7 @@ function VehicleMarker({
   return (
     <OverlayView position={smoothPosition ?? position} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
     <div
+      ref={blockMapClicks}
       className="flex flex-col items-center cursor-pointer"
       style={{ transform: "translate(-50%, -100%)" }}
       onClick={onClick}
@@ -204,8 +197,8 @@ function VehicleMarker({
   );
 }
 
-function StartPointMarker({ variant }: { variant: "saved" | "preview" }) {
-  const color = variant === "saved" ? "#0d9488" : "#f97316";
+function StartPointMarker() {
+  const color = "#0d9488";
 
   return (
     <div className="flex flex-col items-center" style={{ transform: "translate(-50%, -100%)" }}>
@@ -213,7 +206,7 @@ function StartPointMarker({ variant }: { variant: "saved" | "preview" }) {
         className="mb-1 px-2 py-1 rounded shadow-sm bg-white border text-xs font-semibold whitespace-nowrap"
         style={{ borderColor: color, color }}
       >
-        {variant === "saved" ? "Start point" : "New start point"}
+        Start point
       </div>
       <div
         className="w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow"
@@ -232,24 +225,14 @@ interface LatLng {
 
 export default function FleetMap({
   basePath = "/admin/vehicles",
-  pickMode = false,
   savedStartPoint = null,
-  pickedStartPoint = null,
-  onPickStartPoint,
-  mapOverlay,
-  title = "Live Map",
-  subtitle = "Real-time location of every vehicle in your fleet",
 }: {
   basePath?: string;
-  pickMode?: boolean;
   savedStartPoint?: LatLng | null;
-  pickedStartPoint?: LatLng | null;
-  onPickStartPoint?: (point: LatLng) => void;
-  mapOverlay?: ReactNode;
-  title?: string;
-  subtitle?: string;
 }) {
+  const shell = useAppShell();
   const router = useRouter();
+  const { canManageFleet, canDispatch } = useAdminAccess();
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
@@ -262,7 +245,6 @@ export default function FleetMap({
   const [loading, setLoading] = useState(true);
   const [showGeofences, setShowGeofences] = useState(true);
   const [showRoutes, setShowRoutes] = useState(true);
-  const [showTrails, setShowTrails] = useState(true);
   const [showVehicles, setShowVehicles] = useState(true);
   const [showTraffic, setShowTraffic] = useState(false);
   const [satelliteView, setSatelliteView] = useState(false);
@@ -349,90 +331,99 @@ export default function FleetMap({
     return () => window.removeEventListener("fleet:jump-to-vehicle", handleJumpEvent);
   });
 
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "idle" | "offline">("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [layersOpen, setLayersOpen] = useState(false);
+  // A spot clicked on the map, with its "create here" menu open.
+  const [mapMenu, setMapMenu] = useState<LatLng | null>(null);
+  const navHref = (label: string) =>
+    shell?.nav.sections.flatMap((sec) => sec.items).find((i) => i.label === label)?.href ?? null;
+  const geofencesHref = canManageFleet ? navHref("Geofences") : null;
+  const routesHref = canDispatch ? navHref("Routes") : null;
+
+  // Hands the spot to the Geofences / Routes page through the same
+  // sessionStorage draft the AI assistant uses (see GeofencesManager and
+  // RoutesManager).
+  function createHere(kind: "geofence" | "route") {
+    if (!mapMenu) return;
+    if (kind === "geofence" && geofencesHref) {
+      sessionStorage.setItem("geofenceDraft", JSON.stringify({ lat: mapMenu.lat, lng: mapMenu.lng, radiusMeters: 500 }));
+      router.push(geofencesHref);
+    } else if (kind === "route" && routesHref) {
+      sessionStorage.setItem("routeDraft", JSON.stringify({ start: mapMenu }));
+      router.push(routesHref);
+    }
+  }
+
   const counts = {
-    total: vehicles.length,
+    all: vehicles.length,
     active: vehicles.filter((v) => v.status === "active").length,
     idle: vehicles.filter((v) => v.status === "idle").length,
     offline: vehicles.filter((v) => v.status === "offline").length,
   };
 
-  // Puts the vehicle-count cards beside the hero banner (squeezing it down
-  // to the same width, same row) instead of in their own column next to the
-  // map, so the map gets the page's full width. The banner row is moved
-  // below the page ("bottom") so the map sits at the very top. Memoized so
-  // usePageHeader's effect (keyed on this node's identity) doesn't fire
-  // every render.
-  const statsNode = useMemo(
-    () => (
-      <div className="grid grid-cols-2 gap-3 h-full">
-        <StatCard label="Total vehicles" value={counts.total} accent="green" />
-        <StatCard label="Active" value={counts.active} accent="green" />
-        <StatCard label="Idle" value={counts.idle} accent="orange" />
-        <StatCard label="Offline" value={counts.offline} accent="orange" />
-      </div>
-    ),
-    [counts.total, counts.active, counts.idle, counts.offline]
-  );
-  usePageHeader(title, subtitle, statsNode, "bottom");
+  const outsideZone = (v: LiveVehicle) =>
+    !!v.lastLocation && isOutsideGeofences(v.lastLocation.latitude, v.lastLocation.longitude, geofences);
+  const outOfZoneCount = geofences.length ? withLocation.filter(outsideZone).length : 0;
 
-  const reportingPct = counts.total ? Math.round((withLocation.length / counts.total) * 100) : 0;
+  // The card's list narrows as you type (plate, type or driver) and by the
+  // status chips; pressing Enter also zooms the map to the matches.
+  const query = searchQuery.trim().toLowerCase();
+  const listedVehicles = vehicles
+    .filter((v) => statusFilter === "all" || v.status === statusFilter)
+    .filter(
+      (v) =>
+        !query ||
+        v.plateNumber.toLowerCase().includes(query) ||
+        (v.vehicleType && v.vehicleType.toLowerCase().includes(query)) ||
+        (v.driverId?.fullName && v.driverId.fullName.toLowerCase().includes(query))
+    );
 
-  const mostRecent = withLocation.length
-    ? withLocation.reduce((latest, v) =>
-        new Date(v.lastLocation!.recordedAt) > new Date(latest.lastLocation!.recordedAt) ? v : latest
-      )
-    : null;
+  const selected = vehicles.find((v) => v.vehicleId === selectedId) || null;
 
-  // Search by plate number or vehicle type (car/van/truck) — zooms the map to
-  // whatever matches, without changing anything about how vehicles are
-  // fetched, filtered, or rendered above.
+  function selectVehicle(v: LiveVehicle) {
+    setSelectedId(v.vehicleId);
+    const map = mapRef.current;
+    if (map && v.lastLocation) {
+      map.panTo({ lat: v.lastLocation.latitude, lng: v.lastLocation.longitude });
+      if ((map.getZoom() || 12) < 15) map.setZoom(15);
+    }
+  }
+
   function handleSearch(e: FormEvent) {
     e.preventDefault();
-    const query = searchQuery.trim().toLowerCase();
     if (!query) {
       setSearchMessage(null);
       return;
     }
 
-    const matches = vehicles.filter(
-      (v) =>
-        v.plateNumber.toLowerCase().includes(query) ||
-        (v.vehicleType && v.vehicleType.toLowerCase().includes(query))
-    );
-
+    const matches = listedVehicles;
     if (matches.length === 0) {
       setSearchMessage(`No vehicle found matching "${searchQuery.trim()}".`);
       return;
     }
 
     const matchesOnMap = matches.filter((v) => v.lastLocation);
-
     if (matchesOnMap.length === 0) {
       setSearchMessage(
         matches.length === 1
-          ? `${matches[0].plateNumber} exists but isn't showing on the map yet — no GPS location received.`
-          : `Found ${matches.length} matching vehicles, but none are showing on the map yet — no GPS location received.`
+          ? `${matches[0].plateNumber} isn't on the map yet — no GPS location received.`
+          : `None of the ${matches.length} matches are on the map yet — no GPS location received.`
       );
       return;
     }
 
+    setSearchMessage(null);
+    if (matchesOnMap.length === 1) {
+      selectVehicle(matchesOnMap[0]);
+      return;
+    }
     const map = mapRef.current;
     if (map) {
-      if (matchesOnMap.length === 1) {
-        map.panTo({ lat: matchesOnMap[0].lastLocation!.latitude, lng: matchesOnMap[0].lastLocation!.longitude });
-        map.setZoom(16);
-      } else {
-        const bounds = new google.maps.LatLngBounds();
-        matchesOnMap.forEach((v) => bounds.extend({ lat: v.lastLocation!.latitude, lng: v.lastLocation!.longitude }));
-        map.fitBounds(bounds);
-      }
+      const bounds = new google.maps.LatLngBounds();
+      matchesOnMap.forEach((v) => bounds.extend({ lat: v.lastLocation!.latitude, lng: v.lastLocation!.longitude }));
+      map.fitBounds(bounds);
     }
-
-    setSearchMessage(
-      matchesOnMap.length === 1
-        ? `Zoomed to ${matchesOnMap[0].plateNumber}.`
-        : `Found ${matchesOnMap.length} matching vehicles on the map.`
-    );
   }
 
   // Recenters/fits the map to whatever vehicles currently have a GPS fix —
@@ -456,9 +447,7 @@ export default function FleetMap({
     }
 
     const bounds = new google.maps.LatLngBounds();
-    visibleVehicles.forEach((v) =>
-      bounds.extend({ lat: v.lastLocation!.latitude, lng: v.lastLocation!.longitude })
-    );
+    visibleVehicles.forEach((v) => bounds.extend({ lat: v.lastLocation!.latitude, lng: v.lastLocation!.longitude }));
     map.fitBounds(bounds);
   }
 
@@ -470,283 +459,486 @@ export default function FleetMap({
 
   if (loading || !isLoaded) return <FullPageLoading label="Loading map" />;
 
+  const layerToggles = [
+    { label: "Vehicles", on: showVehicles, toggle: () => setShowVehicles((s) => !s), show: true },
+    { label: "Zones", on: showGeofences, toggle: () => setShowGeofences((s) => !s), show: geofences.length > 0 },
+    { label: "Routes", on: showRoutes, toggle: () => setShowRoutes((s) => !s), show: routes.length > 0 },
+    { label: "Traffic", on: showTraffic, toggle: () => setShowTraffic((s) => !s), show: true },
+    { label: "Satellite", on: satelliteView, toggle: () => setSatelliteView((s) => !s), show: true },
+  ];
+  const controlClass =
+    "flex h-9 w-9 items-center justify-center rounded-full bg-white text-gray-600 shadow-lg ring-1 ring-black/5 hover:text-teal-600";
+
   return (
-    <div>
-      {/* The map uses the page's full width and sits at the top — the
-          vehicle-count cards live in the hero banner row, which the shell
-          renders below this page (see statsNode / usePageHeader above). */}
-      <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden mb-3">
-          <div className="relative h-[calc(100vh-140px)] min-h-[560px] w-full">
-            <GoogleMap
-              mapContainerStyle={containerStyle}
-              center={mapCenter}
-              zoom={12}
-              onLoad={(map) => {
-                mapRef.current = map;
-              }}
-              onClick={
-                pickMode && onPickStartPoint
-                  ? (e) => {
-                      if (e.latLng) onPickStartPoint({ lat: e.latLng.lat(), lng: e.latLng.lng() });
-                    }
-                  : undefined
-              }
-              mapTypeId={satelliteView ? "satellite" : "roadmap"}
-              options={{
-                disableDefaultUI: true,
-                mapTypeControl: false,
-                zoomControl: false,
-                streetViewControl: false,
-                fullscreenControl: false,
-                rotateControl: false,
-                scaleControl: false,
-                clickableIcons: false,
-                draggableCursor: pickMode ? "crosshair" : undefined,
-              }}
-            >
-              {showTraffic && <TrafficLayer />}
+    // Traccar's main screen: the map fills the window and everything else
+    // floats on top of it.
+    <div className="relative h-screen w-full">
+      <GoogleMap
+        mapContainerStyle={containerStyle}
+        center={mapCenter}
+        zoom={12}
+        onLoad={(map) => {
+          mapRef.current = map;
+        }}
+        onClick={(e) => {
+          setLayersOpen(false);
+          if (e.latLng && (geofencesHref || routesHref)) {
+            setMapMenu({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+          } else {
+            setMapMenu(null);
+          }
+        }}
+        mapTypeId={satelliteView ? "satellite" : "roadmap"}
+        options={{
+          disableDefaultUI: true,
+          mapTypeControl: false,
+          zoomControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+          rotateControl: false,
+          scaleControl: false,
+          clickableIcons: false,
+        }}
+      >
+        {showTraffic && <TrafficLayer />}
 
-              {/* Geofence zones */}
-              {showGeofences &&
-                geofences.map(
-                  (g) =>
-                    g.type === "circle" &&
-                    g.centerLat &&
-                    g.centerLng && (
-                      <Circle
-                        key={g._id}
-                        center={{ lat: g.centerLat, lng: g.centerLng }}
-                        radius={g.radiusM}
-                        options={{
-                          fillColor: zoneColor,
-                          fillOpacity: 0.12,
-                          strokeColor: zoneColor,
-                          strokeWeight: 1.5,
-                          clickable: false,
-                        }}
-                      />
-                    )
-                )}
-
-              {/* Planned routes — the path a vehicle is expected to follow */}
-              {showRoutes &&
-                routes
-                  .filter((r) => r.active && r.waypoints.length > 1)
-                  .map((r) => (
-                    <Polyline
-                      key={r._id}
-                      path={r.waypoints}
-                      options={{
-                        strokeColor: "#3b82f6",
-                        strokeWeight: 3,
-                        strokeOpacity: 0.7,
-                        icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 1, scale: 3 }, offset: "0", repeat: "12px" }],
-                      }}
-                    />
-                  ))}
-
-              {/* Live trail — where a vehicle has actually been recently, distinct from the planned route above */}
-              {showTrails &&
-                vehicles
-                  .filter((v) => v.recentTrail && v.recentTrail.length > 1)
-                  .map((v) => (
-                    <Polyline
-                      key={`trail-${v.vehicleId}`}
-                      path={v.recentTrail!.map((p) => ({ lat: p.latitude, lng: p.longitude }))}
-                      options={{ strokeColor: "#a855f7", strokeWeight: 3, strokeOpacity: 0.85 }}
-                    />
-                  ))}
-
-              {/* Vehicles — plotted as soon as they have a GPS fix, independent of geofences */}
-              {showVehicles && visibleVehicles.map((v) => (
-                <VehicleMarker
-                  key={v.vehicleId}
-                  vehicle={v}
-                  position={{ lat: v.lastLocation!.latitude, lng: v.lastLocation!.longitude }}
-                  outOfGeofence={isOutsideGeofences(
-                    v.lastLocation!.latitude,
-                    v.lastLocation!.longitude,
-                    geofences
-                  )}
-                  onClick={() => router.push(`${basePath}/${v.vehicleId}`)}
+        {/* Geofence zones */}
+        {showGeofences &&
+          geofences.map(
+            (g) =>
+              g.type === "circle" &&
+              g.centerLat &&
+              g.centerLng && (
+                <Circle
+                  key={g._id}
+                  center={{ lat: g.centerLat, lng: g.centerLng }}
+                  radius={g.radiusM}
+                  options={{
+                    fillColor: zoneColor,
+                    fillOpacity: 0.12,
+                    strokeColor: zoneColor,
+                    strokeWeight: 1.5,
+                    clickable: false,
+                  }}
                 />
-              ))}
+              )
+          )}
 
-              {/* Driver daily starting point */}
-              {savedStartPoint && (
-                <OverlayView position={savedStartPoint} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-                  <StartPointMarker variant="saved" />
-                </OverlayView>
-              )}
-              {pickedStartPoint && (
-                <OverlayView position={pickedStartPoint} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-                  <StartPointMarker variant="preview" />
-                </OverlayView>
-              )}
-            </GoogleMap>
+        {/* Planned routes — the path a vehicle is expected to follow */}
+        {showRoutes &&
+          routes
+            .filter((r) => r.active && r.waypoints.length > 1)
+            .map((r) => (
+              <Polyline
+                key={r._id}
+                path={r.waypoints}
+                options={{
+                  strokeColor: "#3b82f6",
+                  strokeWeight: 3,
+                  strokeOpacity: 0.7,
+                  icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 1, scale: 3 }, offset: "0", repeat: "12px" }],
+                }}
+              />
+            ))}
 
-            {/* Floating top bar — search on the left, layer toggles on the
-                right, both overlaying the map instead of sitting in a
-                separate bordered strip above it. */}
-            <div className="absolute inset-x-3 top-3 z-10 flex flex-col gap-2 sm:flex-row sm:items-start">
-              <form
-                onSubmit={handleSearch}
-                className="flex flex-1 items-center gap-2 rounded-full bg-white px-4 py-2.5 shadow-lg ring-1 ring-black/5"
-              >
-                <FaSearch className="shrink-0 text-gray-400" size={13} />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by plate number or type (car, van, truck)…"
-                  className="flex-1 bg-transparent text-sm outline-none"
-                />
-                {searchQuery && (
-                  <button type="submit" className="shrink-0 text-xs font-medium text-teal-600 hover:text-teal-700">
-                    Search
+        {/* Vehicles — plotted as soon as they have a GPS fix, independent of geofences */}
+        {showVehicles &&
+          visibleVehicles.map((v) => (
+            <VehicleMarker
+              key={v.vehicleId}
+              vehicle={v}
+              position={{ lat: v.lastLocation!.latitude, lng: v.lastLocation!.longitude }}
+              outOfGeofence={outsideZone(v)}
+              onClick={() => selectVehicle(v)}
+            />
+          ))}
+
+        {/* Clicked spot — pin plus "create here" menu */}
+        {mapMenu && (
+          <OverlayView position={mapMenu} mapPaneName={OverlayView.FLOAT_PANE}>
+            <div ref={blockMapClicks} className="flex flex-col items-center" style={{ transform: "translate(-50%, -100%)" }}>
+              <div className="mb-1 w-56 overflow-hidden rounded-lg bg-white text-left shadow-xl ring-1 ring-black/10">
+                <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">This spot</span>
+                  <button
+                    onClick={() => setMapMenu(null)}
+                    aria-label="Close"
+                    className="rounded-full p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                  >
+                    <FiX size={13} />
+                  </button>
+                </div>
+                {geofencesHref && (
+                  <button
+                    onClick={() => createHere("geofence")}
+                    className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 hover:bg-teal-50"
+                  >
+                    <FiCircle size={15} className="shrink-0 text-teal-600" />
+                    Create a geofence here
                   </button>
                 )}
-              </form>
-
-              <div className="flex shrink-0 flex-wrap items-center gap-1 rounded-full bg-white px-2 py-1.5 shadow-lg ring-1 ring-black/5">
-                <button onClick={() => setShowVehicles((s) => !s)} className={layerPillClass(showVehicles, "green")}>
-                  Vehicles
-                </button>
-                {geofences.length > 0 && (
-                  <button onClick={() => setShowGeofences((s) => !s)} className={layerPillClass(showGeofences, "teal")}>
-                    Zones
+                {routesHref && (
+                  <button
+                    onClick={() => createHere("route")}
+                    className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 hover:bg-teal-50"
+                  >
+                    <FiNavigation size={15} className="shrink-0 text-blue-600" />
+                    Start a route here
                   </button>
                 )}
-                {routes.length > 0 && (
-                  <button onClick={() => setShowRoutes((s) => !s)} className={layerPillClass(showRoutes, "blue")}>
-                    Routes
-                  </button>
-                )}
-                <button onClick={() => setShowTrails((s) => !s)} className={layerPillClass(showTrails, "purple")}>
-                  Trails
-                </button>
-                <button onClick={() => setShowTraffic((s) => !s)} className={layerPillClass(showTraffic, "orange")}>
-                  Traffic
-                </button>
-                <button onClick={() => setSatelliteView((s) => !s)} className={layerPillClass(satelliteView, "teal")}>
-                  Satellite
-                </button>
               </div>
+              <ImLocation2 size={26} className="text-orange-500 drop-shadow" />
             </div>
+          </OverlayView>
+        )}
 
-            {searchMessage && (
-              <div className="absolute left-3 top-28 z-10 max-w-sm rounded bg-white px-3 py-2 text-xs text-gray-600 shadow-lg ring-1 ring-black/5 sm:top-16">
-                {searchMessage}
-              </div>
+        {/* Driver daily starting point */}
+        {savedStartPoint && (
+          <OverlayView position={savedStartPoint} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+            <StartPointMarker />
+          </OverlayView>
+        )}
+      </GoogleMap>
+
+      {/* FLOATING CARD — toolbar, vehicle list, bottom menu. Full width along
+          the bottom on phones, a column on the left from md up. */}
+      <div className="absolute inset-x-2 bottom-2 z-10 flex max-h-[55vh] flex-col overflow-hidden rounded-lg bg-white shadow-xl ring-1 ring-black/5 md:inset-x-auto md:bottom-3 md:left-3 md:top-3 md:max-h-none md:w-[360px]">
+        <div className="border-b border-gray-100 px-3 pt-3 pb-2">
+          <div className="mb-2 flex items-center gap-2">
+            <BrandIcon className="h-4 w-4 shrink-0" />
+            <span className="flex-1 truncate text-xs font-bold text-blue-950">
+              FIGBLOOM FLEET
+              {shell?.companyName && <span className="font-medium text-gray-400"> · {shell.companyName}</span>}
+            </span>
+            {shell && (
+              <Link
+                href={shell.nav.alertsHref}
+                aria-label="Alerts"
+                className="relative rounded-full p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+              >
+                <FiBell size={17} />
+                {shell.alertCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-medium text-white">
+                    {shell.alertCount > 99 ? "99+" : shell.alertCount}
+                  </span>
+                )}
+              </Link>
             )}
-
-            {/* Floating controls — recenter + zoom, replacing Google's
-                default UI (disabled above) with ones that match the rest of
-                the app's styling. Anchored top-right, below the search/layer
-                bar, rather than bottom-right — mapOverlay (e.g. the admin
-                page's "set starting point" sheet) can occupy the full bottom
-                edge, which would otherwise cover them. Offset is taller
-                below the sm breakpoint, where the search/layer bar above
-                wraps onto two rows instead of one. */}
-            <div className="absolute right-3 top-28 z-10 flex flex-col gap-2 sm:top-16">
-              <button
-                onClick={handleRecenter}
-                title="Recenter on fleet"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-gray-600 shadow-lg ring-1 ring-black/5 hover:text-teal-600"
-              >
-                <FiCrosshair size={16} />
-              </button>
-              <div className="flex flex-col overflow-hidden rounded-full bg-white shadow-lg ring-1 ring-black/5">
-                <button
-                  onClick={() => handleZoom(1)}
-                  title="Zoom in"
-                  className="flex h-9 w-9 items-center justify-center border-b border-gray-100 text-gray-600 hover:text-teal-600"
-                >
-                  <FiPlus size={16} />
-                </button>
-                <button
-                  onClick={() => handleZoom(-1)}
-                  title="Zoom out"
-                  className="flex h-9 w-9 items-center justify-center text-gray-600 hover:text-teal-600"
-                >
-                  <FiMinus size={16} />
-                </button>
-              </div>
-            </div>
-
-            {mapOverlay}
           </div>
 
-          {withLocation.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-4">
-              No vehicle location data yet — vehicles will appear once GPS pings start coming in.
+          <form
+            onSubmit={handleSearch}
+            className="flex items-center gap-2 rounded border border-gray-200 px-3 py-2 focus-within:border-teal-500"
+          >
+            <FaSearch className="shrink-0 text-gray-400" size={12} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setSearchMessage(null);
+              }}
+              placeholder="Search vehicles, types or drivers"
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSearchMessage(null);
+                }}
+                className="shrink-0 text-gray-400 hover:text-gray-600"
+                aria-label="Clear search"
+              >
+                <FiX size={14} />
+              </button>
+            )}
+          </form>
+          {searchMessage && <p className="mt-1.5 text-xs text-gray-500">{searchMessage}</p>}
+
+          <div className="mt-2 flex flex-wrap gap-1">
+            {(["all", "active", "idle", "offline"] as const).map((key) => (
+              <button
+                key={key}
+                onClick={() => setStatusFilter(key)}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-medium capitalize transition-colors ${
+                  statusFilter === key ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {key} {counts[key]}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] text-gray-500">
+            {withLocation.length} of {vehicles.length} reporting
+            {geofences.length > 0 && (
+              <>
+                {" · "}
+                <span className="text-teal-600">{withLocation.length - outOfZoneCount} in zone</span>
+                {" · "}
+                <span className={outOfZoneCount ? "font-medium text-red-600" : ""}>{outOfZoneCount} out of zone</span>
+              </>
+            )}
+          </p>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {listedVehicles.length === 0 ? (
+            <p className="px-4 py-6 text-center text-xs text-gray-400">
+              {vehicles.length === 0 ? "No vehicles registered yet." : "No vehicles match."}
             </p>
+          ) : (
+            listedVehicles.map((v) => (
+              <VehicleRow
+                key={v.vehicleId}
+                vehicle={v}
+                outOfZone={outsideZone(v)}
+                selected={v.vehicleId === selectedId}
+                onClick={() => selectVehicle(v)}
+              />
+            ))
           )}
         </div>
 
-        {/* Legend */}
-        <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-4 mb-3">
-          <p className="text-xs font-medium text-gray-500 mb-2">Marker colors</p>
-          <div className="flex flex-wrap gap-x-6 gap-y-2">
-            {LEGEND_ITEMS.map((item) => (
-              <div key={item.label} className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full border-2 border-white shadow" style={{ background: item.color }} />
-                <span className="text-xs text-gray-600">{item.label}</span>
-              </div>
-            ))}
-            {geofences.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full border-2 border-teal-400 bg-teal-400/20" />
-                <span className="text-xs text-gray-600">Geofence zone</span>
-              </div>
-            )}
-            {geofences.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="relative w-3 h-3">
-                  <span className="absolute inset-0 rounded-full bg-red-500 opacity-75 animate-ping" />
-                  <span className="relative block w-3 h-3 rounded-full bg-red-500" />
-                </span>
-                <span className="text-xs text-gray-600">Vehicle outside geofence</span>
-              </div>
-            )}
-            {savedStartPoint && (
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full border-2 border-white shadow" style={{ background: "#0d9488" }} />
-                <span className="text-xs text-gray-600">Driver starting point</span>
-              </div>
-            )}
-            {routes.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="h-0.5 w-4" style={{ background: "#3b82f6" }} />
-                <span className="text-xs text-gray-600">Planned route</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <span className="h-0.5 w-4" style={{ background: "#a855f7" }} />
-              <span className="text-xs text-gray-600">Recent movement (last 30 min)</span>
-            </div>
-          </div>
-        </div>
+        <BottomMenu />
+      </div>
 
-        {/* Reporting % + freshness — below the map */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <CircleStat
-            percentage={reportingPct}
-            label="Vehicles reporting location"
-            color="#2dd4bf"
-            description="Share of the fleet with a live GPS fix right now"
-          />
-          <StatCard
-            label="Most recent update"
-            value={mostRecent ? timeAgo(mostRecent.lastLocation!.recordedAt) : "—"}
-            accent="green"
-            description={mostRecent ? `From ${mostRecent.plateNumber}` : "No GPS pings received yet"}
-          />
+      {/* MAP CONTROLS — layers, recenter, zoom */}
+      <div className="absolute right-3 top-3 z-10 flex flex-col items-end gap-2">
+        <div className="relative">
+          <button onClick={() => setLayersOpen((o) => !o)} title="Map layers" className={controlClass}>
+            <FiLayers size={16} />
+          </button>
+          {layersOpen && (
+            <div className="absolute right-11 top-0 w-60 rounded-lg bg-white p-3 shadow-xl ring-1 ring-black/5">
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Layers</p>
+              {layerToggles
+                .filter((l) => l.show)
+                .map((l) => (
+                  <label key={l.label} className="flex cursor-pointer items-center justify-between py-1 text-sm text-gray-700">
+                    {l.label}
+                    <Switch size="sm" checked={l.on} onChange={l.toggle} />
+                  </label>
+                ))}
+              <p className="mb-1 mt-3 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Legend</p>
+              <div className="space-y-1">
+                {LEGEND_ITEMS.map((item) => (
+                  <div key={item.label} className="flex items-center gap-2">
+                    <span className="h-3 w-3 shrink-0 rounded-full border-2 border-white shadow" style={{ background: item.color }} />
+                    <span className="text-xs text-gray-600">{item.label}</span>
+                  </div>
+                ))}
+                {geofences.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="h-3 w-3 shrink-0 rounded-full bg-red-500" />
+                    <span className="text-xs text-gray-600">Outside its zone</span>
+                  </div>
+                )}
+                {savedStartPoint && (
+                  <div className="flex items-center gap-2">
+                    <span className="h-3 w-3 shrink-0 rounded-full border-2 border-white shadow" style={{ background: "#0d9488" }} />
+                    <span className="text-xs text-gray-600">Driver starting point</span>
+                  </div>
+                )}
+                {routes.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="h-0.5 w-3 shrink-0" style={{ background: "#3b82f6" }} />
+                    <span className="text-xs text-gray-600">Planned route</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
+        <button onClick={handleRecenter} title="Recenter on fleet" className={controlClass}>
+          <FiCrosshair size={16} />
+        </button>
+        <div className="flex flex-col overflow-hidden rounded-full bg-white shadow-lg ring-1 ring-black/5">
+          <button
+            onClick={() => handleZoom(1)}
+            title="Zoom in"
+            className="flex h-9 w-9 items-center justify-center border-b border-gray-100 text-gray-600 hover:text-teal-600"
+          >
+            <FiPlus size={16} />
+          </button>
+          <button
+            onClick={() => handleZoom(-1)}
+            title="Zoom out"
+            className="flex h-9 w-9 items-center justify-center text-gray-600 hover:text-teal-600"
+          >
+            <FiMinus size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* STATUS CARD — the selected vehicle, like Traccar's StatusCard */}
+      {selected && (
+        <StatusCard
+          vehicle={selected}
+          outOfZone={outsideZone(selected)}
+          detailsHref={`${basePath}/${selected.vehicleId}`}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
     </div>
   );
 }
 
+function VehicleRow({
+  vehicle,
+  outOfZone,
+  selected,
+  onClick,
+}: {
+  vehicle: LiveVehicle;
+  outOfZone: boolean;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const color = statusColor[vehicle.status] || "#9ca3af";
+  const iconSrc = VEHICLE_TYPE_ICONS[vehicle.vehicleType || ""];
+  const [iconFailed, setIconFailed] = useState(false);
+  const speedKph = vehicle.lastLocation?.speedKph;
 
+  return (
+    <button
+      onClick={onClick}
+      className={`flex w-full items-center gap-3 border-b border-gray-50 px-3 py-2.5 text-left transition-colors ${
+        selected ? "bg-teal-50" : "hover:bg-gray-50"
+      }`}
+    >
+      <span
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+        style={{ background: vehicle.lastLocation ? (outOfZone ? "#ef4444" : color) : "#d1d5db" }}
+      >
+        {iconSrc && !iconFailed ? (
+          <img src={iconSrc} alt="" aria-hidden="true" onError={() => setIconFailed(true)} className="h-4 w-4 brightness-0 invert" />
+        ) : (
+          <IoCarSportSharp size={16} color="white" />
+        )}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-gray-900">{vehicle.plateNumber}</span>
+        <span className="block truncate text-xs">
+          <span className="font-medium capitalize" style={{ color: vehicle.status === "offline" ? "#6b7280" : color }}>
+            {vehicle.status}
+          </span>
+          <span className="text-gray-400">
+            {" · "}
+            {vehicle.lastLocation ? timeAgo(vehicle.lastLocation.recordedAt) : "No GPS yet"}
+            {vehicle.driverId?.fullName ? ` · ${vehicle.driverId.fullName}` : ""}
+          </span>
+        </span>
+      </span>
+      <span className="flex shrink-0 items-center gap-1.5 text-gray-400">
+        {vehicle.lastLocation?.isMocked && (
+          <span className="rounded bg-red-600 px-1 text-[9px] font-bold text-white" title="Location came from a fake-GPS app">
+            FAKE
+          </span>
+        )}
+        {outOfZone && (
+          <span title="Outside its zone">
+            <FaLocationPinLock size={13} className="text-red-500" />
+          </span>
+        )}
+        {speedKph != null && speedKph > 2 && (
+          <span className="text-[11px] font-medium text-gray-600">{Math.round(speedKph)} km/h</span>
+        )}
+      </span>
+    </button>
+  );
+}
 
+// Street address for a position, looked up by the backend (Google, or
+// OpenStreetMap while Google's Geocoding API is off). Rounded to ~11 m so a
+// parked vehicle doesn't trigger a new lookup on every 10 s refresh.
+function useAddress(lat: number | undefined, lng: number | undefined) {
+  const key = lat != null && lng != null ? `${lat.toFixed(4)},${lng.toFixed(4)}` : null;
+  const [result, setResult] = useState<{ key: string; address: string | null } | null>(null);
 
+  useEffect(() => {
+    if (!key) return;
+    let cancelled = false;
+    const [la, ln] = key.split(",");
+    apiRequest<{ address: string | null }>(`/api/tracking/address?lat=${la}&lng=${ln}`)
+      .then((r) => !cancelled && setResult({ key, address: r.address }))
+      .catch(() => !cancelled && setResult({ key, address: null }));
+    return () => {
+      cancelled = true;
+    };
+  }, [key]);
+
+  if (!key) return { address: null, loading: false };
+  return result?.key === key ? { address: result.address, loading: false } : { address: null, loading: true };
+}
+
+function StatusCard({
+  vehicle,
+  outOfZone,
+  detailsHref,
+  onClose,
+}: {
+  vehicle: LiveVehicle;
+  outOfZone: boolean;
+  detailsHref: string;
+  onClose: () => void;
+}) {
+  const loc = vehicle.lastLocation;
+  const color = statusColor[vehicle.status] || "#9ca3af";
+  const { address, loading: addressLoading } = useAddress(loc?.latitude, loc?.longitude);
+  const rows: [string, string][] = [
+    ["Status", vehicle.status],
+    ["Driver", vehicle.driverId?.fullName || "Not assigned"],
+    ["Speed", loc?.speedKph != null ? `${Math.round(loc.speedKph)} km/h` : "—"],
+    ["Last update", loc ? `${timeAgo(loc.recordedAt)} (${new Date(loc.recordedAt).toLocaleTimeString()})` : "No GPS yet"],
+  ];
+  // Falls back to the raw coordinates if no address could be found.
+  const addressText = !loc
+    ? "—"
+    : addressLoading
+      ? "Looking up address…"
+      : address || `${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}`;
+
+  return (
+    <div className="absolute inset-x-2 top-2 z-20 rounded-lg bg-white shadow-xl ring-1 ring-black/5 md:inset-x-auto md:bottom-3 md:left-[384px] md:top-auto md:w-80">
+      <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
+        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} />
+        <span className="flex-1 truncate text-sm font-semibold text-gray-900">{vehicle.plateNumber}</span>
+        {vehicle.vehicleType && <span className="text-xs capitalize text-gray-400">{vehicle.vehicleType}</span>}
+        <button onClick={onClose} aria-label="Close" className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+          <FiX size={15} />
+        </button>
+      </div>
+      {(outOfZone || loc?.isMocked) && (
+        <div className="flex flex-wrap gap-1.5 px-4 pt-3">
+          {outOfZone && <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-600">Outside its zone</span>}
+          {loc?.isMocked && <span className="rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-bold text-white">Fake GPS</span>}
+        </div>
+      )}
+      <dl className="space-y-1.5 px-4 py-3">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex justify-between gap-3 text-xs">
+            <dt className="text-gray-500">{label}</dt>
+            <dd className="truncate text-right font-medium text-gray-800">{value}</dd>
+          </div>
+        ))}
+        <div className="flex justify-between gap-3 text-xs">
+          <dt className="shrink-0 text-gray-500">Address</dt>
+          <dd
+            className={`text-right font-medium ${addressLoading ? "text-gray-400" : "text-gray-800"}`}
+            title={loc ? `${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}` : undefined}
+          >
+            {addressText}
+          </dd>
+        </div>
+      </dl>
+      <Link
+        href={detailsHref}
+        className="block border-t border-gray-100 py-2.5 text-center text-xs font-semibold text-teal-700 hover:bg-teal-50"
+      >
+        Details & history
+      </Link>
+    </div>
+  );
+}
