@@ -26,7 +26,7 @@ export default function NoticeModal({
 }: NoticeModalProps) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl">
+      <div className="w-full max-w-sm rounded-lg bg-white p-6 text-center shadow-2xl">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-teal-50">
           <Icon size={24} className="text-teal-600" />
         </div>
@@ -38,14 +38,14 @@ export default function NoticeModal({
           {secondaryLabel && (
             <button
               onClick={onSecondary}
-              className="flex-1 rounded-md border border-gray-300 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+              className="flex-1 rounded border border-gray-300 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
             >
               {secondaryLabel}
             </button>
           )}
           <button
             onClick={onPrimary}
-            className="flex-1 rounded-md bg-orange-500 py-2.5 text-sm font-medium text-white transition-colors hover:bg-orange-600"
+            className="flex-1 rounded bg-orange-500 py-2.5 text-sm font-medium text-white transition-colors hover:bg-orange-600"
           >
             {primaryLabel}
           </button>

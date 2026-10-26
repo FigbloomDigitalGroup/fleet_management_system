@@ -1,25 +1,15 @@
 "use client";
 
 import { ReactNode } from "react";
-import { FiHome, FiBriefcase, FiBarChart2, FiCreditCard, FiSettings, FiCpu } from "react-icons/fi";
 import ProtectedRoute from "../components/ProtectedRoute";
-import DashboardShell from "../components/DashboardShell";
+import AppShell from "../components/AppShell";
 
-const navItems = [
-  { label: "Overview", href: "/platform/dashboard", icon: FiHome },
-  { label: "Companies", href: "/platform/companies", icon: FiBriefcase },
-  { label: "Analytics", href: "/platform/analytics", icon: FiBarChart2 },
- { label: "Billing", href: "/platform/billing", icon: FiCreditCard },
-  { label: "Agent", href: "/platform/agent", icon: FiCpu },
-  { label: "Settings", href: "/platform/settings", icon: FiSettings },
-];
-
+// Same Traccar-style shell as the company portals — navigation lives in
+// lib/fleetNav.ts (platformNav): Reports / Companies / Settings.
 export default function PlatformLayout({ children }: { children: ReactNode }) {
   return (
     <ProtectedRoute allowedRoles={["PLATFORM_ADMIN"]}>
-      <DashboardShell navItems={navItems} title="Platform">
-        {children}
-      </DashboardShell>
+      <AppShell portal="platform">{children}</AppShell>
     </ProtectedRoute>
   );
 }

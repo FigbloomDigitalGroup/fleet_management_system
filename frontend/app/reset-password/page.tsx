@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import BackgroundSlideshow from "../components/BackgroundSlideshow";
+import AuthHeroPanel from "../components/AuthHeroPanel";
 import ResetPasswordForm from "./ResetPasswordForm";
 import BrandIcon from "../components/BrandIcon";
 
@@ -7,8 +7,7 @@ export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen bg-white flex flex-col lg:flex-row">
       {/* LEFT — Hero panel */}
-      <BackgroundSlideshow className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16">
-        <div className="absolute inset-0 z-10 bg-black/50" />
+      <AuthHeroPanel className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16">
 
         <div className="relative z-20 flex flex-col justify-between h-full">
           <span className="flex items-center gap-2 text-xl font-bold text-white">
@@ -34,7 +33,7 @@ export default function ResetPasswordPage() {
             </a>
           </p>
         </div>
-      </BackgroundSlideshow>
+      </AuthHeroPanel>
 
       {/* RIGHT — Form panel */}
       <div className="lg:w-1/2 flex items-center justify-center p-8">

@@ -1,56 +1,31 @@
 "use client";
 
-import { ReactNode, createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
-import { apiRequest } from "../lib/api";
-import { CompanyRecord, AlertRecord, GeofenceRecord } from "../types/auth";
-import { isOutsideGeofences } from "../lib/geofence";
 import { industryLabel } from "../lib/industries";
 import { offerLabel } from "../lib/pricing";
+import OverviewSlides from "./OverviewSlides";
 import { IconType } from "react-icons";
 import { FiBell } from "react-icons/fi";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import BrandIcon from "./BrandIcon";
 import WheelIcon from "./WheelIcon";
 import { FaLocationPinLock } from "react-icons/fa6";
-import AlertToastStack, { ToastAlert } from "./AlertToast";
+import AlertToastStack from "./AlertToast";
 import AgentChatWidget from "./AgentChatWidget";
 import SessionExpiredModal from "./SessionExpiredModal";
+import { useAdminAccess } from "../lib/adminAccess";
+import { PageHeaderContext, PageHeaderValue } from "./PageHeader";
+import { useShellData } from "./useShellData";
+
+export { usePageHeader } from "./PageHeader";
 
 interface NavItem {
   label: string;
   href: string;
   icon: IconType;
-}
-
-interface PageHeaderValue {
-  title: string;
-  subtitle?: string;
-  stats?: ReactNode;
-}
-
-interface PageHeaderContextType {
-  header: PageHeaderValue | null;
-  setHeader: (header: PageHeaderValue | null) => void;
-}
-
-const PageHeaderContext = createContext<PageHeaderContextType | null>(null);
-
-// Lets any page pinned inside DashboardShell put its title/subtitle/stats in
-// the hero banner instead of building its own. `stats` is optional page
-// content (e.g. a couple of StatCards) rendered beside the banner — the
-// page controls its own grid/flex layout for it.
-export function usePageHeader(title: string, subtitle?: string, stats?: ReactNode) {
-  const ctx = useContext(PageHeaderContext);
-  const setHeader = ctx?.setHeader;
-
-  useEffect(() => {
-    setHeader?.({ title, subtitle, stats });
-    return () => setHeader?.(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setHeader, title, subtitle, stats]);
 }
 
 export default function DashboardShell({
@@ -64,7 +39,9 @@ export default function DashboardShell({
 }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { access, isViewer } = useAdminAccess();
   const alertsHref = navItems.find((item) => item.label === "Alerts")?.href;
+  const messagesHref = navItems.find((item) => item.label === "Messages")?.href;
   const activeNavLabel = navItems.find((item) => item.href === pathname)?.label;
   const isOverviewPage =
     pathname === "/admin/dashboard" || pathname === "/company/dashboard" || pathname === "/platform/dashboard";
@@ -73,135 +50,91 @@ export default function DashboardShell({
   const bannerTitle = header?.title ?? activeNavLabel ?? title;
   const bannerSubtitle = header?.subtitle;
 
-  // Company name shown in the header on every page — fetched once here so
-  // company owners and admins don't have to re-fetch it per page.
-  const [companyName, setCompanyName] = useState<string | null>(null);
-  const [companyIndustry, setCompanyIndustry] = useState<string | null>(null);
+  const { companyName, companyIndustry, alertCount, toasts, dismissToast, unreadMessages, zoneCounts } = useShellData({
+    alerts: !!alertsHref,
+    messages: !!messagesHref,
+    zones: true,
+  });
 
-  useEffect(() => {
-    if (user?.role !== "COMPANY_OWNER" && user?.role !== "ADMIN") return;
-    let cancelled = false;
-    apiRequest<CompanyRecord>("/api/companies/me")
-      .then((company) => {
-        if (!cancelled) {
-          setCompanyName(company.name);
-          setCompanyIndustry(company.industry ?? null);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setCompanyName(null);
-          setCompanyIndustry(null);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.role]);
+  const heroAtBottom = header?.position === "bottom";
+  const showSlidesInHero = isOverviewPage && (user?.role === "COMPANY_OWNER" || user?.role === "ADMIN");
 
-  // Unresolved alert count — shown as a badge on the bell icon, on every page.
-  const [alertCount, setAlertCount] = useState(0);
+  // Hero banner — present on every page; takes half the row once a page
+  // supplies stats to fill the other half, full width otherwise. Normally
+  // sits above the page content; `position: "bottom"` puts it below.
+  const heroRow = (
+    <div
+      className={`grid gap-4 print:hidden ${heroAtBottom ? "mt-6" : "mb-6"} ${header?.stats ? "lg:grid-cols-2" : "grid-cols-1"}`}
+    >
+      {/* Styled to match the white stat cards beside it */}
+      <div className="relative flex flex-col justify-between overflow-hidden rounded-lg bg-white p-6 shadow-sm ring-1 ring-black/5">
+        <div
+          className="pointer-events-none absolute -right-4 -top-4 grid grid-cols-6 gap-3 opacity-10"
+          aria-hidden="true"
+        >
+          {Array.from({ length: 24 }).map((_, i) => (
+            <span key={i} className={`h-2 w-2 bg-teal-600 ${i % 3 === 0 ? "rounded-full" : "rotate-45"}`} />
+          ))}
+        </div>
+        {isOverviewPage && (
+          <WheelIcon
+            className="spin-slow pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 text-teal-600/20"
+            size={72}
+          />
+        )}
+        <div className="relative max-w-md">
+          {/* Company-side overview cards sweep through the special offer and
+              what FIGBLOOM FLEET offers, in place of the "Fleet Overview"
+              title. Platform staff aren't upsold, so they keep the title. */}
+          {showSlidesInHero ? (
+            <OverviewSlides isOwner={user?.role === "COMPANY_OWNER"} />
+          ) : (
+            <>
+              <h2 className="text-[17px] font-bold text-blue-950">{bannerTitle}</h2>
+              {bannerSubtitle && <p className="mt-1 text-[11px] font-bold text-teal-600">{bannerSubtitle}</p>}
+            </>
+          )}
+          {isOverviewPage && companyIndustry && (
+            <span className="mt-3 inline-flex items-center rounded-full bg-teal-50 px-3 py-1 text-[9px] font-medium uppercase tracking-wide text-teal-600">
+              {industryLabel(companyIndustry)}
+            </span>
+          )}
+        </div>
+        <p className="relative mt-4 text-right text-[11px] text-blue-950/50">Powered by Movec</p>
+      </div>
 
-  // New alerts also pop up as a toast at the top of the screen for a few
-  // seconds, on top of being recorded in the alerts list and bell badge.
-  const [toasts, setToasts] = useState<ToastAlert[]>([]);
-  const seenAlertIds = useRef<Set<string> | null>(null);
-
-  function dismissToast(id: string) {
-    setToasts((current) => current.filter((t) => t.id !== id));
-  }
-
-  useEffect(() => {
-    if (!alertsHref) return;
-    let cancelled = false;
-
-    async function loadAlerts() {
-      try {
-        const alerts = await apiRequest<AlertRecord[]>("/api/alerts");
-        if (cancelled) return;
-        setAlertCount(alerts.filter((a) => !a.resolved).length);
-
-        const seen = seenAlertIds.current;
-        if (seen === null) {
-          // First load after mount — establish a baseline so we don't
-          // toast every alert that already existed before this session.
-          seenAlertIds.current = new Set(alerts.map((a) => a._id));
-          return;
-        }
-
-        const newAlerts = alerts.filter((a) => !seen.has(a._id));
-        if (newAlerts.length > 0) {
-          newAlerts.forEach((a) => seen.add(a._id));
-          setToasts((current) => [...current, ...newAlerts.map((a) => ({ id: a._id, alert: a }))]);
-        }
-      } catch {
-        if (!cancelled) setAlertCount(0);
-      }
-    }
-
-    loadAlerts();
-    const interval = setInterval(loadAlerts, 30000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [alertsHref]);
-
-  // Fleet in-zone / out-of-zone counts — shown in the header on every page,
-  // for ADMIN and COMPANY_OWNER only (same scope as the company name pill).
-  // A vehicle only counts once it has a live location; with no geofences set
-  // up yet there's nothing to be "in" or "out" of, so the chips stay hidden.
-  const [zoneCounts, setZoneCounts] = useState<{ inZone: number; outOfZone: number } | null>(null);
-
-  useEffect(() => {
-    if (user?.role !== "COMPANY_OWNER" && user?.role !== "ADMIN") return;
-    let cancelled = false;
-
-    async function loadZoneCounts() {
-      try {
-        const [vehicles, geofences] = await Promise.all([
-          apiRequest<{ lastLocation: { latitude: number; longitude: number } | null }[]>("/api/tracking/live"),
-          apiRequest<GeofenceRecord[]>("/api/geofences"),
-        ]);
-        if (cancelled) return;
-
-        if (geofences.length === 0) {
-          setZoneCounts(null);
-          return;
-        }
-
-        const withLocation = vehicles.filter((v) => v.lastLocation);
-        const outOfZone = withLocation.filter((v) =>
-          isOutsideGeofences(v.lastLocation!.latitude, v.lastLocation!.longitude, geofences)
-        ).length;
-        setZoneCounts({ inZone: withLocation.length - outOfZone, outOfZone });
-      } catch {
-        if (!cancelled) setZoneCounts(null);
-      }
-    }
-
-    loadZoneCounts();
-    const interval = setInterval(loadZoneCounts, 30000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [user?.role]);
+      {header?.stats && <div className="min-w-0">{header.stats}</div>}
+    </div>
+  );
 
   return (
-    <div className="h-screen overflow-hidden bg-white flex">
-      <AlertToastStack toasts={toasts} onDismiss={dismissToast} />
-      <SessionExpiredModal />
-      {(user?.role === "ADMIN" || user?.role === "COMPANY_OWNER") && <AgentChatWidget />}
+    <div className="h-screen overflow-hidden bg-white flex print:block print:h-auto print:overflow-visible">
+      <div className="print:hidden">
+        <AlertToastStack
+          toasts={toasts}
+          onDismiss={dismissToast}
+          liveMapHref={
+            user?.role === "ADMIN" ? "/admin/live-map" : user?.role === "COMPANY_OWNER" ? "/company/live-map" : null
+          }
+        />
+        <SessionExpiredModal />
+        {(user?.role === "ADMIN" || user?.role === "COMPANY_OWNER") && !isViewer && <AgentChatWidget />}
+      </div>
 
       {/* SIDEBAR */}
-      <aside className="h-screen w-40 shrink-0 overflow-y-auto bg-teal-950 flex flex-col text-white">
+      {/* The company portal's long nav still scrolls on short screens, but
+          without a visible scrollbar (no-scrollbar, globals.css). */}
+      <aside
+        className={`h-screen w-40 shrink-0 overflow-y-auto bg-teal-950 flex flex-col text-white print:hidden ${
+          user?.role === "COMPANY_OWNER" ? "no-scrollbar" : ""
+        }`}
+      >
         <div className="px-3 py-4">
           <span className="flex items-center gap-1.5 text-xs font-bold text-white whitespace-nowrap">
             <BrandIcon variant="light" className="h-4 w-4 shrink-0" />
             FIGBLOOM FLEET
           </span>
-          <p className="text-[11px] text-white mt-0.5">{title}</p>
+          <p className="text-[9px] text-white mt-0.5">{title}</p>
         </div>
 
         <nav className="flex-1 px-2 py-3 space-y-1">
@@ -210,11 +143,12 @@ export default function DashboardShell({
             const Icon = item.icon;
             const isAgent = item.label === "AI Agent";
             const isAlerts = item.label === "Alerts";
+            const isMessages = item.label === "Messages";
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-2 px-2 py-2 rounded-md text-xs font-medium transition-colors ${active
+                className={`flex items-center gap-2 px-2 py-2 rounded text-[10px] font-medium transition-colors ${active
                   ? "bg-teal-900 text-white"
                   : "text-white hover:bg-teal-900"
                   }`}
@@ -233,6 +167,11 @@ export default function DashboardShell({
                     {alertCount > 99 ? "99+" : alertCount}
                   </span>
                 )}
+                {isMessages && unreadMessages > 0 && (
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-medium text-white">
+                    {unreadMessages > 99 ? "99+" : unreadMessages}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -241,13 +180,26 @@ export default function DashboardShell({
       </aside>
 
       {/* MAIN CONTENT */}
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden print:block print:overflow-visible">
         {/* FLOATING HEADER — holds the current page's title, pinned above the scroll */}
-        <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between bg-blue-50 px-6 py-4">
+        <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between bg-blue-50 px-6 py-4 print:hidden">
           <div className="flex min-w-0 flex-1 items-center gap-4">
             {companyName && (
               <span className="shrink-0 rounded-full bg-teal-600 px-3 py-1 text-xs font-medium text-white">
                 {companyName}
+              </span>
+            )}
+            {/* Limited admins see why some buttons are missing */}
+            {access !== "full" && (
+              <span
+                className="shrink-0 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-medium text-orange-600"
+                title={
+                  access === "viewer"
+                    ? "You can see everything but can't make changes"
+                    : "You can manage jobs, routes, messages and alerts"
+                }
+              >
+                {access === "viewer" ? "View-only access" : "Dispatcher access"}
               </span>
             )}
 
@@ -297,54 +249,17 @@ export default function DashboardShell({
             )}
             <button
               onClick={logout}
-              className="rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-600"
+              className="rounded bg-orange-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-600"
             >
               Sign out
             </button>
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 overflow-y-auto p-6">
-          {/* Hero banner — present on every page; takes half the row once a
-              page supplies stats to fill the other half, full width otherwise */}
-          <div className={`grid gap-4 mb-6 ${header?.stats ? "lg:grid-cols-2" : "grid-cols-1"}`}>
-            <div
-              className={`relative flex flex-col justify-between overflow-hidden rounded-2xl p-6 shadow-sm ${
-                isOverviewPage
-                  ? "bg-gradient-to-br from-orange-600 via-orange-500 to-amber-500"
-                  : "bg-gradient-to-br from-teal-600 via-teal-500 to-cyan-600"
-              }`}
-            >
-              <div
-                className="pointer-events-none absolute -right-4 -top-4 grid grid-cols-6 gap-3 opacity-20"
-                aria-hidden="true"
-              >
-                {Array.from({ length: 24 }).map((_, i) => (
-                  <span key={i} className={`h-2 w-2 bg-white ${i % 3 === 0 ? "rounded-full" : "rotate-45"}`} />
-                ))}
-              </div>
-              {isOverviewPage && (
-                <WheelIcon
-                  className="spin-slow pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 text-white/20"
-                  size={72}
-                />
-              )}
-              <div className="relative max-w-md">
-                <h2 className="text-xl font-bold text-white">{bannerTitle}</h2>
-                {bannerSubtitle && <p className="mt-1 text-sm text-white/80">{bannerSubtitle}</p>}
-                {isOverviewPage && companyIndustry && (
-                  <span className="mt-3 inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white">
-                    {industryLabel(companyIndustry)}
-                  </span>
-                )}
-              </div>
-              <p className="relative mt-4 text-right text-[11px] text-white/60">Powered by Movec</p>
-            </div>
-
-            {header?.stats && <div className="min-w-0">{header.stats}</div>}
-          </div>
-
+        <main className="app-content min-w-0 flex-1 overflow-y-auto bg-[#f5f6f8] p-6 print:overflow-visible print:bg-white print:p-0">
+          {!heroAtBottom && heroRow}
           <PageHeaderContext.Provider value={headerContextValue}>{children}</PageHeaderContext.Provider>
+          {heroAtBottom && heroRow}
         </main>
       </div>
     </div>

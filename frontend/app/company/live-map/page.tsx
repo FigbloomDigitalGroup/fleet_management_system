@@ -14,13 +14,5 @@ export default function CompanyLiveMapPage() {
     apiRequest<CompanyRecord>("/api/companies/me").then(setCompany).catch(() => {});
   }, []);
 
-  return (
-    <div>
-      <FleetMap
-        basePath="/company/vehicles"
-        savedStartPoint={company?.dailyStartPoint ?? null}
-        subtitle="Real-time overview of your fleet"
-      />
-    </div>
-  );
+  return <FleetMap basePath="/company/vehicles" savedStartPoint={company?.dailyStartPoint ?? null} />;
 }

@@ -7,6 +7,7 @@ import FullPageLoading from "@/app/components/FullPageLoading";
 import ZoneStatusBadge from "@/app/components/ZoneStatusBadge";
 import VehicleTripsMap from "@/app/components/VehicleTripsMap";
 import { usePageHeader } from "@/app/components/DashboardShell";
+import VehicleExtras from "@/app/components/VehicleExtras";
 import { CompanyRecord, GeofenceRecord, VehicleRecord } from "../../../types/auth";
 
 interface LiveLocation {
@@ -61,7 +62,7 @@ export default function CompanyVehicleDetailPage() {
 
   return (
     <div>
-      <button onClick={() => router.back()} className="mb-4 rounded-md bg-gray-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-600">
+      <button onClick={() => router.back()} className="mb-4 rounded bg-gray-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-600">
         Back
       </button>
 
@@ -72,7 +73,8 @@ export default function CompanyVehicleDetailPage() {
         <ZoneStatusBadge lastLocation={lastLocation} geofences={geofences} />
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 max-w-xl">
+      <div className="flex flex-col lg:flex-row gap-4">
+      <div className="flex-1 min-w-0 bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
         <h3 className="text-sm font-medium text-gray-700 mb-3">Vehicle details</h3>
         <dl className="grid grid-cols-2 gap-3 text-sm">
           <div>
@@ -108,11 +110,14 @@ export default function CompanyVehicleDetailPage() {
         <p className="text-xs text-teal-600 mt-4">Status changes and starting points are managed by your fleet Admin.</p>
       </div>
 
-      <div className="mt-4 max-w-xl bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+      <div className="flex-1 min-w-0 bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
         <h3 className="text-sm font-medium text-gray-700">Recent trips</h3>
         <p className="text-xs text-teal-600 mt-0.5 mb-3">Routes this vehicle has traveled recently</p>
         <VehicleTripsMap vehicleId={vehicle._id} basePath="/company/trips" />
       </div>
+      </div>
+
+      <VehicleExtras vehicleId={vehicle._id} canEdit={true} />
     </div>
   );
 }

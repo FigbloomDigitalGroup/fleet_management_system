@@ -1,24 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import dynamic from "next/dynamic";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { apiRequest } from "../../lib/api";
-import StatCard from "../../components/StatCard";
 import CircleStat from "../../components/CircleStat";
 import BarChartCard from "../../components/BarChartCard";
 import DonutChartCard from "../../components/DonutChartCard";
 import LineChartCard from "../../components/LineChartCard";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import { usePageHeader } from "../../components/DashboardShell";
-import { VehicleRecord, DriverRecord, TripRecord, AlertRecord, AgentSummary, DailyStatPoint, RouteRecord } from "../../types/auth";
-import LiveMapPreview from "../../components/LiveMapPreview";
+import { VehicleRecord, DriverRecord, TripRecord, AgentSummary, DailyStatPoint, RouteRecord } from "../../types/auth";
 import MapMetricsCard from "../../components/MapMetricsCard";
 import WheelIcon from "../../components/WheelIcon";
 import { routeDistanceKm, estimateFuelRangeLiters } from "../../lib/routeEstimate";
 import { routeStatusBadge } from "../../lib/routeStatus";
 
-//const FleetMap = dynamic<{ compact?: boolean }>(() => import("../../components/FleetMap"), { ssr: false });
 
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -26,7 +22,6 @@ export default function AdminDashboard() {
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
   const [trips, setTrips] = useState<TripRecord[]>([]);
-  const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [agentSummary, setAgentSummary] = useState<AgentSummary | null>(null);
   const [dailyStats, setDailyStats] = useState<DailyStatPoint[]>([]);
   const [routes, setRoutes] = useState<RouteRecord[]>([]);
@@ -41,36 +36,21 @@ export default function AdminDashboard() {
     offline: vehicles.filter((v) => v.status === "offline").length,
     maintenance: vehicles.filter((v) => v.status === "maintenance").length,
   };
-  const unresolvedAlertCount = alerts.filter((a) => !a.resolved).length;
 
-  const statsNode = useMemo(
-    () => (
-      <div className="grid grid-cols-2 gap-3 h-full">
-        <StatCard label="Total vehicles" value={vehicleCounts.total} accent="blue" description="All vehicles on your account" />
-        <StatCard label="Drivers" value={drivers.length} accent="green" description="Drivers registered to your fleet" />
-        <StatCard label="Active now" value={vehicleCounts.active} accent="green" description="Vehicles currently moving" />
-        <StatCard label="Unresolved alerts" value={unresolvedAlertCount} accent="orange" description="Alerts still awaiting review" />
-      </div>
-    ),
-    [vehicleCounts.total, drivers.length, vehicleCounts.active, unresolvedAlertCount]
-  );
-
-  usePageHeader("Fleet Overview", "Real-time visibility across your entire fleet.", statsNode);
+  usePageHeader("Fleet Overview", "Real-time visibility across your entire fleet.");
 
   useEffect(() => {
     async function loadAll() {
       try {
-        const [vehicleData, driverData, tripData, alertData, routeData] = await Promise.all([
+        const [vehicleData, driverData, tripData, routeData] = await Promise.all([
           apiRequest<VehicleRecord[]>("/api/vehicles"),
           apiRequest<DriverRecord[]>("/api/users/drivers"),
           apiRequest<TripRecord[]>("/api/trips"),
-          apiRequest<AlertRecord[]>("/api/alerts"),
           apiRequest<RouteRecord[]>("/api/routes"),
         ]);
         setVehicles(vehicleData);
         setDrivers(driverData);
         setTrips(tripData);
-        setAlerts(alertData);
         setRoutes(routeData);
         hasLoadedOnceRef.current = true;
         setLoadError(null);
@@ -114,7 +94,7 @@ export default function AdminDashboard() {
         <p className="text-sm text-red-600 mb-4">{loadError}</p>
         <button
           onClick={() => window.location.reload()}
-          className="rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
+          className="rounded bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
         >
           Retry
         </button>
@@ -139,23 +119,26 @@ export default function AdminDashboard() {
   return (
     <div>
       {loadError && (
-        <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-2 text-xs text-red-600">
+        <div className="mb-4 rounded bg-red-50 border border-red-200 px-4 py-2 text-xs text-red-600">
           Couldn't refresh dashboard data — showing the last loaded values. ({loadError})
         </div>
       )}
 
-      {/* Live Map preview + Map metrics card — share the row instead of each
-          spanning the full width on their own. The map's title/button float
-          over it (see LiveMapPreview) instead of sitting above it, so both
-          cards use the row's full height edge to edge. Shown first, right
-          after the Fleet Overview hero + stat cards above. */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 h-80">
-        <LiveMapPreview href="/admin/live-map" />
-        <MapMetricsCard active={vehicleCounts.active} total={vehicleCounts.total} dailyStats={dailyStats} />
-      </div>
-
-      {/* Charts row */}
+      {/* Fleet status breakdown beside the trips chart — first thing below
+          the header. */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
+        <div>
+          <DonutChartCard
+            title="Fleet status breakdown"
+            description="How your vehicles are distributed across statuses"
+            data={[
+              { name: "Active", value: vehicleCounts.active, color: "#2dd4bf" },
+              { name: "Idle", value: vehicleCounts.idle, color: "#fb923c" },
+              { name: "Offline", value: vehicleCounts.offline, color: "#000000" },
+              { name: "Maintenance", value: vehicleCounts.maintenance, color: "#f87171" },
+            ]}
+          />
+        </div>
         <div className="lg:col-span-2">
           <BarChartCard
             title="Trips — last 7 days"
@@ -166,27 +149,17 @@ export default function AdminDashboard() {
             size="lg"
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <CircleStat percentage={activePct} label="Fleet active" color="#2dd4bf" description="Vehicles currently on the move" />
-          <CircleStat percentage={assignedPct} label="Drivers assigned" color="#0d9488" description="Drivers with a vehicle assigned" />
-        </div>
       </div>
 
-      {/* Fleet status breakdown */}
-<div className="mb-4 flex flex-col lg:flex-row gap-3">
-  <div className="flex-1">
-    <DonutChartCard
-      title="Fleet status breakdown"
-      description="How your vehicles are distributed across statuses"
-      data={[
-        { name: "Active", value: vehicleCounts.active, color: "#2dd4bf" },
-        { name: "Idle", value: vehicleCounts.idle, color: "#fb923c" },
-        { name: "Offline", value: vehicleCounts.offline, color: "#9ca3af" },
-        { name: "Maintenance", value: vehicleCounts.maintenance, color: "#f87171" },
-      ]}
-    />
-  </div>
-<div className="flex-1">
+      {/* Fleet active / drivers assigned rings */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <CircleStat percentage={activePct} label="Fleet active" color="#2dd4bf" description="Vehicles currently on the move" />
+        <CircleStat percentage={assignedPct} label="Drivers assigned" color="#0d9488" description="Drivers with a vehicle assigned" />
+      </div>
+
+      {/* Agent activity on the left, Fleet on the map on the right */}
+<div className="mb-4 flex flex-col lg:flex-row gap-3 lg:h-80">
+<div className="flex-1 h-80 lg:h-full">
   <LineChartCard
     title="Agent activity — last 7 days"
     description="Vehicle checks and anomalies found for your fleet, per day"
@@ -203,6 +176,9 @@ export default function AdminDashboard() {
     ]}
   />
 </div>
+<div className="flex-1 h-80 lg:h-full">
+  <MapMetricsCard active={vehicleCounts.active} total={vehicleCounts.total} dailyStats={dailyStats} />
+</div>
 </div>
 
       {/* Recent trips + Routes — share the row */}
@@ -210,12 +186,12 @@ export default function AdminDashboard() {
         <div className="flex-1">
           <div className="flex items-center justify-between mb-1">
             <h2 className="text-base font-semibold text-gray-900">Recent trips</h2>
-            <Link href="/admin/trips" className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
+            <Link href="/admin/trips" className="rounded bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
               View all
             </Link>
           </div>
           <p className="text-xs text-teal-600 mb-3">The 5 most recently started trips</p>
-          <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+          <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
             {trips.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-6">No trips recorded yet.</p>
             ) : (
@@ -245,12 +221,12 @@ export default function AdminDashboard() {
         <div className="flex-1">
           <div className="flex items-center justify-between mb-1">
             <h2 className="text-base font-semibold text-gray-900">Routes</h2>
-            <Link href="/admin/routes" className="rounded-md bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
+            <Link href="/admin/routes" className="rounded bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
               View all
             </Link>
           </div>
           <p className="text-xs text-teal-600 mb-3">Distance and estimated fuel per planned route</p>
-          <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+          <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
             {routes.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-6">No routes created yet.</p>
             ) : (

@@ -4,7 +4,7 @@ import AlertsList from "@/app/components/AlertList";
 import { usePageHeader } from "@/app/components/DashboardShell";
 
 export default function AdminAlertsPage() {
-  usePageHeader("Alerts", "Speeding, idle, and offline notifications");
+  usePageHeader("Alerts", "Driving, phone, zone, job and inspection alerts across your fleet");
 
   return (
     <div>

@@ -1,6 +1,6 @@
 import { emitSessionExpired } from "./sessionEvents";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 interface ApiRequestOptions extends RequestInit {
   headers?: Record<string, string>;
@@ -105,4 +105,57 @@ export async function apiRequest<T = any>(
   }
 
   return data as T;
+}
+
+// File downloads (e.g. the Excel report) need the same Bearer token and
+// one-shot refresh as apiRequest, but the body is a binary blob, not JSON —
+// so the browser can't just follow a plain link to it.
+export async function apiDownload(path: string, fallbackFilename: string, isRetry = false): Promise<void> {
+  const token = localStorage.getItem("accessToken");
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  } catch {
+    throw new Error(`Unable to reach the API at ${API_URL}.`);
+  }
+
+  if (res.status === 401 && !isRetry) {
+    const newToken = await refreshAccessToken();
+    if (newToken) return apiDownload(path, fallbackFilename, true);
+    if (token) {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+      emitSessionExpired();
+      throw new Error("Session expired. Please sign in again.");
+    }
+  }
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Download failed");
+  }
+
+  // Prefer the server's filename (Content-Disposition) when CORS exposes it.
+  const disposition = res.headers.get("Content-Disposition") || "";
+  const match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+  const filename = match ? decodeURIComponent(match[1]) : fallbackFilename;
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Revoking straight away can cancel the download in some browsers.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// For `catch (err)` blocks — the thrown value is `unknown` in TypeScript.
+export function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback;
 }

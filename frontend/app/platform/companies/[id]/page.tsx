@@ -77,7 +77,7 @@ export default function CompanyDetailPage() {
     <div>
       <button
         onClick={() => router.push("/platform/companies")}
-        className="mb-4 rounded-md bg-gray-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-600"
+        className="mb-4 rounded bg-gray-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-600"
       >
         Back to companies
       </button>
@@ -93,7 +93,7 @@ export default function CompanyDetailPage() {
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Details + users */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+          <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
             <h3 className="text-sm font-medium text-gray-700">Company details</h3>
             <p className="text-xs text-teal-600 mt-0.5 mb-3">Plan, sign-up date, and user count</p>
             <dl className="grid grid-cols-2 gap-3 text-sm">
@@ -119,7 +119,7 @@ export default function CompanyDetailPage() {
           </div>
 
           {stats && (
-            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+            <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
               <h3 className="text-sm font-medium text-gray-700">Fleet</h3>
               <p className="text-xs text-teal-600 mt-0.5 mb-3">Vehicles, distance, and money on this company's account</p>
 
@@ -133,7 +133,7 @@ export default function CompanyDetailPage() {
                   <dd className="text-gray-900 font-medium mt-0.5">{stats.totalDistanceKm} km</dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">Expenses</dt>
+                  <dt className="text-gray-500">Estimated subscription cost</dt>
                   <dd className="text-gray-900 font-medium mt-0.5">
                     {stats.estimatedExpenses === null ? "Custom plan" : formatKes(stats.estimatedExpenses)}
                   </dd>
@@ -162,7 +162,7 @@ export default function CompanyDetailPage() {
             </div>
           )}
 
-          <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+          <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
             <h3 className="text-sm font-medium text-gray-700 px-5 pt-5">Users</h3>
             <p className="text-xs text-teal-600 px-5">Admins and drivers on this company's account</p>
             <table className="w-full text-sm mt-3">
@@ -195,21 +195,21 @@ export default function CompanyDetailPage() {
         </div>
 
         {/* Status controls */}
-        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5 h-fit">
+        <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5 h-fit">
           <h3 className="text-sm font-medium text-gray-700">Manage status</h3>
           <p className="text-xs text-teal-600 mt-0.5 mb-4">Controls whether this company can access the platform</p>
           <div className="space-y-2">
             <button
               onClick={() => updateStatus("active")}
               disabled={updating || company.status === "active"}
-              className="w-full py-2 rounded-md text-sm font-medium text-white bg-teal-500 hover:bg-teal-600 disabled:opacity-40"
+              className="w-full py-2 rounded text-sm font-medium text-white bg-teal-500 hover:bg-teal-600 disabled:opacity-40"
             >
               Approve / Activate
             </button>
             <button
               onClick={() => updateStatus("suspended")}
               disabled={updating || company.status === "suspended"}
-              className="w-full py-2 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-40"
+              className="w-full py-2 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-40"
             >
               Suspend
             </button>

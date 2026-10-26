@@ -100,7 +100,7 @@ export default function CompanyBillingPage() {
 
   return (
     <div className="max-w-4xl space-y-8">
-      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-6 space-y-5 max-w-xl">
+      <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-6 space-y-5 max-w-xl">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-500">Current plan</p>
@@ -143,8 +143,8 @@ export default function CompanyBillingPage() {
         <p className="text-xs text-teal-600 mb-4">Distance and expenses are calculated automatically.</p>
 
         <div className="grid sm:grid-cols-2 gap-5 max-w-md">
-          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-            <span className="shrink-0 rounded-xl bg-blue-50 p-2.5 text-blue-600">
+          <div className="flex items-center gap-3 rounded-lg bg-white p-4 shadow-sm ring-1 ring-black/5">
+            <span className="shrink-0 rounded-md bg-blue-50 p-2.5 text-blue-600">
               <DistanceIcon size={18} />
             </span>
             <div>
@@ -153,12 +153,12 @@ export default function CompanyBillingPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-            <span className="shrink-0 rounded-xl bg-orange-50 p-2.5 text-orange-600">
+          <div className="flex items-center gap-3 rounded-lg bg-white p-4 shadow-sm ring-1 ring-black/5">
+            <span className="shrink-0 rounded-md bg-orange-50 p-2.5 text-orange-600">
               <ExpensesIcon size={18} />
             </span>
             <div>
-              <p className="text-xs text-gray-500">Estimated expenses</p>
+              <p className="text-xs text-gray-500">Estimated subscription cost</p>
               <p className="text-lg font-bold text-gray-900">
                 {stats?.estimatedExpenses === null ? "Custom plan" : formatKes(stats?.estimatedExpenses ?? 0)}
               </p>
@@ -168,7 +168,7 @@ export default function CompanyBillingPage() {
       </div>
 
       {SPECIAL_OFFER.active && (
-        <div className="relative overflow-hidden rounded-2xl bg-teal-950 shadow-sm">
+        <div className="relative overflow-hidden rounded-lg bg-teal-950 shadow-sm">
           <div className="relative flex items-center gap-3 px-5 py-4">
             <span className="animate-shake inline-block shrink-0 rounded-full bg-orange-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
               Special offer
@@ -182,7 +182,7 @@ export default function CompanyBillingPage() {
         <h2 className="text-base font-semibold text-gray-900 mb-1">Change plan</h2>
         <p className="text-xs text-teal-600 mb-4">Upgrade or switch plans — pay with M-Pesa or Paystack.</p>
 
-        <div className="flex items-center gap-4 mb-6 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5 max-w-md">
+        <div className="flex items-center gap-4 mb-6 rounded-lg bg-white p-4 shadow-sm ring-1 ring-black/5 max-w-md">
           <div className="flex items-center -space-x-2">
             {ACCEPTED_PAYMENT_METHODS.map((m) => (
               <div
@@ -205,7 +205,7 @@ export default function CompanyBillingPage() {
             return (
               <div
                 key={p.id}
-                className={`relative flex flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ${
+                className={`relative flex flex-col rounded-lg bg-white p-5 shadow-sm ring-1 ${
                   p.highlighted ? "ring-2 ring-orange-500" : "ring-black/5"
                 }`}
               >
@@ -228,20 +228,20 @@ export default function CompanyBillingPage() {
                 </ul>
 
                 {isCurrent ? (
-                  <span className="text-center px-4 py-2 rounded-md text-xs font-medium text-gray-400 border border-gray-200">
+                  <span className="text-center px-4 py-2 rounded text-xs font-medium text-gray-400 border border-gray-200">
                     Current plan
                   </span>
                 ) : p.id === "enterprise" ? (
                   <a
                     href="mailto:sales@figbloomfleet.com"
-                    className="text-center px-4 py-2 rounded-md text-xs font-medium text-gray-700 border border-gray-300 hover:border-gray-400"
+                    className="text-center px-4 py-2 rounded text-xs font-medium text-gray-700 border border-gray-300 hover:border-gray-400"
                   >
                     Contact sales
                   </a>
                 ) : (
                   <button
                     onClick={() => setCheckoutPlan(p.id as SelfServePlan)}
-                    className={`text-center px-4 py-2 rounded-md text-xs font-medium transition-colors ${
+                    className={`text-center px-4 py-2 rounded text-xs font-medium transition-colors ${
                       p.highlighted
                         ? "text-white bg-orange-500 hover:bg-orange-600"
                         : "text-white bg-teal-600 hover:bg-teal-700"
@@ -260,7 +260,7 @@ export default function CompanyBillingPage() {
         <h2 className="text-base font-semibold text-gray-900 mb-1">Payment history</h2>
         <p className="text-xs text-teal-600 mb-4">Every real charge made on this account, most recent first.</p>
 
-        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
           {transactions.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">No payments yet.</p>
           ) : (

@@ -49,7 +49,7 @@ export default function ResetPasswordForm() {
 
   if (!linkIsValid) {
     return (
-      <div className="text-sm px-3.5 py-2.5 rounded-md bg-red-50 text-red-600 border border-red-200" role="alert">
+      <div className="text-sm px-3.5 py-2.5 rounded bg-red-50 text-red-600 border border-red-200" role="alert">
         This reset link is missing or invalid.{" "}
         <a href="/forgot-password" className="font-medium underline">
           Request a new one
@@ -61,7 +61,7 @@ export default function ResetPasswordForm() {
 
   if (done) {
     return (
-      <div className="text-sm px-3.5 py-2.5 rounded-md bg-teal-50 text-teal-600 border border-teal-200">
+      <div className="text-sm px-3.5 py-2.5 rounded bg-teal-50 text-teal-600 border border-teal-200">
         Your password has been updated. Taking you to sign in…
       </div>
     );
@@ -80,7 +80,7 @@ export default function ResetPasswordForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Your new password"
-          className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+          className="w-full px-3.5 py-2.5 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
         />
       </div>
 
@@ -95,12 +95,12 @@ export default function ResetPasswordForm() {
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           placeholder="Confirm your new password"
-          className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+          className="w-full px-3.5 py-2.5 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
         />
       </div>
 
       {error && (
-        <div className="text-sm px-3.5 py-2.5 rounded-md bg-red-50 text-red-600 border border-red-200" role="alert">
+        <div className="text-sm px-3.5 py-2.5 rounded bg-red-50 text-red-600 border border-red-200" role="alert">
           {error}
         </div>
       )}
@@ -108,7 +108,7 @@ export default function ResetPasswordForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full py-2.5 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+        className="w-full py-2.5 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
       >
         {isSubmitting ? "Updating…" : "Update password"}
       </button>
