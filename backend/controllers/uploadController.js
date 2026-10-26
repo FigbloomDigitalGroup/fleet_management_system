@@ -1,22 +1,14 @@
 import crypto from "crypto";
 import mongoose from "mongoose";
 import Upload from "../models/Upload.js";
+import { signatureFor, uploadUrl } from "../lib/uploadUrl.js";
+
+export { uploadUrl };
 
 const MAX_BYTES = 2 * 1024 * 1024;
-const KINDS = ["inspection", "receipt", "pod_photo", "signature"];
+const KINDS = ["inspection", "receipt", "pod_photo", "signature", "avatar", "logo"];
 const CONTENT_TYPES = ["image/jpeg", "image/png"];
 
-// Images are shown in plain <img> tags on the web dashboard, which can't
-// send the Bearer token — so each one is served from an unguessable signed
-// URL instead of an authenticated endpoint.
-function signatureFor(id) {
-  return crypto.createHmac("sha256", process.env.JWT_SECRET).update(String(id)).digest("hex").slice(0, 32);
-}
-
-export function uploadUrl(id) {
-  if (!id) return null;
-  return `/api/uploads/${id}/raw?sig=${signatureFor(id)}`;
-}
 
 // DRIVER (or admin) — store one image sent as base64 JSON
 // ({ kind, contentType, dataBase64 }). The phone compresses before sending.
@@ -80,4 +72,23 @@ export async function ownedUploadIds(ids, companyId) {
   if (!clean.length) return [];
   const found = await Upload.find({ _id: { $in: clean }, companyId }).select("_id");
   return found.map((u) => u._id);
+}
+
+// Points a profile picture / logo field at a freshly uploaded image (or
+// clears it with null), removing the image it replaces. The upload must be
+// the right kind and belong to the same company, so nobody can borrow
+// another company's image by id. Returns an error string, or null.
+export async function setImageField(doc, field, uploadId, { companyId, kind }) {
+  let next = null;
+  if (uploadId !== null) {
+    if (!mongoose.isValidObjectId(uploadId)) return "uploadId must be a valid id or null";
+    const upload = await Upload.findOne({ _id: uploadId, companyId, kind }).select("_id");
+    if (!upload) return "Image not found — upload it first";
+    next = upload._id;
+  }
+  const previous = doc[field];
+  doc[field] = next;
+  await doc.save();
+  if (previous && String(previous) !== String(next)) await Upload.deleteOne({ _id: previous });
+  return null;
 }

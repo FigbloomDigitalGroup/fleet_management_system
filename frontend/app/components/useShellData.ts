@@ -20,6 +20,7 @@ export function useShellData({ alerts, messages, zones }: { alerts: boolean; mes
   // and admins don't have to re-fetch it per page.
   const [companyName, setCompanyName] = useState<string | null>(null);
   const [companyIndustry, setCompanyIndustry] = useState<string | null>(null);
+  const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isCompanySide) return;
@@ -29,6 +30,7 @@ export function useShellData({ alerts, messages, zones }: { alerts: boolean; mes
         if (!cancelled) {
           setCompanyName(company.name);
           setCompanyIndustry(company.industry ?? null);
+          setCompanyLogoUrl(company.logoUrl ?? null);
         }
       })
       .catch(() => {
@@ -151,5 +153,5 @@ export function useShellData({ alerts, messages, zones }: { alerts: boolean; mes
     };
   }, [zones, isCompanySide]);
 
-  return { companyName, companyIndustry, alertCount, toasts, dismissToast, unreadMessages, zoneCounts };
+  return { companyName, companyIndustry, companyLogoUrl, alertCount, toasts, dismissToast, unreadMessages, zoneCounts };
 }

@@ -6,6 +6,8 @@ import FullPageLoading from "@/app/components/FullPageLoading";
 import { CompanyRecord } from "../../types/auth";
 import { usePageHeader } from "../../components/DashboardShell";
 import CompanyOpsSettings from "../../components/CompanyOpsSettings";
+import Avatar from "../../components/Avatar";
+import ImageUploadButton from "../../components/ImageUploadButton";
 
 export default function CompanySettingsPage() {
   const [company, setCompany] = useState<CompanyRecord | null>(null);
@@ -54,6 +56,23 @@ export default function CompanySettingsPage() {
   return (
     <div className="max-w-4xl space-y-4">
       <form onSubmit={handleSave} className="max-w-xl bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-6 space-y-5">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Company logo</label>
+          <div className="flex items-center gap-4">
+            <Avatar src={company.logoUrl} name={company.name} size="lg" shape="square" />
+            <div>
+              <ImageUploadButton
+                endpoint="/api/companies/me/logo"
+                kind="logo"
+                label={company.logoUrl ? "Change logo" : "Upload logo"}
+                hasImage={!!company.logoUrl}
+                onChange={(logoUrl) => setCompany({ ...company, logoUrl })}
+              />
+              <p className="mt-1 text-xs text-gray-400">Shown on your dashboard, the driver app and to the platform team.</p>
+            </div>
+          </div>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Company name</label>
           <input

@@ -35,6 +35,9 @@ const alertSchema = new mongoose.Schema(
     },
     message: { type: String, required: true },
     resolved: { type: Boolean, default: false },
+    // Set when the driver deletes it in the app — hidden from their phone
+    // only; it stays on the dashboard until resolved.
+    hiddenForDriverAt: { type: Date, default: null },
     // Set when the alert is resolved; the TTL index below deletes it from
     // the database 30 minutes later. Open alerts have no resolvedAt, so
     // they're never expired.

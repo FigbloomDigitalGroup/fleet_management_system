@@ -9,7 +9,7 @@ import AppShell from "../components/AppShell";
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <ProtectedRoute allowedRoles={["ADMIN"]}>
-      <AppShell base="/admin">{children}</AppShell>
+      <AppShell portal="admin">{children}</AppShell>
     </ProtectedRoute>
   );
 }

@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { apiRequest } from "../../lib/api";
-import OpsMetrics from "../../components/OpsMetrics";
 import CircleStat from "../../components/CircleStat";
 import BarChartCard from "../../components/BarChartCard";
 import DonutChartCard from "../../components/DonutChartCard";
@@ -130,14 +129,14 @@ export default function CompanyDashboard() {
       {/* Fleet status breakdown beside the trips chart — first thing below
           the header. */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
-        <div className="h-80">
+        <div>
           <DonutChartCard
             title="Fleet status breakdown"
             description="How your vehicles are distributed across statuses"
             data={[
               { name: "Active", value: vehicleCounts.active, color: "#2dd4bf" },
               { name: "Idle", value: vehicleCounts.idle, color: "#fb923c" },
-              { name: "Offline", value: vehicleCounts.offline, color: "#9ca3af" },
+              { name: "Offline", value: vehicleCounts.offline, color: "#000000" },
               { name: "Maintenance", value: vehicleCounts.maintenance, color: "#f87171" },
             ]}
           />
@@ -154,21 +153,15 @@ export default function CompanyDashboard() {
         </div>
       </div>
 
-      {/* Operations today (3 columns) where the trips chart used to be, beside
-          the fleet active / offline rings */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
-        <div className="lg:col-span-2">
-          <OpsMetrics basePath="/company" columns={3} />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <CircleStat percentage={activePct} label="Fleet active" color="#2dd4bf" description="Vehicles currently on the move" />
-          <CircleStat
-            percentage={vehicleCounts.total ? Math.round((vehicleCounts.offline / vehicleCounts.total) * 100) : 0}
-            label="Offline"
-            color="#9ca3af"
-            description="No recent signal received"
-          />
-        </div>
+      {/* Fleet active / offline rings */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <CircleStat percentage={activePct} label="Fleet active" color="#2dd4bf" description="Vehicles currently on the move" />
+        <CircleStat
+          percentage={vehicleCounts.total ? Math.round((vehicleCounts.offline / vehicleCounts.total) * 100) : 0}
+          label="Offline"
+          color="#9ca3af"
+          description="No recent signal received"
+        />
       </div>
 
    {/* Agent activity on the left, Fleet on the map on the right */}

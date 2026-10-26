@@ -7,6 +7,7 @@ import { useAdminAccess } from "../lib/adminAccess";
 import { timeAgo } from "../lib/dateKeys";
 import { DriverRecord, MessageRecord, MessageThread } from "../types/auth";
 import Skeleton from "./Skeleton";
+import CallButton from "./CallButton";
 
 const POLL_MS = 10000;
 
@@ -204,7 +205,14 @@ export default function MessagesCenter() {
         ) : (
           <>
             <div className="border-b border-gray-100 px-5 py-3">
-              <h3 className="text-sm font-bold text-blue-950">{activeName}</h3>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm font-bold text-blue-950">{activeName}</h3>
+                <CallButton
+                  phone={drivers.find((d) => d._id === activeDriverId)?.phone}
+                  name={activeName}
+                  size="xs"
+                />
+              </div>
               <p className="text-[11px] text-teal-600">Messages show up in the driver&apos;s app — refreshes every 10 seconds</p>
             </div>
             <div ref={scrollRef} className="flex-1 space-y-2 overflow-y-auto bg-gray-50 px-5 py-4">

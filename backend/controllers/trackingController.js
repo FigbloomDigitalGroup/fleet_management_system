@@ -26,6 +26,12 @@ export const TRACKING_CONSENT_VERSION = "2026-10";
 // trip instead of starting a new one.
 const TRIP_IDLE_TIMEOUT_MINUTES = 120;
 const TRIP_IDLE_TIMEOUT_MS = TRIP_IDLE_TIMEOUT_MINUTES * 60 * 1000;
+// Speeding / harsh-driving noise filters (see processPing).
+const MAX_EVENT_ACCURACY_M = 25; // fixes less accurate than this are ignored for events
+const SPEEDING_CONFIRM_SECONDS = 60; // two over-limit fixes within this window
+const HARSH_MAX_GAP_SECONDS = 10; // a rate over a longer gap is an average, not an event
+const HARSH_MIN_SPEED_KPH = 25; // the faster side of the change must be real driving speed
+const HARSH_MIN_CHANGE_KPH = 12; // and the speed must actually change this much
 const FUEL_ANOMALY_THRESHOLD_PCT = 50;
 const MOCK_LOCATION_ALERT_DEBOUNCE_MINUTES = 30;
 const DRIVING_EVENT_DEBOUNCE_SECONDS = 60; // one incident per type per minute
@@ -253,11 +259,30 @@ async function processPing(vehicle, data, source) {
     }
   }
 
-  // 4. Speeding (route-specific limit overrides the company's limit, if a route is assigned)
+  // GPS speed jitters, and a single bad fix can read as a burst of speed.
+  // Speeding and harsh driving only count from fixes that are trustworthy
+  // (not fake GPS, reasonably accurate, physically plausible).
+  const trustworthy = (p) =>
+    p &&
+    !p.isMocked &&
+    (p.accuracyM == null || p.accuracyM <= MAX_EVENT_ACCURACY_M) &&
+    p.speedKph != null &&
+    p.speedKph <= MAX_PLAUSIBLE_SPEED_KPH;
+  const thisFix = { isMocked, accuracyM, speedKph };
+  const prevGapSeconds = previousPing ? (t.getTime() - new Date(previousPing.recordedAt).getTime()) / 1000 : Infinity;
+
+  // 4. Speeding (route-specific limit overrides the company's limit, if a route is assigned).
+  // Must hold across two consecutive good fixes, so one spike isn't speeding.
   const activeRoute = await Route.findOne({ vehicleId, active: true });
   const speedLimit = activeRoute?.speedLimitKph || alertSettings.speedLimitKph;
 
-  if (speedKph && speedKph > speedLimit) {
+  if (
+    trustworthy(thisFix) &&
+    speedKph > speedLimit &&
+    trustworthy(previousPing) &&
+    previousPing.speedKph > speedLimit &&
+    prevGapSeconds <= SPEEDING_CONFIRM_SECONDS
+  ) {
     await recordDrivingEvent({ vehicle, type: "speeding", source: "gps", value: speedKph, speedKph, latitude, longitude, at: t });
     await raiseAlert({
       companyId: vehicle.companyId,
@@ -271,18 +296,30 @@ async function processPing(vehicle, data, source) {
   // 4b. Harsh braking / harsh acceleration from the GPS speed delta between
   // this point and the previous one. Works for hardware trackers too; the
   // phone app additionally reports sensor-based events (POST /events).
-  if (previousPing && speedKph !== undefined && speedKph !== null && previousPing.speedKph != null) {
-    const deltaSeconds = (t.getTime() - new Date(previousPing.recordedAt).getTime()) / 1000;
+  // Only between two good fixes a few seconds apart, and only at real
+  // driving speeds with a real change — creeping or GPS jitter in traffic
+  // used to read as "harsh acceleration".
+  if (trustworthy(thisFix) && trustworthy(previousPing)) {
+    const deltaSeconds = prevGapSeconds;
 
-    if (deltaSeconds >= 1 && deltaSeconds <= 30) {
-      const ratePerSec = (speedKph - previousPing.speedKph) / deltaSeconds;
+    if (deltaSeconds >= 1 && deltaSeconds <= HARSH_MAX_GAP_SECONDS) {
+      const change = speedKph - previousPing.speedKph;
+      const ratePerSec = change / deltaSeconds;
       let harshType = null;
       let message = null;
 
-      if (ratePerSec <= -alertSettings.harshBrakingKphPerSec) {
+      if (
+        ratePerSec <= -alertSettings.harshBrakingKphPerSec &&
+        previousPing.speedKph >= HARSH_MIN_SPEED_KPH &&
+        -change >= HARSH_MIN_CHANGE_KPH
+      ) {
         harshType = "harsh_braking";
         message = `Harsh braking detected: dropped from ${previousPing.speedKph} km/h to ${speedKph} km/h in ${deltaSeconds.toFixed(0)}s.`;
-      } else if (ratePerSec >= alertSettings.harshAccelerationKphPerSec) {
+      } else if (
+        ratePerSec >= alertSettings.harshAccelerationKphPerSec &&
+        speedKph >= HARSH_MIN_SPEED_KPH &&
+        change >= HARSH_MIN_CHANGE_KPH
+      ) {
         harshType = "harsh_acceleration";
         message = `Harsh acceleration detected: rose from ${previousPing.speedKph} km/h to ${speedKph} km/h in ${deltaSeconds.toFixed(0)}s.`;
       }
@@ -526,7 +563,7 @@ export async function getLiveLocations(req, res) {
   try {
     const vehicles = await Vehicle.find(tenantScope(req))
       .select("plateNumber status vehicleType device driverId")
-      .populate("driverId", "fullName");
+      .populate("driverId", "fullName phone avatarUploadId");
     const results = await Promise.all(
       vehicles.map(async (v) => {
         const lastPing = await LocationPing.findOne({ vehicleId: v._id }).sort({ recordedAt: -1 });

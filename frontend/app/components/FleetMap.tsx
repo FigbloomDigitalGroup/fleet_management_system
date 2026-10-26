@@ -19,13 +19,14 @@ import FullPageLoading from "./FullPageLoading";
 import { GeofenceRecord, RouteRecord } from "../types/auth";
 import Switch from "./Switch";
 import { useAdminAccess } from "../lib/adminAccess";
+import CallButton from "./CallButton";
 
 interface LiveVehicle {
   vehicleId: string;
   plateNumber: string;
   status: string;
   vehicleType?: string;
-  driverId?: { _id: string; fullName: string } | null;
+  driverId?: { _id: string; fullName: string; phone?: string | null } | null;
   lastLocation:
     | {
         latitude: number;
@@ -339,6 +340,7 @@ export default function FleetMap({
   const navHref = (label: string) =>
     shell?.nav.sections.flatMap((sec) => sec.items).find((i) => i.label === label)?.href ?? null;
   const geofencesHref = canManageFleet ? navHref("Geofences") : null;
+  const { address: menuAddress, loading: menuAddressLoading } = useAddress(mapMenu?.lat, mapMenu?.lng);
   const routesHref = canDispatch ? navHref("Routes") : null;
 
   // Hands the spot to the Geofences / Routes page through the same
@@ -482,11 +484,9 @@ export default function FleetMap({
         }}
         onClick={(e) => {
           setLayersOpen(false);
-          if (e.latLng && (geofencesHref || routesHref)) {
-            setMapMenu({ lat: e.latLng.lat(), lng: e.latLng.lng() });
-          } else {
-            setMapMenu(null);
-          }
+          // Everyone gets the spot's address; the create options inside
+          // the menu are limited to what the user may do.
+          setMapMenu(e.latLng ? { lat: e.latLng.lat(), lng: e.latLng.lng() } : null);
         }}
         mapTypeId={satelliteView ? "satellite" : "roadmap"}
         options={{
@@ -557,16 +557,27 @@ export default function FleetMap({
         {mapMenu && (
           <OverlayView position={mapMenu} mapPaneName={OverlayView.FLOAT_PANE}>
             <div ref={blockMapClicks} className="flex flex-col items-center" style={{ transform: "translate(-50%, -100%)" }}>
-              <div className="mb-1 w-56 overflow-hidden rounded-lg bg-white text-left shadow-xl ring-1 ring-black/10">
-                <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">This spot</span>
-                  <button
-                    onClick={() => setMapMenu(null)}
-                    aria-label="Close"
-                    className="rounded-full p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              <div className="mb-1 w-64 overflow-hidden rounded-lg bg-white text-left shadow-xl ring-1 ring-black/10">
+                <div className="border-b border-gray-100 px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">This spot</span>
+                    <button
+                      onClick={() => setMapMenu(null)}
+                      aria-label="Close"
+                      className="rounded-full p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                    >
+                      <FiX size={13} />
+                    </button>
+                  </div>
+                  {/* The address of the clicked spot, looked up as soon as it's picked */}
+                  <p
+                    className={`mt-1 text-xs leading-snug ${menuAddressLoading ? "animate-pulse text-gray-400" : "text-gray-800"}`}
+                    title={`${mapMenu.lat.toFixed(5)}, ${mapMenu.lng.toFixed(5)}`}
                   >
-                    <FiX size={13} />
-                  </button>
+                    {menuAddressLoading
+                      ? "Looking up address…"
+                      : menuAddress || `${mapMenu.lat.toFixed(5)}, ${mapMenu.lng.toFixed(5)}`}
+                  </p>
                 </div>
                 {geofencesHref && (
                   <button
@@ -610,7 +621,7 @@ export default function FleetMap({
               FIGBLOOM FLEET
               {shell?.companyName && <span className="font-medium text-gray-400"> · {shell.companyName}</span>}
             </span>
-            {shell && (
+            {shell?.nav.alertsHref && (
               <Link
                 href={shell.nav.alertsHref}
                 aria-label="Alerts"
@@ -933,12 +944,12 @@ function StatusCard({
           </dd>
         </div>
       </dl>
-      <Link
-        href={detailsHref}
-        className="block border-t border-gray-100 py-2.5 text-center text-xs font-semibold text-teal-700 hover:bg-teal-50"
-      >
-        Details & history
-      </Link>
+      <div className="flex items-center gap-2 border-t border-gray-100 px-4 py-2.5">
+        {vehicle.driverId && <CallButton phone={vehicle.driverId.phone} name={vehicle.driverId.fullName} size="xs" label="Call driver" />}
+        <Link href={detailsHref} className="ml-auto text-xs font-semibold text-teal-700 hover:underline">
+          Details & history
+        </Link>
+      </div>
     </div>
   );
 }

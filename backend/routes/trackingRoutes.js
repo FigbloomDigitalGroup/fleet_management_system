@@ -18,7 +18,7 @@ const router = express.Router();
 router.post("/ping", authenticateTracking, ingestLocation);
 
 router.get("/live", authenticate, getLiveLocations);
-router.get("/address", authenticate, authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"), getAddress);
+router.get("/address", authenticate, authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN", "DRIVER"), getAddress);
 router.get("/history", authenticate, authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"), getLocationHistory);
 
 // Driver phone reliability endpoints

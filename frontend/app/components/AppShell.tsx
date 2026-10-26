@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, createContext, useContext, useMemo, useState } from "react";
+import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FiArrowLeft, FiBell, FiChevronLeft, FiLogOut, FiMapPin, FiMenu } from "react-icons/fi";
@@ -8,7 +8,10 @@ import { FaMapMarkerAlt } from "react-icons/fa";
 import { FaLocationPinLock } from "react-icons/fa6";
 import { useAuth } from "../context/AuthContext";
 import { useAdminAccess } from "../lib/adminAccess";
-import { FleetNav, fleetNav, isNavItemActive } from "../lib/fleetNav";
+import { FleetNav, fleetNav, isNavItemActive, navHomeHref, platformNav } from "../lib/fleetNav";
+import { apiRequest } from "../lib/api";
+import Avatar from "./Avatar";
+import ImageUploadButton from "./ImageUploadButton";
 import { industryLabel } from "../lib/industries";
 import { PageHeaderContext, PageHeaderValue } from "./PageHeader";
 import { useShellData } from "./useShellData";
@@ -16,15 +19,16 @@ import AlertToastStack from "./AlertToast";
 import AgentChatWidget from "./AgentChatWidget";
 import SessionExpiredModal from "./SessionExpiredModal";
 import OverviewSlides from "./OverviewSlides";
-import BrandIcon from "./BrandIcon";
 import WheelIcon from "./WheelIcon";
 
-// The company-side portals' shell, arranged like Traccar's web app:
-// - the Live Map is a full-screen page with its own floating card (see
-//   FleetMap), so the shell adds nothing around it;
-// - every other page belongs to a section (Reports / Dispatch / Settings)
-//   and gets that section's left menu beside it.
-// A bottom menu (Map + the three sections + Log out) moves between them.
+// The portals' shell, arranged like Traccar's web app:
+// - on the company side the Live Map is a full-screen page with its own
+//   floating card (see FleetMap), so the shell adds nothing around it;
+// - every other page belongs to a section (Reports / Dispatch / Settings, or
+//   for the platform owner Reports / Companies / Settings) and gets that
+//   section's left menu beside it.
+// A bottom menu (Map when there is one + the sections + Log out) moves
+// between them.
 
 interface ShellContextValue {
   nav: FleetNav;
@@ -47,7 +51,7 @@ export function BottomMenu({ dark = false }: { dark?: boolean }) {
   const { nav } = shell;
 
   const entries = [
-    { key: "map", label: "Map", icon: FiMapPin, href: nav.mapHref, active: pathname === nav.mapHref },
+    ...(nav.mapHref ? [{ key: "map", label: "Map", icon: FiMapPin, href: nav.mapHref, active: pathname === nav.mapHref }] : []),
     ...nav.sections.map((s) => ({
       key: s.key,
       label: s.label,
@@ -92,24 +96,43 @@ function CountBadge({ count, tone }: { count: number; tone: "red" | "orange" }) 
   );
 }
 
-export default function AppShell({ children, base }: { children: ReactNode; base: "/admin" | "/company" }) {
+export default function AppShell({ children, portal }: { children: ReactNode; portal: "admin" | "company" | "platform" }) {
   const pathname = usePathname();
   const { user } = useAuth();
   const { access, isViewer } = useAdminAccess();
   const isOwner = user?.role === "COMPANY_OWNER";
+  const isPlatform = portal === "platform";
 
-  const nav = useMemo(() => fleetNav(base, { isOwner, canEditCompany: access === "full" }), [base, isOwner, access]);
-  const isMap = pathname === nav.mapHref;
+  const nav = useMemo(
+    () => (isPlatform ? platformNav() : fleetNav(`/${portal}` as "/admin" | "/company", { isOwner, canEditCompany: access === "full" })),
+    [isPlatform, portal, isOwner, access]
+  );
+  const homeHref = navHomeHref(nav);
+  const isMap = !!nav.mapHref && pathname === nav.mapHref;
   const section = nav.sections.find((s) => s.items.some((i) => isNavItemActive(pathname, i.href)));
   const activeItem = section?.items.find((i) => isNavItemActive(pathname, i.href));
-  const isOverviewPage = pathname === `${base}/dashboard`;
+  // The company-side overview gets Fleet's offer/industry hero card.
+  const isOverviewPage = !isPlatform && pathname === `/${portal}/dashboard`;
 
-  const { companyName, companyIndustry, alertCount, toasts, dismissToast, unreadMessages, zoneCounts } = useShellData({
-    alerts: true,
-    messages: true,
-    // The map works these out itself from its own, faster poll.
-    zones: !isMap,
-  });
+  const { companyName, companyIndustry, companyLogoUrl, alertCount, toasts, dismissToast, unreadMessages, zoneCounts } =
+    useShellData({
+      alerts: !!nav.alertsHref,
+      messages: !isPlatform,
+      // The map works these out itself from its own, faster poll.
+      zones: !isPlatform && !isMap,
+    });
+
+  // The signed-in person's own name and photo, for the menu footer.
+  const [me, setMe] = useState<{ fullName: string; avatarUrl: string | null } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    apiRequest<{ fullName: string; avatarUrl?: string | null }>("/api/users/me")
+      .then((u) => !cancelled && setMe({ fullName: u.fullName, avatarUrl: u.avatarUrl ?? null }))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const [header, setHeader] = useState<PageHeaderValue | null>(null);
   const headerContextValue = useMemo(() => ({ header, setHeader }), [header]);
@@ -128,9 +151,9 @@ export default function AppShell({ children, base }: { children: ReactNode; base
 
   const overlays = (
     <div className="print:hidden">
-      <AlertToastStack toasts={toasts} onDismiss={dismissToast} liveMapHref={nav.mapHref} />
+      {nav.alertsHref && <AlertToastStack toasts={toasts} onDismiss={dismissToast} liveMapHref={nav.mapHref} />}
       <SessionExpiredModal />
-      {!isViewer && <AgentChatWidget />}
+      {!isPlatform && !isViewer && <AgentChatWidget />}
     </div>
   );
 
@@ -197,8 +220,8 @@ export default function AppShell({ children, base }: { children: ReactNode; base
         >
           <div className="flex items-center gap-2 border-b border-teal-900 px-3 py-3">
             <Link
-              href={nav.mapHref}
-              title="Back to the map"
+              href={homeHref}
+              title={nav.mapHref ? "Back to the map" : "Back to the start"}
               className="rounded-full p-1.5 text-teal-100 transition-colors hover:bg-teal-900 hover:text-white"
             >
               <FiArrowLeft size={18} />
@@ -237,12 +260,32 @@ export default function AppShell({ children, base }: { children: ReactNode; base
             })}
           </nav>
 
-          <div className="px-3 pb-3">
-            <span className="flex items-center gap-1.5 text-xs font-bold whitespace-nowrap">
-              <BrandIcon variant="light" className="h-4 w-4 shrink-0" />
-              FIGBLOOM FLEET
-            </span>
-            {companyName && <p className="mt-0.5 truncate text-[11px] text-teal-100/80">{companyName}</p>}
+          <div className="space-y-3 px-3 pb-3">
+            {companyName && (
+              <div className="flex items-center gap-2">
+                <Avatar src={companyLogoUrl} name={companyName} size="sm" shape="square" />
+                <p className="min-w-0 truncate text-[11px] font-medium text-teal-50">{companyName}</p>
+              </div>
+            )}
+            {me && (
+              <div className="flex items-center gap-2 rounded-lg bg-teal-900/60 p-2">
+                <Avatar src={me.avatarUrl} name={me.fullName} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[11px] font-medium text-white">{me.fullName}</p>
+                  {/* Platform staff have no company to store an image under */}
+                  {!isPlatform && (
+                    <ImageUploadButton
+                      endpoint="/api/users/me/avatar"
+                      kind="avatar"
+                      tone="dark"
+                      label={me.avatarUrl ? "Change photo" : "Add photo"}
+                      hasImage={!!me.avatarUrl}
+                      onChange={(avatarUrl) => setMe({ ...me, avatarUrl })}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
             {access !== "full" && (
               <span
                 className="mt-2 inline-block rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-medium text-orange-200"
@@ -288,16 +331,18 @@ export default function AppShell({ children, base }: { children: ReactNode; base
                 </span>
               </div>
             )}
-            <Link
-              href={nav.alertsHref}
-              aria-label="Alerts"
-              className="relative rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
-            >
-              <FiBell size={19} />
-              <span className="absolute -right-0.5 -top-0.5">
-                <CountBadge count={alertCount} tone="red" />
-              </span>
-            </Link>
+            {nav.alertsHref && (
+              <Link
+                href={nav.alertsHref}
+                aria-label="Alerts"
+                className="relative rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+              >
+                <FiBell size={19} />
+                <span className="absolute -right-0.5 -top-0.5">
+                  <CountBadge count={alertCount} tone="red" />
+                </span>
+              </Link>
+            )}
           </header>
 
           <main className="app-content min-w-0 flex-1 overflow-y-auto p-4 md:p-6 print:overflow-visible print:bg-white print:p-0">

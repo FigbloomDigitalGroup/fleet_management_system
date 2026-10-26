@@ -2,6 +2,7 @@ import { IconType } from "react-icons";
 import {
   FiAlertTriangle,
   FiBarChart2,
+  FiBriefcase,
   FiClipboard,
   FiCpu,
   FiCreditCard,
@@ -33,16 +34,58 @@ export interface FleetNavItem {
 }
 
 export interface FleetNavSection {
-  key: "reports" | "dispatch" | "settings";
+  key: "reports" | "dispatch" | "settings" | "companies";
   label: string;
   icon: IconType;
   items: FleetNavItem[];
 }
 
 export interface FleetNav {
-  mapHref: string;
-  alertsHref: string;
+  // Company-side portals open on the full-screen Live Map; the platform
+  // portal has no map and just opens on its first section.
+  mapHref: string | null;
+  alertsHref: string | null;
   sections: FleetNavSection[];
+}
+
+// Where "back" / home goes: the map, or the first page of the first section.
+export function navHomeHref(nav: FleetNav) {
+  return nav.mapHref ?? nav.sections[0].items[0].href;
+}
+
+// The platform owner's portal, in the same Traccar-style sections.
+export function platformNav(): FleetNav {
+  return {
+    mapHref: null,
+    alertsHref: null,
+    sections: [
+      {
+        key: "reports",
+        label: "Reports",
+        icon: FiPieChart,
+        items: [
+          { label: "Overview", href: "/platform/dashboard", icon: FiHome },
+          { label: "Analytics", href: "/platform/analytics", icon: FiBarChart2 },
+          { label: "AI Agent", href: "/platform/agent", icon: FiCpu },
+        ],
+      },
+      {
+        key: "companies",
+        label: "Companies",
+        icon: FiBriefcase,
+        items: [
+          { label: "Companies", href: "/platform/companies", icon: FiBriefcase },
+          { label: "Billing", href: "/platform/billing", icon: FiCreditCard },
+        ],
+      },
+      {
+        key: "settings",
+        label: "Settings",
+        icon: FiSettings,
+        items: [{ label: "Platform", href: "/platform/settings", icon: FiSliders }],
+      },
+    ],
+  };
 }
 
 export function fleetNav(

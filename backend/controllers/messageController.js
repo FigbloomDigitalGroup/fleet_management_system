@@ -42,7 +42,9 @@ export async function listThreads(req, res) {
 }
 
 async function threadFor(driverId, markReadFromDriver) {
-  const messages = await Message.find({ driverId }).sort({ createdAt: -1 }).limit(200);
+  // The driver's own view leaves out messages they deleted.
+  const query = markReadFromDriver ? { driverId } : { driverId, hiddenForDriverAt: null };
+  const messages = await Message.find(query).sort({ createdAt: -1 }).limit(200);
   // Opening a thread marks the other side's messages as read.
   await Message.updateMany(
     { driverId, fromDriver: markReadFromDriver, readAt: null },
@@ -76,7 +78,7 @@ export async function getMyThread(req, res) {
 // DRIVER — unread messages from dispatch (for the app's badge)
 export async function getMyUnreadCount(req, res) {
   try {
-    const count = await Message.countDocuments({ driverId: req.user.id, fromDriver: false, readAt: null });
+    const count = await Message.countDocuments({ driverId: req.user.id, fromDriver: false, readAt: null, hiddenForDriverAt: null });
     return res.json({ count });
   } catch (err) {
     console.error(err);
@@ -116,5 +118,22 @@ export async function sendMessage(req, res) {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to send message" });
+  }
+}
+
+// DRIVER — delete a message from their own view of the conversation (body:
+// none). Dispatch keeps the full history.
+export async function hideMyMessage(req, res) {
+  try {
+    const message = await Message.findOneAndUpdate(
+      { _id: req.params.id, driverId: req.user.id },
+      { $set: { hiddenForDriverAt: new Date() } },
+      { new: true }
+    );
+    if (!message) return res.status(404).json({ error: "Message not found" });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to delete message" });
   }
 }

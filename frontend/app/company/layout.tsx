@@ -9,7 +9,7 @@ import AppShell from "../components/AppShell";
 export default function CompanyLayout({ children }: { children: ReactNode }) {
   return (
     <ProtectedRoute allowedRoles={["COMPANY_OWNER"]}>
-      <AppShell base="/company">{children}</AppShell>
+      <AppShell portal="company">{children}</AppShell>
     </ProtectedRoute>
   );
 }

@@ -7,6 +7,7 @@ import { ADMIN_ACCESS_OPTIONS } from "../../lib/adminAccess";
 import Skeleton from "../../components/Skeleton";
 import PasswordInput from "../../components/PasswordInput";
 import { usePageHeader } from "../../components/DashboardShell";
+import Avatar from "../../components/Avatar";
 
 export default function AdminsPage() {
   const [admins, setAdmins] = useState<AdminRecord[]>([]);
@@ -105,7 +106,12 @@ export default function AdminsPage() {
                 ) : (
                   admins.map((a) => (
                     <tr key={a._id} className="border-t border-gray-100">
-                      <td className="px-5 py-3 font-medium text-gray-900">{a.fullName}</td>
+                      <td className="px-5 py-3 font-medium text-gray-900">
+                        <span className="inline-flex items-center gap-2.5">
+                          <Avatar src={a.avatarUrl} name={a.fullName} size="sm" />
+                          {a.fullName}
+                        </span>
+                      </td>
                       <td className="px-5 py-3 text-gray-600">{a.email}</td>
                       <td className="px-5 py-3">
                         <select

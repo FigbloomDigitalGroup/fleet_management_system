@@ -12,9 +12,9 @@ import {
   getMyDailyStats,
   updateMyRevenue,
   getCompanyStats,
+  updateMyLogo,
 } from "../controllers/companyController.js";
 import { getMySettings, updateMySettings } from "../controllers/settingsCompanyController.js";
-import { getOpsSummary } from "../controllers/opsSummaryController.js";
 
 const router = express.Router();
 router.use(authenticate);
@@ -26,10 +26,10 @@ router.patch("/me/start-point", authorize("ADMIN", "COMPANY_OWNER"), updateStart
 router.patch("/me/plan", authorize("COMPANY_OWNER"), updateMyPlan);
 router.get("/me/stats", authorize("ADMIN", "COMPANY_OWNER"), getMyCompanyStats);
 router.get("/me/stats/daily", authorize("ADMIN", "COMPANY_OWNER"), getMyDailyStats);
-router.get("/me/ops-summary", authorize("ADMIN", "COMPANY_OWNER"), getOpsSummary);
 router.get("/me/settings", authorize("ADMIN", "COMPANY_OWNER"), getMySettings);
 router.put("/me/settings", authorize("ADMIN", "COMPANY_OWNER"), updateMySettings);
 router.patch("/me/revenue", authorize("COMPANY_OWNER"), updateMyRevenue);
+router.patch("/me/logo", authorize("COMPANY_OWNER"), updateMyLogo);
 router.get("/:id", authorize("PLATFORM_ADMIN"), getCompany);
 router.get("/:id/stats", authorize("PLATFORM_ADMIN"), getCompanyStats);
 router.patch("/:id/status", authorize("PLATFORM_ADMIN"), updateCompanyStatus);

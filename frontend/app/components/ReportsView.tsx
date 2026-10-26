@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { FiChevronDown, FiDownload, FiPrinter } from "react-icons/fi";
+import { FiDownload, FiPrinter } from "react-icons/fi";
 import { apiDownload, apiRequest, errorMessage } from "../lib/api";
 import { formatKes } from "../lib/pricing";
 import { toDateInput } from "../lib/dateKeys";
 import { ReportRow, ReportSummary } from "../types/auth";
 import Skeleton from "./Skeleton";
 import { scoreBadgeClass } from "./DriverScoreCard";
-import Switch from "./Switch";
+import ColumnPicker, { useStoredColumns } from "./ColumnPicker";
 
 type NumericKey = Exclude<keyof ReportRow, "id" | "name">;
 
@@ -31,18 +31,8 @@ const COLUMNS: { key: NumericKey; label: string; format?: (n: number) => string;
 ];
 
 const COLUMNS_STORAGE_KEY = "fleet:report-columns";
-
-// The viewer's own column choice, remembered in this browser only.
-function loadVisibleColumns(): NumericKey[] {
-  const defaults = COLUMNS.filter((c) => c.essential).map((c) => c.key);
-  try {
-    const saved = JSON.parse(localStorage.getItem(COLUMNS_STORAGE_KEY) || "null");
-    if (Array.isArray(saved)) return COLUMNS.map((c) => c.key).filter((k) => saved.includes(k));
-  } catch {
-    // Storage unavailable or corrupt — fall back to the defaults.
-  }
-  return defaults;
-}
+const ALL_KEYS = COLUMNS.map((c) => c.key);
+const DEFAULT_KEYS = COLUMNS.filter((c) => c.essential).map((c) => c.key);
 
 const MAX_DAYS = 93;
 
@@ -62,18 +52,7 @@ export default function ReportsView() {
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
-  const [visibleColumns, setVisibleColumns] = useState<NumericKey[]>(loadVisibleColumns);
-  const [columnsOpen, setColumnsOpen] = useState(false);
-
-  function toggleColumn(key: NumericKey) {
-    const next = visibleColumns.includes(key) ? visibleColumns.filter((k) => k !== key) : [...visibleColumns, key];
-    setVisibleColumns(next);
-    try {
-      localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // Not remembered — the choice still applies for this visit.
-    }
-  }
+  const { visible: visibleColumns, toggle: toggleColumn } = useStoredColumns(COLUMNS_STORAGE_KEY, ALL_KEYS, DEFAULT_KEYS);
 
   const rangeError =
     from > to
@@ -158,32 +137,7 @@ export default function ReportsView() {
             ))}
           </div>
         </div>
-        <div className="relative">
-          <label className="mb-1 block text-xs font-medium text-gray-600">Columns</label>
-          <button
-            onClick={() => setColumnsOpen((o) => !o)}
-            className="inline-flex items-center gap-1.5 rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-          >
-            {columns.length} of {availableColumns.length} shown
-            <FiChevronDown size={14} />
-          </button>
-          {columnsOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setColumnsOpen(false)} />
-              <div className="absolute left-0 top-full z-20 mt-1 w-52 rounded-lg bg-white p-2 shadow-xl ring-1 ring-black/5">
-                {availableColumns.map((c) => (
-                  <label
-                    key={c.key}
-                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    <span className="flex-1">{c.label}</span>
-                    <Switch size="sm" checked={visibleColumns.includes(c.key)} onChange={() => toggleColumn(c.key)} />
-                  </label>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        <ColumnPicker columns={availableColumns} visible={visibleColumns} onToggle={toggleColumn} />
         <div className="ml-auto flex gap-2">
           <button
             onClick={downloadExcel}

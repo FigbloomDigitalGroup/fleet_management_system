@@ -9,6 +9,8 @@ import { scoreBadgeClass } from "./DriverScoreCard";
 import Skeleton from "./Skeleton";
 import WheelIcon from "./WheelIcon";
 import PasswordInput from "./PasswordInput";
+import Avatar from "./Avatar";
+import CallButton from "./CallButton";
 
 interface BulkImportResultRow {
   row: number;
@@ -168,6 +170,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
               <tr>
                 <th className="text-left px-5 py-3 font-bold">Name</th>
                 <th className="text-left px-5 py-3 font-bold">Email</th>
+                <th className="text-left px-5 py-3 font-bold">Phone</th>
                 <th className="text-left px-5 py-3 font-bold">Vehicle</th>
                 <th className="text-left px-5 py-3 font-bold" title="Safety score over the last 30 days">Score</th>
               </tr>
@@ -175,7 +178,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
             <tbody>
               {drivers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-5 py-8 text-center text-gray-400">
+                  <td colSpan={5} className="px-5 py-8 text-center text-gray-400">
                     No drivers added yet.
                   </td>
                 </tr>
@@ -185,11 +188,18 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                   return (
                     <tr key={d._id} className="border-t border-gray-100">
                       <td className="px-5 py-3 font-medium text-blue-950">
-                        <Link href={`${driversBasePath}/${d._id}`} className="hover:text-teal-600 hover:underline">
+                        <Link href={`${driversBasePath}/${d._id}`} className="inline-flex items-center gap-2.5 hover:text-teal-600 hover:underline">
+                          <Avatar src={d.avatarUrl} name={d.fullName} size="sm" />
                           {d.fullName}
                         </Link>
                       </td>
                       <td className="px-5 py-3 text-blue-950">{d.email}</td>
+                      <td className="whitespace-nowrap px-5 py-3">
+                        <span className="inline-flex items-center gap-2">
+                          <CallButton phone={d.phone} name={d.fullName} size="xs" />
+                          {d.phone && <span className="text-xs text-gray-500">{d.phone}</span>}
+                        </span>
+                      </td>
                       <td className="px-5 py-3">
                         {canAssignVehicle ? (
                           <select

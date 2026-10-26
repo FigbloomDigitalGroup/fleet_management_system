@@ -8,6 +8,7 @@ import { VEHICLE_TYPES } from "../lib/vehicleTypes";
 import Skeleton from "./Skeleton";
 import ZoneStatusBadge from "./ZoneStatusBadge";
 import WheelIcon from "./WheelIcon";
+import Avatar from "./Avatar";
 
 interface BulkImportResultRow {
   row: number;
@@ -269,6 +270,7 @@ export default function VehiclesList({
     </div>
   ) : (
     <div className="flex items-center gap-2">
+      {v.driverId && <Avatar src={v.driverId.avatarUrl} name={v.driverId.fullName} size="xs" />}
       <span className="text-gray-600">{v.driverId ? v.driverId.fullName : "Unassigned"}</span>
       {!v.driverId && (
         <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">

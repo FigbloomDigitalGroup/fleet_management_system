@@ -28,6 +28,7 @@ export interface CompanyRecord {
   paymentMethod?: "mpesa" | "paystack" | null;
   totalRevenue?: number;
   industry?: string;
+  logoUrl?: string | null;
   createdAt: string;
   userCount?: number;
   dailyStartPoint?: {
@@ -86,6 +87,7 @@ export interface AdminRecord {
   role: string;
   status: string;
   adminAccess?: AdminAccess;
+  avatarUrl?: string | null;
   createdAt: string;
 }
 
@@ -97,7 +99,7 @@ export interface VehicleRecord {
   deviceId?: string;
   vehicleType?: string;
   status: "active" | "idle" | "offline" | "maintenance";
-  driverId?: { _id: string; fullName: string; email: string } | null;
+  driverId?: { _id: string; fullName: string; email: string; avatarUrl?: string | null } | null;
   startGeofenceId?: { _id: string; name: string } | null;
   avgConsumptionLPer100Km?: number;
   odometerBaseKm?: number;
@@ -109,6 +111,7 @@ export interface DriverRecord {
   fullName: string;
   email: string;
   status: string;
+  avatarUrl?: string | null;
   createdAt: string;
   phone?: string | null;
   dob?: string | null;

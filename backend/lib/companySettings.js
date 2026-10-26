@@ -5,8 +5,11 @@ export const ALERT_SETTING_DEFAULTS = {
   idleMinutes: 10,
   offlineMinutes: 15,
   lowBatteryPercent: 15,
-  harshBrakingKphPerSec: 8,
-  harshAccelerationKphPerSec: 6,
+  // km/h gained or lost per second. Real harsh braking is ~14 km/h/s (0.4 g)
+  // and harsh acceleration ~10 km/h/s (0.3 g); lower values flagged ordinary
+  // GPS speed jitter as harsh driving.
+  harshBrakingKphPerSec: 12,
+  harshAccelerationKphPerSec: 10,
   disabledTypes: [],
   emailRecipientIds: [],
   emailTypes: [],

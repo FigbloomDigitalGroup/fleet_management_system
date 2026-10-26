@@ -7,6 +7,7 @@ import { CompanyRecord } from "../../types/auth";
 import Skeleton from "../../components/Skeleton";
 import { usePageHeader } from "../../components/DashboardShell";
 import { industryLabel } from "../../lib/industries";
+import Avatar from "../../components/Avatar";
 
 const statusStyles: Record<string, string> = {
   active: "bg-teal-50 text-teal-600 border-teal-200",
@@ -71,8 +72,9 @@ export default function CompaniesPage() {
                     <td className="px-5 py-3">
                       <Link
                         href={`/platform/companies/${c._id}`}
-                        className="inline-block cursor-pointer rounded bg-blue-950 px-3 py-1.5 text-sm font-medium text-white"
+                        className="inline-flex items-center gap-2.5 font-medium text-gray-900 hover:text-teal-700 hover:underline"
                       >
+                        <Avatar src={c.logoUrl} name={c.name} size="md" shape="square" />
                         {c.name}
                       </Link>
                     </td>

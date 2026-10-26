@@ -10,6 +10,9 @@ const messageSchema = new mongoose.Schema(
     fromDriver: { type: Boolean, required: true },
     body: { type: String, required: true, maxlength: 2000 },
     readAt: { type: Date, default: null },
+    // Set when the driver deletes it in the app — it's hidden from their
+    // phone only; dispatch still sees the full conversation.
+    hiddenForDriverAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

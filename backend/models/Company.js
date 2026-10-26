@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { uploadUrl } from "../lib/uploadUrl.js";
 
 const companySchema = new mongoose.Schema(
   {
@@ -55,8 +56,8 @@ const companySchema = new mongoose.Schema(
       idleMinutes: { type: Number, default: 10, min: 1, max: 240 },
       offlineMinutes: { type: Number, default: 15, min: 5, max: 1440 },
       lowBatteryPercent: { type: Number, default: 15, min: 5, max: 50 },
-      harshBrakingKphPerSec: { type: Number, default: 8, min: 3, max: 30 },
-      harshAccelerationKphPerSec: { type: Number, default: 6, min: 3, max: 30 },
+      harshBrakingKphPerSec: { type: Number, default: 12, min: 3, max: 30 },
+      harshAccelerationKphPerSec: { type: Number, default: 10, min: 3, max: 30 },
       disabledTypes: { type: [String], default: [] }, // alert types that are never raised
       emailRecipientIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
       emailTypes: { type: [String], default: [] }, // alert types that also get emailed
@@ -71,8 +72,15 @@ const companySchema = new mongoose.Schema(
     },
     // Location pings and driving events older than this are deleted nightly.
     dataRetentionDays: { type: Number, default: 180, min: 30, max: 3650 },
+    // Company logo (an Upload of kind "logo"); exposed as logoUrl.
+    logoUploadId: { type: mongoose.Schema.Types.ObjectId, ref: "Upload", default: null },
   },
-  { timestamps: true } // automatically adds createdAt and updatedAt
+  // timestamps adds createdAt/updatedAt; virtuals adds logoUrl to responses.
+  { timestamps: true, toJSON: { virtuals: true, id: false }, toObject: { virtuals: true, id: false } }
 );
+
+companySchema.virtual("logoUrl").get(function () {
+  return uploadUrl(this.logoUploadId);
+});
 
 export default mongoose.model("Company", companySchema);

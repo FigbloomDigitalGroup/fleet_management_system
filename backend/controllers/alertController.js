@@ -64,6 +64,7 @@ export async function getMyAlerts(req, res) {
     const alerts = await Alert.find({
       vehicleId: vehicle._id,
       resolved: false,
+      hiddenForDriverAt: null,
       type: { $in: DRIVER_VISIBLE_TYPES },
     })
       .populate("vehicleId", "plateNumber")
@@ -98,8 +99,21 @@ export async function createAlert(req, res) {
   }
 }
 
-
-
-
-
-
+// DRIVER — delete an alert from their phone. Only hides it for them; the
+// dashboard keeps it until an admin resolves it.
+export async function hideMyAlert(req, res) {
+  try {
+    const vehicle = await Vehicle.findOne({ driverId: req.user.id }).select("_id");
+    if (!vehicle) return res.status(404).json({ error: "Alert not found" });
+    const alert = await Alert.findOneAndUpdate(
+      { _id: req.params.id, vehicleId: vehicle._id },
+      { $set: { hiddenForDriverAt: new Date() } },
+      { new: true }
+    );
+    if (!alert) return res.status(404).json({ error: "Alert not found" });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to delete alert" });
+  }
+}

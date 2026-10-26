@@ -11,12 +11,16 @@ import {
   getMyScore,
   acceptTrackingConsent,
   updateAdminAccess,
+  updateMyAvatar,
+  updateDriverAvatar,
 } from "../controllers/userController.js";
 
 const router = express.Router();
 
 router.get("/me", authenticate, getMyProfile);
 router.patch("/me", authenticate, updateMyProfile);
+router.patch("/me/avatar", authenticate, updateMyAvatar);
+router.patch("/drivers/:id/avatar", authenticate, authorize("ADMIN", "COMPANY_OWNER"), updateDriverAvatar);
 router.get("/me/score", authenticate, authorize("DRIVER"), getMyScore);
 router.post("/me/consent", authenticate, authorize("DRIVER"), acceptTrackingConsent);
 router.patch("/admins/:id/access", authenticate, authorize("COMPANY_OWNER", "PLATFORM_ADMIN"), updateAdminAccess);

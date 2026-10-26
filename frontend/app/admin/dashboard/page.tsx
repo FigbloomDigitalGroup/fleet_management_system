@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { apiRequest } from "../../lib/api";
-import OpsMetrics from "../../components/OpsMetrics";
 import CircleStat from "../../components/CircleStat";
 import BarChartCard from "../../components/BarChartCard";
 import DonutChartCard from "../../components/DonutChartCard";
@@ -128,14 +127,14 @@ export default function AdminDashboard() {
       {/* Fleet status breakdown beside the trips chart — first thing below
           the header. */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
-        <div className="h-80">
+        <div>
           <DonutChartCard
             title="Fleet status breakdown"
             description="How your vehicles are distributed across statuses"
             data={[
               { name: "Active", value: vehicleCounts.active, color: "#2dd4bf" },
               { name: "Idle", value: vehicleCounts.idle, color: "#fb923c" },
-              { name: "Offline", value: vehicleCounts.offline, color: "#9ca3af" },
+              { name: "Offline", value: vehicleCounts.offline, color: "#000000" },
               { name: "Maintenance", value: vehicleCounts.maintenance, color: "#f87171" },
             ]}
           />
@@ -152,16 +151,10 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Operations today (3 columns) beside the fleet active / drivers
-          assigned rings */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
-        <div className="lg:col-span-2">
-          <OpsMetrics basePath="/admin" columns={3} />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <CircleStat percentage={activePct} label="Fleet active" color="#2dd4bf" description="Vehicles currently on the move" />
-          <CircleStat percentage={assignedPct} label="Drivers assigned" color="#0d9488" description="Drivers with a vehicle assigned" />
-        </div>
+      {/* Fleet active / drivers assigned rings */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <CircleStat percentage={activePct} label="Fleet active" color="#2dd4bf" description="Vehicles currently on the move" />
+        <CircleStat percentage={assignedPct} label="Drivers assigned" color="#0d9488" description="Drivers with a vehicle assigned" />
       </div>
 
       {/* Agent activity on the left, Fleet on the map on the right */}

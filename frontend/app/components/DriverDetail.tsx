@@ -9,6 +9,10 @@ import WheelIcon from "./WheelIcon";
 import { usePageHeader } from "./DashboardShell";
 import DriverScoreCard from "./DriverScoreCard";
 import { DriverRecord, VehicleRecord } from "../types/auth";
+import Avatar from "./Avatar";
+import ImageUploadButton from "./ImageUploadButton";
+import { useAdminAccess } from "../lib/adminAccess";
+import CallButton from "./CallButton";
 
 type ProfileField = { key: keyof DriverRecord; label: string };
 
@@ -51,6 +55,7 @@ function ProfileCard({ title, fields, driver }: { title: string; fields: Profile
 // detail page for the driver's currently assigned vehicle, if any.
 export default function DriverDetail({ basePath }: { basePath: string }) {
   const { id } = useParams<{ id: string }>();
+  const { canManageFleet } = useAdminAccess();
   const router = useRouter();
 
   const [driver, setDriver] = useState<DriverRecord | null>(null);
@@ -86,6 +91,29 @@ export default function DriverDetail({ basePath }: { basePath: string }) {
       </button>
 
       <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
+        {/* Profile picture — the driver can also set it from the mobile app */}
+        <div className="mb-5 flex items-center gap-4 border-b border-gray-100 pb-5">
+          <Avatar src={driver.avatarUrl} name={driver.fullName} size="lg" />
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-semibold text-gray-900">{driver.fullName}</p>
+              <CallButton phone={driver.phone} name={driver.fullName} size="xs" />
+            </div>
+            {canManageFleet ? (
+              <div className="mt-1.5">
+                <ImageUploadButton
+                  endpoint={`/api/users/drivers/${driver._id}/avatar`}
+                  kind="avatar"
+                  label={driver.avatarUrl ? "Change photo" : "Add photo"}
+                  hasImage={!!driver.avatarUrl}
+                  onChange={(avatarUrl) => setDriver({ ...driver, avatarUrl })}
+                />
+              </div>
+            ) : (
+              <p className="mt-0.5 text-xs text-gray-400">Drivers can set their own photo in the app.</p>
+            )}
+          </div>
+        </div>
         <h3 className="text-sm font-medium text-gray-700">Driver details</h3>
         <p className="text-xs text-teal-600 mt-0.5 mb-3">Account info and vehicle assignment</p>
         <dl className="grid grid-cols-2 gap-3 text-sm">

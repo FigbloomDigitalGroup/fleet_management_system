@@ -6,6 +6,7 @@ import Trip from "../models/Trip.js";
 import LocationPing from "../models/LocationPing.js";
 import { isInsideGeofence } from "../lib/geo.js";
 import { PLAN_PRICING_KES } from "../config/pricing.js";
+import { setImageField } from "./uploadController.js";
 
 // PLATFORM_ADMIN only — list every company on the platform
 export async function listCompanies(req, res) {
@@ -377,7 +378,18 @@ export async function updateMyRevenue(req, res) {
   }
 }
 
-
-
-
-
+// COMPANY_OWNER — set or clear the company logo. Body: { uploadId } from
+// POST /api/uploads (kind "logo"), or { uploadId: null }.
+export async function updateMyLogo(req, res) {
+  try {
+    if (req.body.uploadId === undefined) return res.status(400).json({ error: "uploadId is required (or null to remove)" });
+    const company = await Company.findById(req.user.companyId);
+    if (!company) return res.status(404).json({ error: "Company not found" });
+    const error = await setImageField(company, "logoUploadId", req.body.uploadId, { companyId: company._id, kind: "logo" });
+    if (error) return res.status(400).json({ error });
+    return res.json({ logoUrl: company.logoUrl });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to update company logo" });
+  }
+}

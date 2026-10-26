@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import { tenantScope } from "../middleware/auth.js";
 import { computeDriverScores } from "../lib/driverScore.js";
 import { TRACKING_CONSENT_VERSION } from "./trackingController.js";
+import { setImageField } from "./uploadController.js";
 
 const PRIVATE_FIELDS = "-passwordHash -resetPasswordTokenHash -resetPasswordExpires";
 
@@ -171,5 +172,37 @@ export async function updateAdminAccess(req, res) {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update admin access" });
+  }
+}
+
+// Any company user — set or clear their own profile picture. Body:
+// { uploadId } from POST /api/uploads (kind "avatar"), or { uploadId: null }.
+export async function updateMyAvatar(req, res) {
+  try {
+    if (!req.user.companyId) return res.status(400).json({ error: "This account is not linked to a company" });
+    if (req.body.uploadId === undefined) return res.status(400).json({ error: "uploadId is required (or null to remove)" });
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const error = await setImageField(user, "avatarUploadId", req.body.uploadId, { companyId: req.user.companyId, kind: "avatar" });
+    if (error) return res.status(400).json({ error });
+    return res.json({ avatarUrl: user.avatarUrl });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to update profile picture" });
+  }
+}
+
+// ADMIN/COMPANY_OWNER — set or clear one of their drivers' profile picture.
+export async function updateDriverAvatar(req, res) {
+  try {
+    if (req.body.uploadId === undefined) return res.status(400).json({ error: "uploadId is required (or null to remove)" });
+    const driver = await User.findOne({ _id: req.params.id, role: "DRIVER", ...tenantScope(req) });
+    if (!driver) return res.status(404).json({ error: "Driver not found" });
+    const error = await setImageField(driver, "avatarUploadId", req.body.uploadId, { companyId: driver.companyId, kind: "avatar" });
+    if (error) return res.status(400).json({ error });
+    return res.json({ avatarUrl: driver.avatarUrl });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to update profile picture" });
   }
 }

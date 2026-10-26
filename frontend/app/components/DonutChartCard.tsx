@@ -17,15 +17,24 @@ const titleSizes = {
 // Name + percentage centred inside each slice, like a classic labelled pie.
 // Slivers under 8% skip the label (it wouldn't fit); the list beside the pie
 // and the tooltip still show them.
+// Dark text on light slices, white on dark ones (e.g. black "Offline").
+function labelColor(hex: string | undefined) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return "#0f172a";
+  const n = parseInt(m[1], 16);
+  const luminance = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return luminance < 0.45 ? "#ffffff" : "#0f172a";
+}
+
 function renderSliceLabel(props: any) {
-  const { cx, cy, midAngle, outerRadius, percent, name } = props;
+  const { cx, cy, midAngle, outerRadius, percent, name, payload } = props;
   if (!percent || percent < 0.08) return null;
   const RAD = Math.PI / 180;
   const r = outerRadius * (percent > 0.6 ? 0.45 : 0.6);
   const x = cx + r * Math.cos(-midAngle * RAD);
   const y = cy + r * Math.sin(-midAngle * RAD);
   return (
-    <text x={x} y={y} textAnchor="middle" fill="#0f172a" fontSize={12} fontWeight={700}>
+    <text x={x} y={y} textAnchor="middle" fill={labelColor(payload?.color)} fontSize={12} fontWeight={700}>
       <tspan x={x} dy="-0.2em">{name}</tspan>
       <tspan className="font-figures" x={x} dy="1.25em">{Math.round(percent * 100)}%</tspan>
     </text>
@@ -47,13 +56,15 @@ export default function DonutChartCard({
   const pieData = data.filter((d) => d.value > 0);
 
   return (
-    <div className="flex h-full flex-col rounded-lg bg-white p-5 shadow-sm ring-1 ring-black/5">
+    // @container: the pie and its list sit side by side only when the card
+    // itself is wide enough, not the whole window — in a narrow column they stack.
+    <div className="@container flex h-full flex-col rounded-lg bg-white p-5 shadow-sm ring-1 ring-black/5">
       <div className="mb-4">
         <h3 className={`${titleSizes[size]} font-semibold text-gray-900`}>{title}</h3>
         {description && <p className="text-xs text-teal-600 mt-0.5">{description}</p>}
       </div>
-      <div className="flex flex-1 flex-col items-center gap-4 sm:flex-row">
-        <div className="w-full sm:w-1/2">
+      <div className="flex flex-1 flex-col items-center gap-4 @md:flex-row">
+        <div className="w-full @md:w-1/2">
           {total === 0 ? (
             <p className="py-16 text-center text-sm text-gray-400">No data yet.</p>
           ) : (
@@ -65,7 +76,8 @@ export default function DonutChartCard({
                   data={pieData}
                   dataKey="value"
                   nameKey="name"
-                  outerRadius={100}
+                  // Relative to the chart box, so the whole circle always fits.
+                  outerRadius="92%"
                   startAngle={90}
                   endAngle={-270}
                   labelLine={false}
@@ -86,7 +98,7 @@ export default function DonutChartCard({
         </div>
 
         {/* Legend as a list: dot, status, count pill tinted in the slice color */}
-        <ul className="w-full divide-y divide-gray-100 sm:w-1/2">
+        <ul className="w-full divide-y divide-gray-100 @md:w-1/2">
           {data.map((slice) => (
             <li key={slice.name} className="flex items-center justify-between py-2.5">
               <span className="flex items-center gap-2 text-[13px] text-gray-700">

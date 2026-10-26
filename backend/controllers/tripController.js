@@ -6,7 +6,9 @@ import { sumTripDistanceKm } from "../lib/geo.js";
 
 // List trips for the requester's tenant, newest first. Optionally narrowed
 // to a single vehicle via ?vehicleId= — still constrained to vehicles the
-// requester's tenant actually owns, even if a foreign id is passed.
+// requester's tenant actually owns, even if a foreign id is passed — and to
+// trips that started within ?from=&to= (ISO dates). Without a range it's
+// the latest 100; with one, up to 1000.
 export async function listTrips(req, res) {
   try {
     const vehicles = await Vehicle.find(tenantScope(req)).select("_id");
@@ -16,11 +18,23 @@ export async function listTrips(req, res) {
       ? vehicleIds.filter((v) => String(v) === req.query.vehicleId)
       : vehicleIds;
 
-    const trips = await Trip.find({ vehicleId: { $in: scopedVehicleIds } })
+    const query = { vehicleId: { $in: scopedVehicleIds } };
+    const from = req.query.from ? new Date(req.query.from) : null;
+    const to = req.query.to ? new Date(req.query.to) : null;
+    if ((from && Number.isNaN(from.getTime())) || (to && Number.isNaN(to.getTime()))) {
+      return res.status(400).json({ error: "from and to must be valid dates" });
+    }
+    if (from || to) {
+      query.startTime = {};
+      if (from) query.startTime.$gte = from;
+      if (to) query.startTime.$lte = to;
+    }
+
+    const trips = await Trip.find(query)
       .populate("vehicleId", "plateNumber avgConsumptionLPer100Km")
       .populate("driverId", "fullName")
       .sort({ startTime: -1 })
-      .limit(100);
+      .limit(from || to ? 1000 : 100);
 
     return res.json(trips);
   } catch (err) {

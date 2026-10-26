@@ -217,7 +217,7 @@ export async function listVehicles(req, res) {
     }
 
     const vehicles = await Vehicle.find(scope)
-      .populate("driverId", "fullName email")
+      .populate("driverId", "fullName email avatarUploadId")
       .populate("startGeofenceId", "name")
       .sort({ createdAt: -1 });
     return res.json(vehicles);
@@ -230,7 +230,7 @@ export async function listVehicles(req, res) {
 export async function getVehicle(req, res) {
   try {
     const vehicle = await Vehicle.findOne({ _id: req.params.id, ...tenantScope(req) })
-      .populate("driverId", "fullName email")
+      .populate("driverId", "fullName email avatarUploadId")
       .populate("startGeofenceId", "name");
     if (!vehicle) return res.status(404).json({ error: "Vehicle not found" });
     return res.json(vehicle);
@@ -290,7 +290,7 @@ export async function updateVehicle(req, res) {
     }
 
     const vehicle = await Vehicle.findByIdAndUpdate(existing._id, update, { new: true })
-      .populate("driverId", "fullName email")
+      .populate("driverId", "fullName email avatarUploadId")
       .populate("startGeofenceId", "name");
     return res.json(vehicle);
   } catch (err) {
@@ -336,7 +336,7 @@ export async function regenerateTrackerToken(req, res) {
 // DRIVER — get the vehicle currently assigned to the logged-in driver
 export async function getMyVehicle(req, res) {
   try {
-    const vehicle = await Vehicle.findOne({ driverId: req.user.id }).populate("driverId", "fullName email");
+    const vehicle = await Vehicle.findOne({ driverId: req.user.id }).populate("driverId", "fullName email avatarUploadId");
     return res.json(vehicle || null);
   } catch (err) {
     console.error(err);
