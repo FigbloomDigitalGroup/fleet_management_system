@@ -1,0 +1,4 @@
+# Never convert line endings in binary documents (a PDF is mostly ASCII,
+# so git would otherwise treat it as text and corrupt it on Windows).
+*.pdf binary
+*.apk binary
