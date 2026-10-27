@@ -1,11 +1,16 @@
 export type Role = "PLATFORM_ADMIN" | "COMPANY_OWNER" | "ADMIN" | "DRIVER";
 
+// Only meaningful for ADMIN users — null/undefined for every other role.
+// Older stored sessions predate the field, so treat a missing value as "full".
+export type AdminAccess = "full" | "dispatcher" | "viewer";
+
 export interface User {
   id: string;
   email: string;
   fullName?: string;
   role: Role;
   companyId: string | null;
+  adminAccess?: AdminAccess | null;
 }
 
 export interface LoginResponse {
@@ -23,6 +28,7 @@ export interface CompanyRecord {
   paymentMethod?: "mpesa" | "paystack" | null;
   totalRevenue?: number;
   industry?: string;
+  logoUrl?: string | null;
   createdAt: string;
   userCount?: number;
   dailyStartPoint?: {
@@ -54,13 +60,13 @@ export interface ExpenseRecord {
   category: "fuel" | "toll" | "parking" | "repair" | "other";
   amount: number;
   note: string | null;
+  receiptUrl?: string | null;
   incurredAt: string;
   createdAt: string;
 }
 
 export interface CompanyStats {
   totalDistanceKm: number;
-  totalFuelConsumedLiters: number;
   estimatedExpenses: number | null;
   totalRevenue: number;
   vehicleCount: number;
@@ -80,6 +86,8 @@ export interface AdminRecord {
   fullName: string;
   role: string;
   status: string;
+  adminAccess?: AdminAccess;
+  avatarUrl?: string | null;
   createdAt: string;
 }
 
@@ -91,9 +99,10 @@ export interface VehicleRecord {
   deviceId?: string;
   vehicleType?: string;
   status: "active" | "idle" | "offline" | "maintenance";
-  driverId?: { _id: string; fullName: string; email: string } | null;
+  driverId?: { _id: string; fullName: string; email: string; avatarUrl?: string | null } | null;
   startGeofenceId?: { _id: string; name: string } | null;
   avgConsumptionLPer100Km?: number;
+  odometerBaseKm?: number;
   createdAt: string;
 }
 
@@ -102,6 +111,7 @@ export interface DriverRecord {
   fullName: string;
   email: string;
   status: string;
+  avatarUrl?: string | null;
   createdAt: string;
   phone?: string | null;
   dob?: string | null;
@@ -120,6 +130,10 @@ export interface TripRecord {
   startTime: string;
   endTime?: string;
   distanceKm?: number;
+  // Set by the driver from the mobile app.
+  purpose?: "business" | "private" | null;
+  note?: string;
+  endedBy?: "auto" | "driver" | null;
 }
 
 export interface AlertRecord {
@@ -202,3 +216,266 @@ export interface AgentSummary {
   dailyActivity: AgentDailyActivity[];
 }
 
+
+// ---- Jobs & deliveries ----
+
+export type JobStatus = "assigned" | "started" | "arrived" | "completed" | "failed" | "cancelled";
+
+export interface JobProof {
+  photoUploadIds: string[];
+  photoUrls: string[];
+  signatureUploadId: string | null;
+  signatureUrl: string | null;
+  recipientName: string | null;
+  notes: string | null;
+  scannedCode: string | null;
+  latitude?: number;
+  longitude?: number;
+  capturedAt: string;
+}
+
+export interface JobRecord {
+  _id: string;
+  companyId: string;
+  driverId: { _id: string; fullName: string } | null;
+  vehicleId: { _id: string; plateNumber: string } | null;
+  title: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  contactName: string | null;
+  contactPhone: string | null;
+  notes: string | null;
+  scheduledDate: string;
+  windowStart: string | null;
+  windowEnd: string | null;
+  sequence: number;
+  status: JobStatus;
+  failureReason: string | null;
+  startedAt: string | null;
+  arrivedAt: string | null;
+  completedAt: string | null;
+  failedAt: string | null;
+  proof: JobProof | null;
+  trackingToken: string;
+  trackingPath: string;
+  late: boolean;
+  createdAt: string;
+}
+
+export interface OptimizeResult {
+  jobs: JobRecord[];
+  distanceKm: number;
+  lateMinutes: number;
+  estimatedFinishAt?: string;
+  startedFrom?: "vehicle_location" | "first_stop";
+}
+
+export interface PublicTracking {
+  companyName: string | null;
+  title: string;
+  address: string;
+  destination: { latitude: number; longitude: number };
+  status: JobStatus;
+  windowStart: string | null;
+  windowEnd: string | null;
+  driverFirstName: string | null;
+  plateNumber: string | null;
+  driverLocation: { latitude: number; longitude: number; recordedAt: string } | null;
+  etaMinutes: number | null;
+  distanceRemainingKm: number | null;
+  completedAt: string | null;
+  failureReason: string | null;
+  updatedAt: string;
+}
+
+// ---- Messages ----
+
+export interface MessageRecord {
+  _id: string;
+  driverId: string;
+  senderId: string;
+  fromDriver: boolean;
+  body: string;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface MessageThread {
+  driverId: string;
+  driverName: string;
+  lastMessage: { body: string; fromDriver: boolean; createdAt: string } | null;
+  unread: number;
+}
+
+// ---- Driver scores ----
+
+export interface DriverScore {
+  driverId: string;
+  score: number | null;
+  grade: "Excellent" | "Good" | "Fair" | "Needs coaching" | null;
+  periodDays: number;
+  distanceKm: number;
+  trips: number;
+  events: {
+    speeding: number;
+    harsh_braking: number;
+    harsh_acceleration: number;
+    harsh_cornering: number;
+    phone_use: number;
+  };
+  totalEvents: number;
+  minDistanceKm: number;
+  fullName?: string;
+  email?: string;
+}
+
+// ---- Inspections ----
+
+export interface InspectionRecord {
+  _id: string;
+  vehicleId: { _id: string; plateNumber: string } | null;
+  driverId?: { _id: string; fullName: string } | null;
+  items: { key: string; label: string; ok: boolean; note?: string | null; photoUploadId?: string | null; photoUrl?: string | null }[];
+  passed: boolean;
+  odometerKm?: number | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+// ---- Maintenance ----
+
+export interface MaintenanceItem {
+  _id: string;
+  vehicleId: { _id: string; plateNumber: string } | null;
+  kind: "record" | "reminder";
+  title: string;
+  notes: string | null;
+  performedAt: string | null;
+  odometerKm: number | null;
+  costKes: number | null;
+  dueDate: string | null;
+  dueOdometerKm: number | null;
+  intervalDays: number | null;
+  intervalKm: number | null;
+  status: "open" | "done";
+  state: null | "upcoming" | "due_soon" | "overdue";
+  createdAt: string;
+}
+
+// ---- Tracking: device status & history ----
+
+export interface DeviceStatus {
+  lastSeenAt: string | null;
+  batteryLevel: number | null;
+  isCharging: boolean | null;
+  locationEnabled: boolean | null;
+  permission: "background" | "foreground" | "denied" | null;
+  appState: "active" | "background" | null;
+  isSharing: boolean | null;
+  platform: string | null;
+  appVersion: string | null;
+}
+
+export interface LiveVehicleRecord {
+  vehicleId: string;
+  plateNumber: string;
+  status: string;
+  vehicleType?: string;
+  driverId?: string | null;
+  device: DeviceStatus | null;
+  lastLocation: {
+    latitude: number;
+    longitude: number;
+    recordedAt: string;
+    isMocked?: boolean;
+    accuracyM?: number | null;
+    source?: string;
+  } | null;
+}
+
+export interface HistoryPoint {
+  latitude: number;
+  longitude: number;
+  speedKph: number | null;
+  heading: number | null;
+  recordedAt: string;
+  isMocked: boolean;
+}
+
+export interface HistoryStop {
+  startedAt: string;
+  endedAt: string;
+  durationMinutes: number;
+  latitude: number;
+  longitude: number;
+}
+
+export interface LocationHistory {
+  vehicleId: string;
+  plateNumber: string;
+  from: string;
+  to: string;
+  truncated: boolean;
+  points: HistoryPoint[];
+  stops: HistoryStop[];
+  idleMinutes: number;
+  movingMinutes: number;
+  distanceKm: number;
+}
+
+// ---- Reports ----
+
+export interface ReportRow {
+  id: string;
+  name: string;
+  trips: number;
+  distanceKm: number;
+  drivingHours: number;
+  idleMinutes: number;
+  stops: number;
+  jobsCompleted: number;
+  jobsLate: number;
+  jobsFailed: number;
+  expensesKes: number;
+  inspections: number;
+  inspectionsFailed: number;
+  score: number | null;
+}
+
+export interface ReportSummary {
+  from: string;
+  to: string;
+  groupBy: "vehicle" | "driver";
+  rows: ReportRow[];
+  totals: Partial<Omit<ReportRow, "id" | "name">>;
+}
+
+// ---- Company settings ----
+
+export interface AlertSettings {
+  speedLimitKph: number;
+  idleMinutes: number;
+  offlineMinutes: number;
+  lowBatteryPercent: number;
+  harshBrakingKphPerSec: number;
+  harshAccelerationKphPerSec: number;
+  disabledTypes: string[];
+  emailRecipientIds: string[];
+  emailTypes: string[];
+}
+
+export interface TrackingHours {
+  enabled: boolean;
+  start: string;
+  end: string;
+  days: number[];
+}
+
+export interface CompanySettings {
+  alertSettings: AlertSettings;
+  trackingHours: TrackingHours;
+  dataRetentionDays: number;
+  alertTypes: { key: string; label: string }[];
+  possibleRecipients: { id: string; fullName: string; email: string; role: string }[];
+}

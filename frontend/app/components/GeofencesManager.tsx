@@ -21,6 +21,9 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
 
   const [name, setName] = useState("");
   const [clickedCenter, setClickedCenter] = useState<{ lat: number; lng: number } | null>(null);
+  // Where to centre the map when a draft arrives (AI zone, or a spot picked
+  // on the Live Map) — unlike clickedCenter it doesn't follow later clicks.
+  const [draftFocus, setDraftFocus] = useState<{ lat: number; lng: number } | null>(null);
   const [radiusM, setRadiusM] = useState("500");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -44,6 +47,7 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
   function applyDraft(draft: { name?: string; lat?: number; lng?: number; radiusMeters?: number }) {
     if (typeof draft.lat === "number" && typeof draft.lng === "number") {
       setClickedCenter({ lat: draft.lat, lng: draft.lng });
+      setDraftFocus({ lat: draft.lat, lng: draft.lng });
       setName(draft.name || "");
       setRadiusM(String(draft.radiusMeters || 500));
     }
@@ -133,22 +137,26 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
   if (error) return <p className="text-sm text-red-600">{error}</p>;
 
   const mapCenter =
-    geofences.length > 0 && geofences[0].centerLat
+    draftFocus ??
+    (geofences.length > 0 && geofences[0].centerLat
       ? { lat: geofences[0].centerLat, lng: geofences[0].centerLng! }
-      : defaultCenter;
+      : defaultCenter);
 
   return (
     <div className="grid lg:grid-cols-3 gap-6">
       {canManage && (
-        <div className="lg:col-span-3 rounded-md border border-purple-200 bg-purple-50 px-4 py-2.5 text-xs text-purple-700">
-          <span className="font-semibold">NB:</span> If you're asking the AI assistant to create a geofence, use the
-          exact spelling of the place name as it appears on the map — a misspelled name can't be matched to a real
-          location.
+        <div className="lg:col-span-3 flex items-center gap-3 rounded border border-purple-200 bg-purple-50 px-4 py-2.5 text-xs text-purple-700">
+          <img src="/danger.png" alt="Warning" className="h-6 w-auto shrink-0 animate-bounce" />
+          <p>
+            <span className="font-semibold">NB:</span> If you're asking the AI assistant to create a geofence, use the
+            exact spelling of the place name as it appears on the map — a misspelled name can't be matched to a real
+            location.
+          </p>
         </div>
       )}
 
       {/* Map */}
-      <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+      <div className="lg:col-span-2 bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
         <div className="h-[450px] w-full">
           <GoogleMap
             mapContainerStyle={containerStyle}
@@ -202,7 +210,7 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
       {/* Sidebar: list + create form */}
       <div className="space-y-4">
         {canManage && (
-          <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 p-5">
+          <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
             <h3 className="text-sm font-medium text-gray-700 mb-4">Add a zone</h3>
             <form onSubmit={handleCreate} className="space-y-3">
               <div>
@@ -212,7 +220,7 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Main Depot"
-                  className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
+                  className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-400"
                 />
               </div>
               <div>
@@ -221,7 +229,7 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
                   type="number"
                   value={radiusM}
                   onChange={(e) => setRadiusM(e.target.value)}
-                  className="w-full px-3 py-2 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-400"
+                  className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-400"
                 />
               </div>
               <p className="text-xs text-teal-600">
@@ -235,7 +243,7 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-2 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+                className="w-full py-2 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
               >
                 {isSubmitting ? "Creating…" : "Create zone"}
               </button>
@@ -243,10 +251,10 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
           <p className="text-xs font-medium text-gray-500 p-4 pb-0">Existing zones</p>
           {deleteError && (
-            <div className="mx-4 mt-3 flex items-start justify-between gap-2 rounded-md bg-red-50 px-3 py-2 text-xs text-red-600">
+            <div className="mx-4 mt-3 flex items-start justify-between gap-2 rounded bg-red-50 px-3 py-2 text-xs text-red-600">
               <span>{deleteError}</span>
               <button onClick={() => setDeleteError(null)} className="shrink-0 font-medium hover:underline">
                 Dismiss

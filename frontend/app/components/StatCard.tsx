@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import {
   FaBuilding,
   FaCheckCircle,
@@ -6,6 +7,12 @@ import {
   FaTools,
   FaUsers,
   FaMoneyBillWave,
+  FaClipboardList,
+  FaClipboardCheck,
+  FaShieldAlt,
+  FaMobileAlt,
+  FaComments,
+  FaRoute,
 } from "react-icons/fa";
 import { IoCarSportSharp } from "react-icons/io5";
 
@@ -215,9 +222,15 @@ export function FuelIcon({ size = "2.2em" }: { size?: string | number }) {
 function getStatIcon(label: string) {
   const normalizedLabel = label.toLowerCase();
 
+  if (normalizedLabel === "jobs today") return FaClipboardList;
+  if (normalizedLabel === "fleet safety score") return FaShieldAlt;
+  if (normalizedLabel === "inspections today") return FaClipboardCheck;
+  if (normalizedLabel === "phones sharing") return FaMobileAlt;
+  if (normalizedLabel === "unread messages") return FaComments;
   if (normalizedLabel === "scans covering your fleet") return ScanEyeIcon;
   if (normalizedLabel === "anomalies found") return AnomalyFoundIcon;
-  if (normalizedLabel === "total distance covered") return DistanceIcon;
+  if (normalizedLabel.includes("distance")) return DistanceIcon;
+  if (normalizedLabel.includes("trip")) return FaRoute;
   if (normalizedLabel === "expenses") return ExpensesIcon;
   if (normalizedLabel.includes("fuel")) return FuelIcon;
   if (normalizedLabel === "revenue") return FaMoneyBillWave;
@@ -246,6 +259,7 @@ export default function StatCard({
   accent = "green",
   background = "bg-white",
   light = false,
+  extra,
 }: {
   label: string;
   value: string | number;
@@ -253,28 +267,32 @@ export default function StatCard({
   accent?: "green" | "orange" | "blue";
   background?: string;
   light?: boolean;
+  // Optional supporting metric (breakdown bar, chips…) shown full-width under
+  // the headline figure.
+  extra?: ReactNode;
 }) {
   const Icon = getStatIcon(label);
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl ${background} shadow-sm ring-1 ring-black/5`}>
+    <div className={`relative flex flex-col overflow-hidden rounded-lg ${background} shadow-sm ring-1 ring-black/5`}>
       <div className="relative flex items-start justify-between gap-3 p-4">
-        <div>
-          <p className={`text-xs font-medium uppercase tracking-wide ${light ? "text-white" : "text-blue-950"}`}>
-            {label}
-          </p>
-          <p className={`mt-1.5 text-xl font-bold ${light ? "text-white" : "text-blue-950"}`}>{value}</p>
+        <div className="min-w-0">
+          <p className={`text-xs font-semibold ${light ? "text-white" : "text-gray-700"}`}>{label}</p>
+          <p className={`font-figures mt-1.5 text-xl font-bold leading-tight ${light ? "text-white" : "text-gray-900"}`}>{value}</p>
           {description && (
-            <p className={`text-[10px] font-bold mt-1 ${light ? "text-white/80" : "text-teal-600"}`}>{description}</p>
+            <p className={`mt-1 text-[11px] font-medium leading-snug ${light ? "text-white/80" : "text-teal-600"}`}>
+              {description}
+            </p>
           )}
         </div>
         <span
-          className={`shrink-0 rounded-xl p-2 text-base ${light ? "bg-white/20 text-white" : "bg-teal-50 text-teal-600"}`}
+          className={`shrink-0 rounded-xl p-2.5 text-base ${light ? "bg-white/20 text-white" : "bg-teal-50 text-teal-600"}`}
           aria-hidden="true"
         >
-          <Icon size="2.2em" />
+          <Icon size="1.6em" />
         </span>
       </div>
+      {extra && <div className="relative -mt-1 px-4 pb-4">{extra}</div>}
     </div>
   );
 }

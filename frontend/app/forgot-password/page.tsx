@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-import BackgroundSlideshow from "../components/BackgroundSlideshow";
+import AuthHeroPanel from "../components/AuthHeroPanel";
 import RobotCheckbox from "../components/RobotCheckbox";
 import BrandIcon from "../components/BrandIcon";
 import { apiRequest } from "../lib/api";
@@ -34,8 +34,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen bg-white flex flex-col lg:flex-row">
       {/* LEFT — Hero panel */}
-      <BackgroundSlideshow className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16">
-        <div className="absolute inset-0 z-10 bg-black/50" />
+      <AuthHeroPanel className="lg:w-1/2 flex flex-col justify-between p-10 lg:p-16">
 
         <div className="relative z-20 flex flex-col justify-between h-full">
           <span className="flex items-center gap-2 text-xl font-bold text-white">
@@ -61,7 +60,7 @@ export default function ForgotPasswordPage() {
             </a>
           </p>
         </div>
-      </BackgroundSlideshow>
+      </AuthHeroPanel>
 
       {/* RIGHT — Form panel */}
       <div className="lg:w-1/2 flex items-center justify-center p-8">
@@ -72,7 +71,7 @@ export default function ForgotPasswordPage() {
           </p>
 
           {sent ? (
-            <div className="text-sm px-3.5 py-2.5 rounded-md bg-teal-50 text-teal-600 border border-teal-200">
+            <div className="text-sm px-3.5 py-2.5 rounded bg-teal-50 text-teal-600 border border-teal-200">
               If an account exists for {email}, we&apos;ve sent instructions to reset the password.
             </div>
           ) : (
@@ -89,14 +88,14 @@ export default function ForgotPasswordPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Your email"
-                  className="w-full px-3.5 py-2.5 rounded-md text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                  className="w-full px-3.5 py-2.5 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                 />
               </div>
 
               <RobotCheckbox checked={isHuman} onChange={setIsHuman} />
 
               {error && (
-                <div className="text-sm px-3.5 py-2.5 rounded-md bg-red-50 text-red-600 border border-red-200" role="alert">
+                <div className="text-sm px-3.5 py-2.5 rounded bg-red-50 text-red-600 border border-red-200" role="alert">
                   {error}
                 </div>
               )}
@@ -104,7 +103,7 @@ export default function ForgotPasswordPage() {
               <button
                 type="submit"
                 disabled={isSubmitting || !isHuman}
-                className="w-full py-2.5 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+                className="w-full py-2.5 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
               >
                 {isSubmitting ? "Sending…" : "Send reset link"}
               </button>

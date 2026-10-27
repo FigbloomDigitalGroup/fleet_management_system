@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Driver app builds served from the site — large binaries, kept out of git
+/public/downloads/*.apk

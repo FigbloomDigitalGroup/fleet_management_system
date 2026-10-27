@@ -134,7 +134,7 @@ export default function PlanCheckoutModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
         {step === "confirm" && (
           <>
             <p className="text-xs uppercase tracking-wide text-teal-600 font-bold mb-1">Upgrade plan</p>
@@ -158,13 +158,13 @@ export default function PlanCheckoutModal({
             <div className="flex items-center justify-end gap-3">
               <button
                 onClick={onClose}
-                className="px-4 py-2.5 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50"
+                className="px-4 py-2.5 rounded text-sm font-medium text-gray-600 hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
                 onClick={startCheckout}
-                className="px-5 py-2.5 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600"
+                className="px-5 py-2.5 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600"
               >
                 Continue to payment
               </button>
@@ -188,7 +188,7 @@ export default function PlanCheckoutModal({
             </p>
             <button
               onClick={onClose}
-              className="px-5 py-2.5 rounded-md text-sm font-medium text-white bg-teal-600 hover:bg-teal-700"
+              className="px-5 py-2.5 rounded text-sm font-medium text-white bg-teal-600 hover:bg-teal-700"
             >
               Done
             </button>
@@ -201,13 +201,13 @@ export default function PlanCheckoutModal({
             <div className="flex items-center gap-3">
               <button
                 onClick={onClose}
-                className="px-4 py-2.5 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50"
+                className="px-4 py-2.5 rounded text-sm font-medium text-gray-600 hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
                 onClick={startCheckout}
-                className="px-5 py-2.5 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600"
+                className="px-5 py-2.5 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600"
               >
                 Try again
               </button>

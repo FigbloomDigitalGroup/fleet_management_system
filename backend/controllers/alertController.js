@@ -18,6 +18,10 @@ const DRIVER_VISIBLE_TYPES = [
   "harsh_acceleration",
   "excessive_idling",
   "admin_message",
+  "harsh_cornering",
+  "phone_use",
+  "mock_location",
+  "inspection_failed",
 ];
 
 // admin_message is a message TO a driver, not an operational alert ABOUT a
@@ -40,7 +44,7 @@ export async function resolveAlert(req, res) {
   try {
     const alert = await Alert.findOneAndUpdate(
       { _id: req.params.id, ...tenantScope(req) },
-      { resolved: true },
+      { resolved: true, resolvedAt: new Date() },
       { new: true }
     );
     if (!alert) return res.status(404).json({ error: "Alert not found" });
@@ -60,6 +64,7 @@ export async function getMyAlerts(req, res) {
     const alerts = await Alert.find({
       vehicleId: vehicle._id,
       resolved: false,
+      hiddenForDriverAt: null,
       type: { $in: DRIVER_VISIBLE_TYPES },
     })
       .populate("vehicleId", "plateNumber")
@@ -94,8 +99,21 @@ export async function createAlert(req, res) {
   }
 }
 
-
-
-
-
-
+// DRIVER — delete an alert from their phone. Only hides it for them; the
+// dashboard keeps it until an admin resolves it.
+export async function hideMyAlert(req, res) {
+  try {
+    const vehicle = await Vehicle.findOne({ driverId: req.user.id }).select("_id");
+    if (!vehicle) return res.status(404).json({ error: "Alert not found" });
+    const alert = await Alert.findOneAndUpdate(
+      { _id: req.params.id, vehicleId: vehicle._id },
+      { $set: { hiddenForDriverAt: new Date() } },
+      { new: true }
+    );
+    if (!alert) return res.status(404).json({ error: "Alert not found" });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to delete alert" });
+  }
+}

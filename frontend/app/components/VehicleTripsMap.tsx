@@ -64,12 +64,12 @@ export default function VehicleTripsMap({ vehicleId, basePath }: { vehicleId: st
   const allPoints = useMemo(() => Object.values(routes).flat(), [routes]);
 
   if (loading || !isLoaded) {
-    return <div className="skeleton-shimmer h-56 rounded-xl" />;
+    return <div className="skeleton-shimmer h-56 rounded-md" />;
   }
 
   if (trips.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-sm text-gray-400">
+      <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-sm text-gray-400">
         No completed trips recorded for this vehicle yet.
       </div>
     );
@@ -77,7 +77,7 @@ export default function VehicleTripsMap({ vehicleId, basePath }: { vehicleId: st
 
   return (
     <div>
-      <div className="h-56 w-full overflow-hidden rounded-xl ring-1 ring-black/5">
+      <div className="h-56 w-full overflow-hidden rounded-md ring-1 ring-black/5">
         <GoogleMap
           mapContainerStyle={containerStyle}
           center={allPoints[0] ? { lat: allPoints[0].latitude, lng: allPoints[0].longitude } : { lat: 0, lng: 0 }}
@@ -109,7 +109,7 @@ export default function VehicleTripsMap({ vehicleId, basePath }: { vehicleId: st
           <li key={trip._id}>
             <Link
               href={`${basePath}/${trip._id}`}
-              className="flex items-center justify-between rounded-md px-2 py-1.5 text-xs text-gray-600 transition-colors hover:bg-gray-50"
+              className="flex items-center justify-between rounded px-2 py-1.5 text-xs text-gray-600 transition-colors hover:bg-gray-50"
             >
               <span className="flex items-center gap-2">
                 <span

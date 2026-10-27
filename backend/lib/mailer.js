@@ -31,6 +31,28 @@ async function getTransporter() {
   return transporterPromise;
 }
 
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+// Fleet alert notification — sent to the recipients a company picked in
+// its alert settings, for the alert types it opted into.
+export async function sendAlertEmail(recipients, { companyName, plateNumber, typeLabel, message }) {
+  if (!recipients.length) return null;
+  const transporter = await getTransporter();
+  const subject = `[${companyName || "FIGBLOOM FLEET"}] ${typeLabel}${plateNumber ? ` — ${plateNumber}` : ""}`;
+  const info = await transporter.sendMail({
+    from: process.env.SMTP_FROM || '"FIGBLOOM FLEET" <no-reply@figbloomfleet.com>',
+    to: recipients.join(", "),
+    subject,
+    text: `${typeLabel}${plateNumber ? ` (${plateNumber})` : ""}: ${message}`,
+    html: `<p><strong>${escapeHtml(typeLabel)}</strong>${plateNumber ? ` — ${escapeHtml(plateNumber)}` : ""}</p><p>${escapeHtml(message)}</p>`,
+  });
+  const previewUrl = nodemailer.getTestMessageUrl(info);
+  if (previewUrl) console.log(`[mailer] Alert preview: ${previewUrl}`);
+  return info;
+}
+
 export async function sendPasswordResetEmail(email, resetLink) {
   const transporter = await getTransporter();
 

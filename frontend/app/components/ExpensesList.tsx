@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { apiRequest } from "../lib/api";
+import { API_URL, apiRequest } from "../lib/api";
 import { ExpenseRecord } from "../types/auth";
 import { formatKes } from "../lib/pricing";
 import Skeleton from "./Skeleton";
@@ -50,12 +50,12 @@ export default function ExpensesList() {
 
   return (
     <div className="space-y-4">
-      <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 shadow-sm ring-1 ring-black/5">
+      <div className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-3 shadow-sm ring-1 ring-black/5">
         <span className="text-xs text-gray-500">Total logged</span>
         <span className="text-lg font-bold text-gray-900">{formatKes(totalKes)}</span>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-black/5 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
         {loading && <Skeleton rows={6} rowClassName="h-12" className="p-5" />}
         {error && <p className="text-sm text-red-600 p-5">{error}</p>}
         {!loading && !error && (
@@ -72,12 +72,13 @@ export default function ExpensesList() {
                   <th className="text-left px-5 py-3 font-medium">Category</th>
                   <th className="text-left px-5 py-3 font-medium">Amount</th>
                   <th className="text-left px-5 py-3 font-medium">Note</th>
+                  <th className="text-left px-5 py-3 font-medium">Receipt</th>
                 </tr>
               </thead>
               <tbody>
                 {expenses.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-8 text-center text-gray-400">
+                    <td colSpan={7} className="px-5 py-8 text-center text-gray-400">
                       No expenses logged yet.
                     </td>
                   </tr>
@@ -108,6 +109,25 @@ export default function ExpensesList() {
                       </td>
                       <td className="px-5 py-3 text-gray-900 font-medium">{formatKes(e.amount)}</td>
                       <td className="px-5 py-3 text-gray-500">{e.note || "—"}</td>
+                      <td className="px-5 py-3">
+                        {e.receiptUrl ? (
+                          <a
+                            href={API_URL + e.receiptUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="Open receipt photo"
+                            className="block w-fit"
+                          >
+                            <img
+                              src={API_URL + e.receiptUrl}
+                              alt="Receipt"
+                              className="h-10 w-10 rounded object-cover ring-1 ring-black/10 hover:ring-teal-600"
+                            />
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}

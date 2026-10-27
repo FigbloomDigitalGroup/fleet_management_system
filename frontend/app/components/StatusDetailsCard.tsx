@@ -9,7 +9,7 @@ export default function StatusDetailsCard({ items, title = "Breakdown" }: { item
   const total = items.reduce((sum, i) => sum + i.value, 0);
 
   return (
-    <div className="bg-white rounded-2xl p-5 flex-1 shadow-sm ring-1 ring-black/5">
+    <div className="bg-white rounded-lg p-5 flex-1 shadow-sm ring-1 ring-black/5">
       <h3 className="text-sm font-bold text-blue-950">{title}</h3>
       <p className="text-xs text-teal-600 mt-0.5 mb-4">Share of the total for each status</p>
       <div className="space-y-4">

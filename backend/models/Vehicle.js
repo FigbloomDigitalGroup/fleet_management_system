@@ -47,6 +47,24 @@ const vehicleSchema = new mongoose.Schema(
     // Fuel monitoring — used to detect abnormal consumption
     fuelCapacityLiters: { type: Number, default: 60 },
     avgConsumptionLPer100Km: { type: Number, default: 12 }, // expected liters used per 100km, a reasonable default
+    // Odometer reading when the vehicle was onboarded (or last corrected);
+    // current odometer = this + all recorded trip distance. Drives
+    // mileage-based maintenance reminders.
+    odometerBaseKm: { type: Number, default: 0, min: 0 },
+    // Last state the driver's phone reported (POST /api/tracking/device-status)
+    // — battery, whether location is on, app in foreground/background.
+    device: {
+      lastSeenAt: { type: Date, default: null },
+      batteryLevel: { type: Number, default: null }, // 0..1
+      isCharging: { type: Boolean, default: null },
+      locationEnabled: { type: Boolean, default: null },
+      permission: { type: String, default: null }, // "background" | "foreground" | "denied"
+      appState: { type: String, default: null }, // "active" | "background"
+      isSharing: { type: Boolean, default: null },
+      platform: { type: String, default: null },
+      appVersion: { type: String, default: null },
+      offlineAlertedAt: { type: Date, default: null },
+    },
   },
   { timestamps: true }
 );
