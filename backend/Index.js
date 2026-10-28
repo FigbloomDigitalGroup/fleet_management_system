@@ -27,6 +27,7 @@ import { runAiAnomalyScan } from "./services/aiAnomalyDetector.js";
 import { closeStaleTrips, sweepOfflineDevices } from "./controllers/trackingController.js";
 import { sweepMaintenanceReminders } from "./controllers/maintenanceController.js";
 import { purgeExpiredLocationData } from "./controllers/settingsCompanyController.js";
+import { purgeExpiredRecords } from "./lib/cleanup.js";
 
 
 import cors from "cors";
@@ -142,6 +143,12 @@ connectDB().then(() => {
     sweepMaintenanceReminders()
       .then((n) => n > 0 && console.log(`[maintenance] ${n} reminder(s) due`))
       .catch((err) => console.error("[maintenance] reminder sweep crashed:", err));
+  });
+
+  // Resolved alerts (30 min after resolving) and expired sign-in tokens —
+  // MongoDB's TTL indexes did this before PostgreSQL.
+  cron.schedule("* * * * *", () => {
+    purgeExpiredRecords().catch((err) => console.error("[cleanup] purge crashed:", err));
   });
 
   // Data retention — nightly at 02:30 Nairobi time.
