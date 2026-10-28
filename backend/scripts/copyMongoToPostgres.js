@@ -9,7 +9,7 @@
 //   node scripts/copyMongoToPostgres.js --remote   # allow a non-local target
 import "dotenv/config";
 import mongoose from "mongoose";
-import { connectDB } from "../config/db.js";
+import dns from "dns";
 import prisma from "../lib/prisma.js";
 import { ALERT_SETTING_DEFAULTS, TRACKING_HOURS_DEFAULTS } from "../lib/companySettings.js";
 
@@ -435,7 +435,10 @@ const tables = [
 
 // ── Copy ────────────────────────────────────────────────────────────────────
 
-await connectDB();
+// mongodb+srv:// needs an SRV DNS lookup that some local resolvers refuse;
+// public resolvers handle it.
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
+await mongoose.connect(process.env.MONGODB_URI);
 const mongo = mongoose.connection.db;
 
 // Ids copied so far per model, to drop rows that point at missing parents

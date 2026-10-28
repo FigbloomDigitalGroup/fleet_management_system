@@ -15,6 +15,8 @@ services:
       - /app/node_modules
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      - postgres
     restart: unless-stopped
 
   # Local PostgreSQL for development. Port 5433 on the host so it doesn't

@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cron from "node-cron";
-import { connectDB } from "./config/db.js";
+import prisma from "./lib/prisma.js";
 import authRoutes from "./routes/authRoutes.js";
 import companyRoutes from "./routes/companyRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -102,7 +102,19 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-connectDB().then(() => {
+// Fail fast if the database (PostgreSQL — Supabase in production) can't be
+// reached, rather than starting a server whose every request would error.
+async function connectDatabase() {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    console.log("PostgreSQL connected");
+  } catch (err) {
+    console.error("Failed to connect to PostgreSQL:", err.message);
+    process.exit(1);
+  }
+}
+
+connectDatabase().then(() => {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port:${PORT}`);
   });
