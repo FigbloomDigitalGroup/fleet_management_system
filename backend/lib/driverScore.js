@@ -1,6 +1,4 @@
-import mongoose from "mongoose";
-import DrivingEvent from "../models/DrivingEvent.js";
-import Trip from "../models/Trip.js";
+import prisma from "./prisma.js";
 
 // How much each kind of incident costs, per 100 km driven. Phone use is
 // weighted heaviest — it's the one most strongly linked to crashes.
@@ -28,33 +26,29 @@ export function gradeFor(score) {
 // MIN_SCORED_DISTANCE_KM yet. Returns a Map keyed by driverId string.
 // `endsAt` scores a past window instead (e.g. a week ago, for a trend).
 export async function computeDriverScores(driverIds, days = 30, endsAt = new Date()) {
-  const ids = driverIds.map((id) => new mongoose.Types.ObjectId(String(id)));
+  const ids = driverIds.map(String);
   const since = new Date(endsAt.getTime() - days * 86400000);
 
   const [eventRows, distanceRows] = await Promise.all([
-    DrivingEvent.aggregate([
-      { $match: { driverId: { $in: ids }, recordedAt: { $gte: since, $lt: endsAt } } },
-      { $group: { _id: { driverId: "$driverId", type: "$type" }, count: { $sum: 1 } } },
-    ]),
-    Trip.aggregate([
-      { $match: { driverId: { $in: ids }, startTime: { $gte: since, $lt: endsAt } } },
-      {
-        $group: {
-          _id: "$driverId",
-          distanceKm: { $sum: { $ifNull: ["$distanceKm", 0] } },
-          trips: { $sum: 1 },
-        },
-      },
-    ]),
+    prisma.drivingEvent.groupBy({
+      by: ["driverId", "type"],
+      where: { driverId: { in: ids }, recordedAt: { gte: since, lt: endsAt } },
+      _count: { _all: true },
+    }),
+    prisma.trip.groupBy({
+      by: ["driverId"],
+      where: { driverId: { in: ids }, startTime: { gte: since, lt: endsAt } },
+      _sum: { distanceKm: true },
+      _count: { _all: true },
+    }),
   ]);
 
   const result = new Map();
-  for (const id of ids) {
-    const key = String(id);
+  for (const key of ids) {
     const events = Object.fromEntries(Object.keys(SCORE_WEIGHTS).map((t) => [t, 0]));
-    for (const row of eventRows) if (String(row._id.driverId) === key) events[row._id.type] = row.count;
-    const dist = distanceRows.find((r) => String(r._id) === key);
-    const distanceKm = Math.round((dist?.distanceKm || 0) * 10) / 10;
+    for (const row of eventRows) if (row.driverId === key) events[row.type] = row._count._all;
+    const dist = distanceRows.find((r) => r.driverId === key);
+    const distanceKm = Math.round((dist?._sum.distanceKm || 0) * 10) / 10;
     const weighted = Object.entries(events).reduce((sum, [t, n]) => sum + SCORE_WEIGHTS[t] * n, 0);
 
     let score = null;
@@ -68,7 +62,7 @@ export async function computeDriverScores(driverIds, days = 30, endsAt = new Dat
       grade: gradeFor(score),
       periodDays: days,
       distanceKm,
-      trips: dist?.trips || 0,
+      trips: dist?._count._all || 0,
       events,
       totalEvents: Object.values(events).reduce((a, b) => a + b, 0),
       minDistanceKm: MIN_SCORED_DISTANCE_KM,

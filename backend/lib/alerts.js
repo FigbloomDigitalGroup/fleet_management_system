@@ -1,6 +1,4 @@
-import Alert from "../models/Alert.js";
-import User from "../models/User.js";
-import Vehicle from "../models/Vehicle.js";
+import prisma from "./prisma.js";
 import { getCompanySettings } from "./companySettings.js";
 import { sendAlertEmail } from "./mailer.js";
 
@@ -45,17 +43,25 @@ export async function raiseAlert({ companyId, vehicleId, type, message, debounce
 
     const createdAfter = since ?? new Date((at ?? new Date()).getTime() - (debounceMinutes ?? DEFAULT_DEBOUNCE_MINUTES) * 60000);
     if (debounceMinutes !== 0) {
-      const recent = await Alert.findOne({ vehicleId, type, createdAt: { $gte: createdAfter } });
+      const recent = await prisma.alert.findFirst({
+        where: { vehicleId: String(vehicleId), type, createdAt: { gte: createdAfter } },
+        select: { id: true },
+      });
       if (recent) return null;
     }
 
-    const alert = await Alert.create({ companyId, vehicleId, type, message, ...(at ? { createdAt: at } : {}) });
+    const alert = await prisma.alert.create({
+      data: { companyId: String(companyId), vehicleId: String(vehicleId), type, message, ...(at ? { createdAt: at } : {}) },
+    });
 
     const { emailTypes, emailRecipientIds } = settings.alertSettings;
     if (emailTypes.includes(type) && emailRecipientIds.length) {
       const [recipients, vehicle] = await Promise.all([
-        User.find({ _id: { $in: emailRecipientIds }, companyId }).select("email"),
-        Vehicle.findById(vehicleId).select("plateNumber"),
+        prisma.user.findMany({
+          where: { id: { in: emailRecipientIds.map(String) }, companyId: String(companyId) },
+          select: { email: true },
+        }),
+        prisma.vehicle.findUnique({ where: { id: String(vehicleId) }, select: { plateNumber: true } }),
       ]);
       sendAlertEmail(
         recipients.map((r) => r.email),

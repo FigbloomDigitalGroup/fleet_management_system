@@ -1,17 +1,10 @@
-import Vehicle from "../models/Vehicle.js";
-import LocationPing from "../models/LocationPing.js";
-import Trip from "../models/Trip.js";
-import Alert from "../models/Alert.js";
-import Route from "../models/Route.js";
-import RouteCompletion from "../models/RouteCompletion.js";
-import Geofence from "../models/Geofence.js";
-import DrivingEvent from "../models/DrivingEvent.js";
+import prisma from "../lib/prisma.js";
+import { toApi } from "../lib/serialize.js";
 import { tenantScope } from "../middleware/auth.js";
 import { distanceKm, isInsideGeofence, sumTripDistanceKm, MAX_PLAUSIBLE_SPEED_KPH } from "../lib/geo.js";
 import { raiseAlert } from "../lib/alerts.js";
 import { getCompanySettings, isWithinTrackingHours } from "../lib/companySettings.js";
 import { analyzePings } from "../lib/stops.js";
-import User from "../models/User.js";
 import { reverseGeocode } from "../services/geocodeService.js";
 
 // Bump when the consent wording in the mobile app changes, so drivers are
@@ -62,19 +55,24 @@ function distanceToRouteKm(lat, lng, waypoints) {
 // over the limit pings every few seconds).
 export async function recordDrivingEvent({ vehicle, type, source, value, speedKph, latitude, longitude, at }) {
   const since = new Date(at.getTime() - DRIVING_EVENT_DEBOUNCE_SECONDS * 1000);
-  const recent = await DrivingEvent.findOne({ vehicleId: vehicle._id, type, recordedAt: { $gte: since, $lte: at } });
+  const recent = await prisma.drivingEvent.findFirst({
+    where: { vehicleId: vehicle.id, type, recordedAt: { gte: since, lte: at } },
+    select: { id: true },
+  });
   if (recent) return null;
-  return DrivingEvent.create({
-    companyId: vehicle.companyId,
-    vehicleId: vehicle._id,
-    driverId: vehicle.driverId || null,
-    type,
-    source,
-    value: value ?? null,
-    speedKph: speedKph ?? null,
-    latitude,
-    longitude,
-    recordedAt: at,
+  return prisma.drivingEvent.create({
+    data: {
+      companyId: vehicle.companyId,
+      vehicleId: vehicle.id,
+      driverId: vehicle.driverId || null,
+      type,
+      source,
+      value: value ?? null,
+      speedKph: speedKph ?? null,
+      latitude,
+      longitude,
+      recordedAt: at,
+    },
   });
 }
 
@@ -105,7 +103,7 @@ async function resolveTrackingVehicle(req) {
   const { vehicleId } = req.body;
   if (!vehicleId) return { status: 400, error: "vehicleId is required" };
 
-  const vehicle = await Vehicle.findById(vehicleId);
+  const vehicle = await prisma.vehicle.findUnique({ where: { id: String(vehicleId) } });
   if (!vehicle) return { status: 404, error: "Vehicle not found" };
   if (req.user.role === "DRIVER" && String(vehicle.driverId) !== String(req.user.id)) {
     return { status: 403, error: "This vehicle isn't assigned to you" };
@@ -123,31 +121,42 @@ async function resolveTrackingVehicle(req) {
 async function processPing(vehicle, data, source) {
   const { latitude, longitude, speedKph, heading, fuelLevelLiters, accuracyM, isMocked } = data;
   const t = data.recordedAt;
-  const vehicleId = vehicle._id;
+  const vehicleId = vehicle.id;
   const { alertSettings } = await getCompanySettings(vehicle.companyId);
   const isMoving = speedKph && speedKph > 2;
 
   // A retried upload resends points the server already has.
-  const duplicate = await LocationPing.exists({ vehicleId, recordedAt: t, latitude, longitude });
+  const duplicate = await prisma.locationPing.findFirst({
+    where: { vehicleId, recordedAt: t, latitude, longitude },
+    select: { id: true },
+  });
   if (duplicate) return { skipped: true };
 
   // Neighbours in time, not just the latest row — buffered points can arrive
   // after newer live ones.
-  const previousPing = await LocationPing.findOne({ vehicleId, recordedAt: { $lt: t } }).sort({ recordedAt: -1 });
-  const newerPingExists = await LocationPing.exists({ vehicleId, recordedAt: { $gt: t } });
+  const previousPing = await prisma.locationPing.findFirst({
+    where: { vehicleId, recordedAt: { lt: t } },
+    orderBy: { recordedAt: "desc" },
+  });
+  const newerPingExists = await prisma.locationPing.findFirst({
+    where: { vehicleId, recordedAt: { gt: t } },
+    select: { id: true },
+  });
 
   // 1. Save the raw ping
-  const ping = await LocationPing.create({
-    vehicleId,
-    latitude,
-    longitude,
-    speedKph,
-    heading,
-    fuelLevelLiters: fuelLevelLiters ?? null,
-    accuracyM: accuracyM ?? null,
-    isMocked: !!isMocked,
-    source,
-    recordedAt: t,
+  const ping = await prisma.locationPing.create({
+    data: {
+      vehicleId,
+      latitude,
+      longitude,
+      speedKph: speedKph ?? null,
+      heading: heading ?? null,
+      fuelLevelLiters: fuelLevelLiters ?? null,
+      accuracyM: accuracyM ?? null,
+      isMocked: !!isMocked,
+      source,
+      recordedAt: t,
+    },
   });
 
   // 1b. Fake GPS — the phone flagged this fix as coming from a mock provider.
@@ -190,18 +199,23 @@ async function processPing(vehicle, data, source) {
       // the vehicle is next seen moving.
       vehicle.status = "idle";
     }
-    vehicle.device = vehicle.device || {};
-    vehicle.device.lastSeenAt = t;
-    vehicle.device.offlineAlertedAt = null; // a fresh offline streak may alert again
-    await vehicle.save();
+    // a fresh offline streak may alert again
+    vehicle.device = { ...(vehicle.device || {}), lastSeenAt: t.toISOString(), offlineAlertedAt: null };
+    // `vehicle` is reused for the rest of a batch, so it's updated in place too.
+    await prisma.vehicle.update({
+      where: { id: vehicleId },
+      data: { status: vehicle.status, statusManuallySet: vehicle.statusManuallySet, device: vehicle.device },
+    });
   }
 
   // 2b. Excessive idling — only meaningful with a driver assigned (unassigned
   // + moving is already handled above as unauthorized_movement). De-duplicated
   // per idle streak by passing the streak start as `since`.
   if (vehicle.driverId && !isMoving) {
-    const lastMovingPing = await LocationPing.findOne({ vehicleId, speedKph: { $gt: 2 }, recordedAt: { $lte: t } }).sort({
-      recordedAt: -1,
+    const lastMovingPing = await prisma.locationPing.findFirst({
+      where: { vehicleId, speedKph: { gt: 2 }, recordedAt: { lte: t } },
+      orderBy: { recordedAt: "desc" },
+      select: { recordedAt: true },
     });
     const idleStartedAt = lastMovingPing ? new Date(lastMovingPing.recordedAt) : vehicle.createdAt;
     const idleMinutes = (t.getTime() - idleStartedAt.getTime()) / 60000;
@@ -221,35 +235,34 @@ async function processPing(vehicle, data, source) {
   // 3. Trip start/end logic. A point that falls inside an already-finished
   // trip (a buffered point uploaded after the trip ended) only refreshes
   // that trip's distance — it must not start or end anything.
-  let openTrip = await Trip.findOne({ vehicleId, endTime: { $exists: false } }).sort({ startTime: -1 });
-  const coveringTrip = await Trip.findOne({ vehicleId, startTime: { $lte: t }, endTime: { $gte: t } });
+  const openTrip = await prisma.trip.findFirst({ where: { vehicleId, endTime: null }, orderBy: { startTime: "desc" } });
+  const coveringTrip = await prisma.trip.findFirst({ where: { vehicleId, startTime: { lte: t }, endTime: { gte: t } } });
 
   if (coveringTrip) {
-    const tripPings = await LocationPing.find({
-      vehicleId,
-      recordedAt: { $gte: coveringTrip.startTime, $lte: coveringTrip.endTime },
-    }).sort({ recordedAt: 1 });
-    coveringTrip.distanceKm = Math.round(sumTripDistanceKm(tripPings) * 10) / 10;
-    await coveringTrip.save();
+    const tripPings = await pingsBetween(vehicleId, coveringTrip.startTime, coveringTrip.endTime);
+    await prisma.trip.update({
+      where: { id: coveringTrip.id },
+      data: { distanceKm: Math.round(sumTripDistanceKm(tripPings) * 10) / 10 },
+    });
   } else if (isMoving && !openTrip) {
     // Moving again soon after the last trip ended (e.g. buffered points from
     // a dead zone arriving after the trip was closed) — carry on with it,
     // unless the driver ended it themselves.
-    const lastTrip = await Trip.findOne({ vehicleId, endTime: { $lte: t } }).sort({ endTime: -1 });
+    const lastTrip = await prisma.trip.findFirst({ where: { vehicleId, endTime: { lte: t } }, orderBy: { endTime: "desc" } });
     if (lastTrip && lastTrip.endedBy !== "driver" && t.getTime() - lastTrip.endTime.getTime() < TRIP_IDLE_TIMEOUT_MS) {
-      lastTrip.endTime = undefined;
-      lastTrip.endLat = undefined;
-      lastTrip.endLng = undefined;
-      lastTrip.distanceKm = undefined;
-      lastTrip.endedBy = null;
-      await lastTrip.save();
+      await prisma.trip.update({
+        where: { id: lastTrip.id },
+        data: { endTime: null, endLat: null, endLng: null, distanceKm: null, endedBy: null },
+      });
     } else {
-      await Trip.create({
-        vehicleId,
-        driverId: vehicle.driverId || null,
-        startTime: t,
-        startLat: latitude,
-        startLng: longitude,
+      await prisma.trip.create({
+        data: {
+          vehicleId,
+          driverId: vehicle.driverId || null,
+          startTime: t,
+          startLat: latitude,
+          startLng: longitude,
+        },
       });
     }
   } else if (!isMoving && openTrip && t > openTrip.startTime) {
@@ -273,7 +286,7 @@ async function processPing(vehicle, data, source) {
 
   // 4. Speeding (route-specific limit overrides the company's limit, if a route is assigned).
   // Must hold across two consecutive good fixes, so one spike isn't speeding.
-  const activeRoute = await Route.findOne({ vehicleId, active: true });
+  const activeRoute = await prisma.route.findFirst({ where: { vehicleId, active: true }, orderBy: { createdAt: "asc" } });
   const speedLimit = activeRoute?.speedLimitKph || alertSettings.speedLimitKph;
 
   if (
@@ -366,16 +379,21 @@ async function processPing(vehicle, data, source) {
 
     if (distanceToDestKm <= toleranceKm) {
       const dateKey = t.toISOString().slice(0, 10);
-      const alreadyCompleted = await RouteCompletion.findOne({ routeId: activeRoute._id, dateKey });
+      const alreadyCompleted = await prisma.routeCompletion.findFirst({
+        where: { routeId: activeRoute.id, dateKey },
+        select: { id: true },
+      });
 
       if (!alreadyCompleted) {
-        await RouteCompletion.create({
-          companyId: vehicle.companyId,
-          routeId: activeRoute._id,
-          vehicleId,
-          driverId: vehicle.driverId || null,
-          dateKey,
-          completedAt: t,
+        await prisma.routeCompletion.create({
+          data: {
+            companyId: vehicle.companyId,
+            routeId: activeRoute.id,
+            vehicleId,
+            driverId: vehicle.driverId || null,
+            dateKey,
+            completedAt: t,
+          },
         });
       }
     }
@@ -417,7 +435,7 @@ async function processPing(vehicle, data, source) {
   }
 
   // 7. Geofence entry/exit detection
-  const geofences = await Geofence.find({ companyId: vehicle.companyId });
+  const geofences = await prisma.geofence.findMany({ where: { companyId: vehicle.companyId } });
 
   for (const geofence of geofences) {
     const isInsideNow = isInsideGeofence(latitude, longitude, geofence);
@@ -440,14 +458,18 @@ async function processPing(vehicle, data, source) {
   return { ping };
 }
 
+// Numbers may arrive as strings (Mongoose used to cast them); anything that
+// isn't a number becomes "not reported".
+const optionalNumber = (v) => (v === undefined || v === null || v === "" || !Number.isFinite(Number(v)) ? undefined : Number(v));
+
 function normalizePoint(p) {
   return {
     latitude: Number(p.latitude),
     longitude: Number(p.longitude),
-    speedKph: p.speedKph ?? undefined,
-    heading: p.heading ?? undefined,
-    fuelLevelLiters: p.fuelLevelLiters,
-    accuracyM: p.accuracyM ?? p.accuracy ?? null,
+    speedKph: optionalNumber(p.speedKph),
+    heading: optionalNumber(p.heading),
+    fuelLevelLiters: optionalNumber(p.fuelLevelLiters) ?? (p.fuelLevelLiters === null ? null : undefined),
+    accuracyM: optionalNumber(p.accuracyM ?? p.accuracy) ?? null,
     isMocked: !!p.isMocked,
     recordedAt: resolveRecordedAt(p.recordedAt),
   };
@@ -493,7 +515,7 @@ export async function ingestLocation(req, res) {
 
     if (isBatch) return res.status(201).json({ accepted, skipped });
     if (!lastPing) return res.status(200).json({ accepted, skipped });
-    return res.status(201).json(lastPing);
+    return res.status(201).json(toApi(lastPing));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to record location ping" });
@@ -505,33 +527,43 @@ export async function ingestLocation(req, res) {
 // latest ping (e.g. the phone lost signal mid-drive), that ping is the best
 // guess. Null if the trip has no pings at all.
 async function findTripStopPing(trip, upTo) {
-  const range = { $gte: trip.startTime, $lte: upTo };
-  const lastMoving = await LocationPing.findOne({ vehicleId: trip.vehicleId, recordedAt: range, speedKph: { $gt: 2 } }).sort({
-    recordedAt: -1,
+  const range = { gte: trip.startTime, lte: upTo };
+  const lastMoving = await prisma.locationPing.findFirst({
+    where: { vehicleId: trip.vehicleId, recordedAt: range, speedKph: { gt: 2 } },
+    orderBy: { recordedAt: "desc" },
   });
   if (lastMoving) {
-    const firstStopped = await LocationPing.findOne({
-      vehicleId: trip.vehicleId,
-      recordedAt: { $gt: lastMoving.recordedAt, $lte: upTo },
-    }).sort({ recordedAt: 1 });
+    const firstStopped = await prisma.locationPing.findFirst({
+      where: { vehicleId: trip.vehicleId, recordedAt: { gt: lastMoving.recordedAt, lte: upTo } },
+      orderBy: { recordedAt: "asc" },
+    });
     return firstStopped || lastMoving;
   }
-  return LocationPing.findOne({ vehicleId: trip.vehicleId, recordedAt: range }).sort({ recordedAt: 1 });
+  return prisma.locationPing.findFirst({ where: { vehicleId: trip.vehicleId, recordedAt: range }, orderBy: { recordedAt: "asc" } });
+}
+
+// A vehicle's pings in [from, to], oldest first — what sumTripDistanceKm needs.
+function pingsBetween(vehicleId, from, to) {
+  return prisma.locationPing.findMany({
+    where: { vehicleId, recordedAt: { gte: from, lte: to } },
+    orderBy: { recordedAt: "asc" },
+    select: { latitude: true, longitude: true, recordedAt: true, isMocked: true },
+  });
 }
 
 // Ends the trip where the vehicle stopped, not where it was last seen idling.
 async function closeTrip(trip, stopPing) {
-  const tripPings = await LocationPing.find({
-    vehicleId: trip.vehicleId,
-    recordedAt: { $gte: trip.startTime, $lte: stopPing.recordedAt },
-  }).sort({ recordedAt: 1 });
-
-  trip.endTime = stopPing.recordedAt;
-  trip.endLat = stopPing.latitude;
-  trip.endLng = stopPing.longitude;
-  trip.distanceKm = Math.round(sumTripDistanceKm(tripPings) * 10) / 10;
-  trip.endedBy = "auto";
-  await trip.save();
+  const tripPings = await pingsBetween(trip.vehicleId, trip.startTime, stopPing.recordedAt);
+  await prisma.trip.update({
+    where: { id: trip.id },
+    data: {
+      endTime: stopPing.recordedAt,
+      endLat: stopPing.latitude,
+      endLng: stopPing.longitude,
+      distanceKm: Math.round(sumTripDistanceKm(tripPings) * 10) / 10,
+      endedBy: "auto",
+    },
+  });
 }
 
 // Closes out trips whose vehicle has gone quiet for the whole idle timeout
@@ -542,11 +574,15 @@ async function closeTrip(trip, stopPing) {
 // signal, its buffered points reopen the trip when they arrive (see
 // processPing). Runs on a schedule from Index.js.
 export async function closeStaleTrips() {
-  const openTrips = await Trip.find({ endTime: { $exists: false } });
+  const openTrips = await prisma.trip.findMany({ where: { endTime: null } });
   let closedCount = 0;
 
   for (const trip of openTrips) {
-    const lastPing = await LocationPing.findOne({ vehicleId: trip.vehicleId }).sort({ recordedAt: -1 });
+    const lastPing = await prisma.locationPing.findFirst({
+      where: { vehicleId: trip.vehicleId },
+      orderBy: { recordedAt: "desc" },
+      select: { recordedAt: true },
+    });
     if (!lastPing) continue;
     if (Date.now() - lastPing.recordedAt.getTime() < TRIP_IDLE_TIMEOUT_MS) continue;
 
@@ -561,21 +597,30 @@ export async function closeStaleTrips() {
 
 export async function getLiveLocations(req, res) {
   try {
-    const vehicles = await Vehicle.find(tenantScope(req))
-      .select("plateNumber status vehicleType device driverId")
-      .populate("driverId", "fullName phone avatarUploadId");
+    const vehicles = await prisma.vehicle.findMany({
+      where: tenantScope(req),
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        plateNumber: true,
+        status: true,
+        vehicleType: true,
+        device: true,
+        driver: { select: { id: true, fullName: true, phone: true, avatarUploadId: true } },
+      },
+    });
     const results = await Promise.all(
       vehicles.map(async (v) => {
-        const lastPing = await LocationPing.findOne({ vehicleId: v._id }).sort({ recordedAt: -1 });
+        const lastPing = await prisma.locationPing.findFirst({ where: { vehicleId: v.id }, orderBy: { recordedAt: "desc" } });
 
         return {
-          vehicleId: v._id,
+          vehicleId: v.id,
           plateNumber: v.plateNumber,
           status: v.status,
           vehicleType: v.vehicleType,
-          driverId: v.driverId,
+          driverId: v.driver ? toApi(v.driver) : null,
           device: v.device || null,
-          lastLocation: lastPing || null,
+          lastLocation: lastPing ? toApi(lastPing) : null,
         };
       })
     );
@@ -604,17 +649,17 @@ const DEVICE_STATUS_EVENTS = ["heartbeat", "tracking_started", "tracking_stopped
 // dashboard needs to tell "vehicle parked" apart from "driver switched it off".
 export async function reportDeviceStatus(req, res) {
   try {
-    const vehicle = await Vehicle.findOne({ driverId: req.user.id });
+    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id } });
     if (!vehicle) return res.status(400).json({ error: "No vehicle is assigned to you yet" });
 
     const { batteryLevel, isCharging, locationEnabled, permission, appState, isSharing, platform, appVersion } = req.body;
     const event = DEVICE_STATUS_EVENTS.includes(req.body.event) ? req.body.event : "heartbeat";
-    const previous = vehicle.device?.toObject?.() ?? {};
+    const previous = vehicle.device ?? {};
     const { alertSettings } = await getCompanySettings(vehicle.companyId);
 
-    vehicle.device = {
+    const device = {
       ...previous,
-      lastSeenAt: new Date(),
+      lastSeenAt: new Date().toISOString(),
       ...(typeof batteryLevel === "number" ? { batteryLevel: Math.max(0, Math.min(1, batteryLevel)) } : {}),
       ...(typeof isCharging === "boolean" ? { isCharging } : {}),
       ...(typeof locationEnabled === "boolean" ? { locationEnabled } : {}),
@@ -625,9 +670,9 @@ export async function reportDeviceStatus(req, res) {
       ...(typeof appVersion === "string" ? { appVersion } : {}),
       offlineAlertedAt: null,
     };
-    await vehicle.save();
+    await prisma.vehicle.update({ where: { id: vehicle.id }, data: { device } });
 
-    const base = { companyId: vehicle.companyId, vehicleId: vehicle._id };
+    const base = { companyId: vehicle.companyId, vehicleId: vehicle.id };
     // Only worth an alert if the phone was actually tracking when they left.
     if (event === "logout" && previous.isSharing) {
       await raiseAlert({ ...base, type: "app_logout", message: "The driver logged out of the app — location tracking has stopped." });
@@ -678,7 +723,7 @@ const SENSOR_EVENT_MESSAGES = {
 // Accepts a batch so events buffered offline arrive with their real times.
 export async function reportDrivingEvents(req, res) {
   try {
-    const vehicle = await Vehicle.findOne({ driverId: req.user.id });
+    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id } });
     if (!vehicle) return res.status(400).json({ error: "No vehicle is assigned to you yet" });
 
     const events = Array.isArray(req.body.events) ? req.body.events.slice(0, 200) : [];
@@ -701,7 +746,7 @@ export async function reportDrivingEvents(req, res) {
       accepted += 1;
       await raiseAlert({
         companyId: vehicle.companyId,
-        vehicleId: vehicle._id,
+        vehicleId: vehicle.id,
         type: e.type,
         message: SENSOR_EVENT_MESSAGES[e.type]({ ...e, value: created.value, speedKph: created.speedKph }),
         at,
@@ -720,21 +765,24 @@ export async function reportDrivingEvents(req, res) {
 export async function getTrackingConfig(req, res) {
   try {
     const [vehicle, user] = await Promise.all([
-      Vehicle.findOne({ driverId: req.user.id }).select("_id companyId plateNumber"),
-      User.findById(req.user.id).select("trackingConsent companyId"),
+      prisma.vehicle.findFirst({ where: { driverId: req.user.id }, select: { id: true, companyId: true, plateNumber: true } }),
+      prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { consentVersion: true, consentAcceptedAt: true, companyId: true },
+      }),
     ]);
     const companyId = vehicle?.companyId || user?.companyId;
     const settings = companyId ? await getCompanySettings(companyId) : null;
     return res.json({
-      vehicleId: vehicle?._id ?? null,
+      vehicleId: vehicle?.id ?? null,
       plateNumber: vehicle?.plateNumber ?? null,
       trackingHours: settings?.trackingHours ?? { enabled: false },
       withinTrackingHours: settings ? isWithinTrackingHours(settings.trackingHours) : true,
       lowBatteryPercent: settings?.alertSettings.lowBatteryPercent ?? 15,
       consent: {
         requiredVersion: TRACKING_CONSENT_VERSION,
-        acceptedVersion: user?.trackingConsent?.version ?? null,
-        acceptedAt: user?.trackingConsent?.acceptedAt ?? null,
+        acceptedVersion: user?.consentVersion ?? null,
+        acceptedAt: user?.consentAcceptedAt ?? null,
       },
       dataRetentionDays: settings?.dataRetentionDays ?? null,
     });
@@ -750,9 +798,11 @@ export async function getTrackingConfig(req, res) {
 // is cleared by the next ping or heartbeat). Catches the cases the phone
 // can't report itself: app force-closed, phone switched off, battery died.
 export async function sweepOfflineDevices() {
-  const vehicles = await Vehicle.find({ driverId: { $ne: null }, "device.lastSeenAt": { $ne: null } }).select(
-    "companyId plateNumber device status statusManuallySet"
-  );
+  const assigned = await prisma.vehicle.findMany({
+    where: { driverId: { not: null } },
+    select: { id: true, companyId: true, plateNumber: true, device: true, status: true, statusManuallySet: true },
+  });
+  const vehicles = assigned.filter((v) => v.device?.lastSeenAt);
   let flagged = 0;
   for (const v of vehicles) {
     if (v.device?.offlineAlertedAt) continue;
@@ -764,14 +814,18 @@ export async function sweepOfflineDevices() {
 
     await raiseAlert({
       companyId: v.companyId,
-      vehicleId: v._id,
+      vehicleId: v.id,
       type: "device_offline",
       message: `No signal from ${v.plateNumber} for ${Math.round(silentMinutes)} minutes — the app may have been closed, the phone switched off, or the battery died.`,
       debounceMinutes: 0,
     });
-    v.device.offlineAlertedAt = new Date();
-    if (!v.statusManuallySet) v.status = "offline";
-    await v.save();
+    await prisma.vehicle.update({
+      where: { id: v.id },
+      data: {
+        device: { ...v.device, offlineAlertedAt: new Date().toISOString() },
+        ...(v.statusManuallySet ? {} : { status: "offline" }),
+      },
+    });
     flagged += 1;
   }
   return flagged;
@@ -793,14 +847,18 @@ export async function getLocationHistory(req, res) {
     if (to - from > HISTORY_MAX_RANGE_DAYS * 86400000) {
       return res.status(400).json({ error: `Pick a range of ${HISTORY_MAX_RANGE_DAYS} days or less` });
     }
-    const vehicle = await Vehicle.findOne({ _id: vehicleId, ...tenantScope(req) }).select("plateNumber");
+    const vehicle = await prisma.vehicle.findFirst({
+      where: { id: String(vehicleId), ...tenantScope(req) },
+      select: { plateNumber: true },
+    });
     if (!vehicle) return res.status(404).json({ error: "Vehicle not found" });
 
-    const pings = await LocationPing.find({ vehicleId, recordedAt: { $gte: from, $lte: to } })
-      .select("latitude longitude speedKph heading recordedAt isMocked")
-      .sort({ recordedAt: 1 })
-      .limit(HISTORY_MAX_POINTS + 1)
-      .lean();
+    const pings = await prisma.locationPing.findMany({
+      where: { vehicleId: String(vehicleId), recordedAt: { gte: from, lte: to } },
+      select: { latitude: true, longitude: true, speedKph: true, heading: true, recordedAt: true, isMocked: true },
+      orderBy: { recordedAt: "asc" },
+      take: HISTORY_MAX_POINTS + 1,
+    });
     const truncated = pings.length > HISTORY_MAX_POINTS;
     const points = truncated ? pings.slice(0, HISTORY_MAX_POINTS) : pings;
     const summary = analyzePings(points);
