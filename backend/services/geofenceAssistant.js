@@ -1,4 +1,4 @@
-import { askOllama, isOllamaReachable } from "./ollamaService.js";
+import { askJson, isAiConfigured } from "./geminiService.js";
 import { getPlaceLocation } from "./googleMapsService.js";
 
 const GEOFENCE_INTENT_PATTERN = /\b(draw|plan|create|make|set up|add)\b.*\bgeo-?fence\b/i;
@@ -27,15 +27,14 @@ async function extractPlace(question) {
   const match = question.match(PLACE_PATTERN);
   if (match) return match[1].trim().replace(/[.,!?]+$/, "");
 
-  const reachable = await isOllamaReachable();
-  if (!reachable) return null;
+  if (!isAiConfigured()) return null;
 
   const prompt = `Extract just the place name from this geofence request — ignore any radius or distance mentioned. Respond with ONLY JSON in the form {"place": "..."} and nothing else — no explanation, no markdown fence. If you can't find a clear place, respond with {"place": null}.
 
 Request: "${question}"`;
 
   try {
-    const result = await askOllama(prompt);
+    const result = await askJson(prompt);
     if (!result?.place) return null;
     return String(result.place);
   } catch {

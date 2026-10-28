@@ -1,5 +1,5 @@
 import prisma from "../lib/prisma.js";
-import { askOllama, isOllamaReachable } from "./ollamaService.js";
+import { askJson, isAiConfigured } from "./geminiService.js";
 
 const LOOKBACK_MINUTES = 15;
 
@@ -33,24 +33,23 @@ ${tripLines}`;
 }
 
 // Runs one full scan pass: pulls every vehicle with a GPS ping in the last
-// LOOKBACK_MINUTES minutes, asks the local Ollama model whether its recent
+// LOOKBACK_MINUTES minutes, asks Gemini whether its recent
 // behavior looks unusual, raises an `ai_pattern_anomaly` Alert for positive
 // hits, and always persists an AgentScanLog — including a "no anomaly" entry
-// per vehicle checked, and a "failed" log (with the error) if Ollama itself
-// is unreachable, rather than throwing out of the cron job.
+// per vehicle checked, and a "failed" log (with the error) if no Gemini key
+// is configured, rather than throwing out of the cron job.
 const saveScanLog = (data) => prisma.agentScanLog.create({ data });
 
 export async function runAiAnomalyScan() {
   const runAt = new Date();
 
-  const reachable = await isOllamaReachable();
-  if (!reachable) {
+  if (!isAiConfigured()) {
     return saveScanLog({
       runAt,
       vehiclesScanned: 0,
       anomaliesFound: 0,
       status: "failed",
-      errorMessage: `Ollama is unreachable at ${process.env.OLLAMA_URL || "http://localhost:11434"}`,
+      errorMessage: "GEMINI_API_KEY is not set — the AI agent is switched off",
       details: [],
     });
   }
@@ -75,7 +74,7 @@ export async function runAiAnomalyScan() {
       const summary = buildVehicleSummary(vehicle, pings, trips);
 
       try {
-        const result = await askOllama(`${PROMPT_INSTRUCTIONS}\n\n${summary}`);
+        const result = await askJson(`${PROMPT_INSTRUCTIONS}\n\n${summary}`);
         const anomaly = Boolean(result?.anomaly);
         const reason = typeof result?.reason === "string" ? result.reason : "";
 

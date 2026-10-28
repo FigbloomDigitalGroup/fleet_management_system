@@ -1,5 +1,5 @@
 import prisma from "../lib/prisma.js";
-import { generateText, isOllamaReachable } from "./ollamaService.js";
+import { generateText, isAiConfigured } from "./geminiService.js";
 
 const SYSTEM_PREAMBLE = `You are the fleet assistant for a vehicle tracking platform. Answer the user's question using ONLY the fleet data provided below — do not invent vehicles, numbers, or events that aren't in it. If the data doesn't contain enough information to answer, say so plainly instead of guessing. Keep the answer conversational and concise (a few sentences, not a report). Do not use markdown formatting.`;
 
@@ -90,9 +90,8 @@ ${tripLines}`;
 }
 
 export async function answerFleetQuestion(companyId, question) {
-  const reachable = await isOllamaReachable();
-  if (!reachable) {
-    throw new Error("The AI assistant is temporarily unavailable — the local model isn't reachable right now.");
+  if (!isAiConfigured()) {
+    throw new Error("The AI assistant isn't set up yet — ask your platform admin to add a Gemini API key.");
   }
 
   const context = await buildFleetContext(companyId);

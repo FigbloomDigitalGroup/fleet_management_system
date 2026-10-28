@@ -53,7 +53,7 @@ export default function AgentOverviewPage() {
     .filter((s) => new Date(s.runAt).getTime() >= sevenDaysAgo)
     .reduce((sum, s) => sum + s.anomaliesFound, 0);
   const lastScan = scans[0] ?? null;
-  const ollamaStatus = lastScan ? (lastScan.status === "success" ? "Reachable" : "Unreachable") : "Unknown";
+  const geminiStatus = lastScan ? (lastScan.status === "success" ? "Working" : "Not working") : "Unknown";
 
   const statsNode = useMemo(
     () => (
@@ -67,14 +67,14 @@ export default function AgentOverviewPage() {
           description={lastScan ? new Date(lastScan.runAt).toLocaleDateString() : "No scans yet"}
         />
         <StatCard
-          label="Ollama"
-          value={ollamaStatus}
-          accent={ollamaStatus === "Reachable" ? "green" : "orange"}
+          label="Gemini"
+          value={geminiStatus}
+          accent={geminiStatus === "Working" ? "green" : "orange"}
           description="Based on the most recent scan"
         />
       </div>
     ),
-    [totalScans, anomaliesLast7Days, lastScan, ollamaStatus]
+    [totalScans, anomaliesLast7Days, lastScan, geminiStatus]
   );
 
   usePageHeader("AI Agent", "Operational history for the anomaly-detection agent", statsNode);
