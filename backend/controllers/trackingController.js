@@ -5,6 +5,8 @@ import { distanceKm, isInsideGeofence, sumTripDistanceKm, MAX_PLAUSIBLE_SPEED_KP
 import { raiseAlert } from "../lib/alerts.js";
 import { getCompanySettings, isWithinTrackingHours } from "../lib/companySettings.js";
 import { analyzePings } from "../lib/stops.js";
+import { filterTrack, cleanTrack } from "../lib/gpsFilter.js";
+import { queueRoadPath } from "../lib/tripRoad.js";
 import { reverseGeocode } from "../services/geocodeService.js";
 
 // Bump when the consent wording in the mobile app changes, so drivers are
@@ -242,7 +244,7 @@ async function processPing(vehicle, data, source) {
     const tripPings = await pingsBetween(vehicleId, coveringTrip.startTime, coveringTrip.endTime);
     await prisma.trip.update({
       where: { id: coveringTrip.id },
-      data: { distanceKm: Math.round(sumTripDistanceKm(tripPings) * 10) / 10 },
+      data: { distanceKm: tripDistanceKm(tripPings), roadPath: null },
     });
   } else if (isMoving && !openTrip) {
     // Moving again soon after the last trip ended (e.g. buffered points from
@@ -252,7 +254,7 @@ async function processPing(vehicle, data, source) {
     if (lastTrip && lastTrip.endedBy !== "driver" && t.getTime() - lastTrip.endTime.getTime() < TRIP_IDLE_TIMEOUT_MS) {
       await prisma.trip.update({
         where: { id: lastTrip.id },
-        data: { endTime: null, endLat: null, endLng: null, distanceKm: null, endedBy: null },
+        data: { endTime: null, endLat: null, endLng: null, distanceKm: null, endedBy: null, roadPath: null },
       });
     } else {
       await prisma.trip.create({
@@ -542,12 +544,18 @@ async function findTripStopPing(trip, upTo) {
   return prisma.locationPing.findFirst({ where: { vehicleId: trip.vehicleId, recordedAt: range }, orderBy: { recordedAt: "asc" } });
 }
 
-// A vehicle's pings in [from, to], oldest first — what sumTripDistanceKm needs.
+// Trip distance in km (one decimal) over the cleaned track — inaccurate
+// fixes, jumps and parked GPS wobble don't add kilometres (lib/gpsFilter.js).
+export function tripDistanceKm(pings) {
+  return Math.round(sumTripDistanceKm(filterTrack(pings)) * 10) / 10;
+}
+
+// A vehicle's pings in [from, to], oldest first — what tripDistanceKm needs.
 function pingsBetween(vehicleId, from, to) {
   return prisma.locationPing.findMany({
     where: { vehicleId, recordedAt: { gte: from, lte: to } },
     orderBy: { recordedAt: "asc" },
-    select: { latitude: true, longitude: true, recordedAt: true, isMocked: true },
+    select: { latitude: true, longitude: true, recordedAt: true, isMocked: true, accuracyM: true, speedKph: true },
   });
 }
 
@@ -560,10 +568,12 @@ async function closeTrip(trip, stopPing) {
       endTime: stopPing.recordedAt,
       endLat: stopPing.latitude,
       endLng: stopPing.longitude,
-      distanceKm: Math.round(sumTripDistanceKm(tripPings) * 10) / 10,
+      distanceKm: tripDistanceKm(tripPings),
       endedBy: "auto",
+      roadPath: null,
     },
   });
+  queueRoadPath(trip.id);
 }
 
 // Closes out trips whose vehicle has gone quiet for the whole idle timeout
@@ -855,7 +865,7 @@ export async function getLocationHistory(req, res) {
 
     const pings = await prisma.locationPing.findMany({
       where: { vehicleId: String(vehicleId), recordedAt: { gte: from, lte: to } },
-      select: { latitude: true, longitude: true, speedKph: true, heading: true, recordedAt: true, isMocked: true },
+      select: { latitude: true, longitude: true, speedKph: true, heading: true, recordedAt: true, isMocked: true, accuracyM: true },
       orderBy: { recordedAt: "asc" },
       take: HISTORY_MAX_POINTS + 1,
     });
@@ -869,7 +879,9 @@ export async function getLocationHistory(req, res) {
       from,
       to,
       truncated,
-      points: points.map((p) => ({
+      // Drawn from the cleaned, smoothed track; the stops and times above
+      // come from every recorded point.
+      points: cleanTrack(points).map((p) => ({
         latitude: p.latitude,
         longitude: p.longitude,
         speedKph: p.speedKph ?? null,

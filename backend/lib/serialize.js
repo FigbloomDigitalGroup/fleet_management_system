@@ -7,7 +7,7 @@ import { uploadUrl } from "./uploadUrl.js";
 //   .populate() replaced it (`vehicle` → `vehicleId: {...}`)
 // - createdById/uploadedById keep their Mongo names (createdBy/uploadedBy)
 // - the old virtuals (avatarUrl, logoUrl) and the nested trackingConsent
-// - secrets and raw image bytes are never sent
+// - secrets, raw image bytes and cached trip paths are never sent
 
 const RELATION_FIELD = {
   company: "companyId",
@@ -21,7 +21,9 @@ const RELATION_FIELD = {
   uploadedBy: "uploadedBy",
 };
 const RENAMED = { createdById: "createdBy", uploadedById: "uploadedBy" };
-const HIDDEN = new Set(["passwordHash", "resetPasswordTokenHash", "resetPasswordExpires", "trackerToken", "data"]);
+// roadPath (a trip's cached road-snapped path) is large and only served by
+// GET /api/trips/:id/path.
+const HIDDEN = new Set(["passwordHash", "resetPasswordTokenHash", "resetPasswordExpires", "trackerToken", "data", "roadPath"]);
 
 function isRow(value) {
   return value !== null && typeof value === "object" && !(value instanceof Date) && !Buffer.isBuffer(value);

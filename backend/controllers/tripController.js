@@ -1,7 +1,8 @@
 import prisma from "../lib/prisma.js";
 import { toApi } from "../lib/serialize.js";
 import { tenantScope } from "../middleware/auth.js";
-import { sumTripDistanceKm } from "../lib/geo.js";
+import { tripPath, queueRoadPath } from "../lib/tripRoad.js";
+import { tripDistanceKm } from "./trackingController.js";
 
 // What the Mongo version populated: vehicleId → plate + mileage.
 const TRIP_VEHICLE = { select: { id: true, plateNumber: true, avgConsumptionLPer100Km: true } };
@@ -36,6 +37,7 @@ export async function listTrips(req, res) {
 
     const trips = await prisma.trip.findMany({
       where,
+      omit: { roadPath: true },
       include: { vehicle: TRIP_VEHICLE, driver: { select: { id: true, fullName: true, avatarUploadId: true } } },
       orderBy: { startTime: "desc" },
       take: from || to ? 1000 : 100,
@@ -52,6 +54,7 @@ export async function getTrip(req, res) {
   try {
     const trip = await prisma.trip.findFirst({
       where: { id: req.params.id, vehicleId: { in: await scopedVehicleIds(req) } },
+      omit: { roadPath: true },
       include: { vehicle: TRIP_VEHICLE, driver: { select: { id: true, fullName: true, email: true, avatarUploadId: true } } },
     });
 
@@ -64,17 +67,26 @@ export async function getTrip(req, res) {
   }
 }
 
+// GET /api/trips/:id/road — the road-following line for drawing the trip
+// (null geometry while it's in progress or not matched yet — see lib/tripRoad.js).
+export async function getTripRoad(req, res) {
+  try {
+    const trip = await prisma.trip.findFirst({ where: { id: req.params.id, vehicleId: { in: await scopedVehicleIds(req) } } });
+    if (!trip) return res.status(404).json({ error: "Trip not found" });
+    const { geometry, snapped } = await tripPath(trip);
+    return res.json({ snapped, geometry });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to fetch trip road" });
+  }
+}
+
 export async function getTripPath(req, res) {
   try {
     const trip = await prisma.trip.findFirst({ where: { id: req.params.id, vehicleId: { in: await scopedVehicleIds(req) } } });
     if (!trip) return res.status(404).json({ error: "Trip not found" });
 
-    const pings = await prisma.locationPing.findMany({
-      where: { vehicleId: trip.vehicleId, recordedAt: { gte: trip.startTime, lte: trip.endTime || new Date() } },
-      orderBy: { recordedAt: "asc" },
-    });
-
-    return res.json(toApi(pings));
+    return res.json((await tripPath(trip)).points);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch trip path" });
@@ -88,6 +100,7 @@ export async function listMyTrips(req, res) {
 
     const trips = await prisma.trip.findMany({
       where: { vehicleId: vehicle.id },
+      omit: { roadPath: true },
       include: { vehicle: TRIP_VEHICLE },
       orderBy: { startTime: "desc" },
       take: 50,
@@ -136,7 +149,7 @@ async function findMyOpenTrip(driverId) {
 async function tripPingsUpTo(trip, until) {
   return prisma.locationPing.findMany({
     where: { vehicleId: trip.vehicleId, recordedAt: { gte: trip.startTime, lte: until } },
-    select: { latitude: true, longitude: true, recordedAt: true },
+    select: { latitude: true, longitude: true, recordedAt: true, isMocked: true, accuracyM: true, speedKph: true },
     orderBy: { recordedAt: "asc" },
   });
 }
@@ -154,7 +167,7 @@ export async function getMyCurrentTrip(req, res) {
       startTime: trip.startTime,
       purpose: trip.purpose,
       note: trip.note,
-      distanceKm: Math.round(sumTripDistanceKm(pings) * 10) / 10,
+      distanceKm: tripDistanceKm(pings),
       lastUpdateAt: pings.length ? pings[pings.length - 1].recordedAt : null,
     });
   } catch (err) {
@@ -203,10 +216,12 @@ export async function endMyCurrentTrip(req, res) {
         endTime,
         endLat: last ? last.latitude : trip.startLat,
         endLng: last ? last.longitude : trip.startLng,
-        distanceKm: Math.round(sumTripDistanceKm(pings) * 10) / 10,
+        distanceKm: tripDistanceKm(pings),
         endedBy: "driver",
+        roadPath: null,
       },
     });
+    queueRoadPath(ended.id);
 
     return res.json(toApi(ended));
   } catch (err) {

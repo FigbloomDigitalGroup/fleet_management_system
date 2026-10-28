@@ -399,6 +399,10 @@ model Trip {
   purpose    TripPurpose?
   note       String       @default("") @db.VarChar(500)
   endedBy    TripEndedBy?
+  // The cleaned, road-snapped path ({ points, geometry }) — computed once
+  // after the trip ends (tripController.getTripPath) and cleared whenever
+  // the trip's points change.
+  roadPath   Json?
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 

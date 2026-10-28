@@ -12,6 +12,13 @@ interface PathPoint {
     recordedAt: string;
 }
 
+// The trip's road-following line (GET /api/trips/:id/road) — null until the
+// finished trip has been matched to the roads; the GPS points are drawn then.
+interface TripRoad {
+  snapped: boolean;
+  geometry: { lat: number; lng: number }[] | null;
+}
+
 const containerStyle = { width: "100%", height: "100%" };
 
 export default function TripReplayMap({ tripId }: { tripId: string }) {
@@ -20,6 +27,7 @@ export default function TripReplayMap({ tripId }: { tripId: string }) {
     });
 
     const [path, setPath] = useState<PathPoint[]>([]);
+    const [road, setRoad] = useState<TripRoad | null>(null);
     const [loading, setLoading] = useState(true);
     const [scrubIndex, setScrubIndexState] = useState(0);
 
@@ -44,6 +52,9 @@ export default function TripReplayMap({ tripId }: { tripId: string }) {
             })
             .catch((err) => console.error(err))
             .finally(() => setLoading(false));
+        apiRequest<TripRoad>(`/api/trips/${tripId}/road`)
+            .then(setRoad)
+            .catch(() => setRoad(null));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tripId]);
 
@@ -59,19 +70,22 @@ export default function TripReplayMap({ tripId }: { tripId: string }) {
 
     const center = { lat: path[0].latitude, lng: path[0].longitude };
     const polylinePath = path.map((p) => ({ lat: p.latitude, lng: p.longitude }));
+    const routeLine = road?.geometry ?? polylinePath;
     const current = path[scrubIndex];
 
     return (
         <div>
             <p className="text-xs text-teal-600 mb-2">
-                Full GPS route for this trip — drag the slider below to scrub through it.
+                {road?.snapped
+                    ? "Route matched to the roads — drag the slider below to scrub through it."
+                    : "GPS route for this trip — drag the slider below to scrub through it."}
             </p>
             <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden mb-3">
                 <div className="h-[400px] w-full">
                     <GoogleMap mapContainerStyle={containerStyle} center={center} zoom={13}>
                         {/* The full path, drawn as a line */}
                         <Polyline
-                            path={polylinePath}
+                            path={routeLine}
                             options={{ strokeColor: "#50a86a", strokeWeight: 4, strokeOpacity: 0.8 }}
                         />
 
