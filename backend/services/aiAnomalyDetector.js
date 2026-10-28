@@ -1,5 +1,5 @@
 import prisma from "../lib/prisma.js";
-import { askJson, isAiConfigured } from "./geminiService.js";
+import { askJson, isAiConfigured } from "./aiService.js";
 
 const LOOKBACK_MINUTES = 15;
 
@@ -33,10 +33,10 @@ ${tripLines}`;
 }
 
 // Runs one full scan pass: pulls every vehicle with a GPS ping in the last
-// LOOKBACK_MINUTES minutes, asks Gemini whether its recent
+// LOOKBACK_MINUTES minutes, asks the AI model whether its recent
 // behavior looks unusual, raises an `ai_pattern_anomaly` Alert for positive
 // hits, and always persists an AgentScanLog — including a "no anomaly" entry
-// per vehicle checked, and a "failed" log (with the error) if no Gemini key
+// per vehicle checked, and a "failed" log (with the error) if no AI key
 // is configured, rather than throwing out of the cron job.
 const saveScanLog = (data) => prisma.agentScanLog.create({ data });
 
@@ -49,7 +49,7 @@ export async function runAiAnomalyScan() {
       vehiclesScanned: 0,
       anomaliesFound: 0,
       status: "failed",
-      errorMessage: "GEMINI_API_KEY is not set — the AI agent is switched off",
+      errorMessage: "OPENAI_API_KEY is not set — the AI agent is switched off",
       details: [],
     });
   }

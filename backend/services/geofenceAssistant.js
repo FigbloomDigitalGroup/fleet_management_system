@@ -1,4 +1,4 @@
-import { askJson, isAiConfigured } from "./geminiService.js";
+import { askJson, isAiConfigured } from "./aiService.js";
 import { getPlaceLocation } from "./googleMapsService.js";
 
 const GEOFENCE_INTENT_PATTERN = /\b(draw|plan|create|make|set up|add)\b.*\bgeo-?fence\b/i;
