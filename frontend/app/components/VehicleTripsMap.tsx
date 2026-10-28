@@ -12,7 +12,7 @@ interface PathPoint {
   longitude: number;
 }
 
-const ROUTE_COLORS = ["#2dd4bf", "#f97316", "#6366f1", "#ec4899", "#84cc16"];
+const ROUTE_COLORS = ["#50a86a", "#ff8a12", "#6366f1", "#ec4899", "#84cc16"];
 const MAX_ROUTES = 5;
 const containerStyle = { width: "100%", height: "100%" };
 

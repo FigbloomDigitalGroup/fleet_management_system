@@ -10,8 +10,8 @@ import Skeleton from "./Skeleton";
 export function scoreColor(score: number | null): string {
   if (score == null) return "#9ca3af";
   if (score >= 90) return "#059669";
-  if (score >= 75) return "#0d9488";
-  if (score >= 60) return "#f97316";
+  if (score >= 75) return "#0e4f27";
+  if (score >= 60) return "#ff8a12";
   return "#dc2626";
 }
 

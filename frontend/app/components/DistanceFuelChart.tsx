@@ -24,12 +24,12 @@ export default function DistanceFuelChart({ data }: { data: DailyPoint[] }) {
         <AreaChart data={chartData}>
           <defs>
             <linearGradient id="distanceFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#2dd4bf" stopOpacity={0.22} />
-              <stop offset="95%" stopColor="#2dd4bf" stopOpacity={0} />
+              <stop offset="5%" stopColor="#50a86a" stopOpacity={0.22} />
+              <stop offset="95%" stopColor="#50a86a" stopOpacity={0} />
             </linearGradient>
             <linearGradient id="fuelFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#fb923c" stopOpacity={0.22} />
-              <stop offset="95%" stopColor="#fb923c" stopOpacity={0} />
+              <stop offset="5%" stopColor="#ffa049" stopOpacity={0.22} />
+              <stop offset="95%" stopColor="#ffa049" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid stroke="#f1f3f5" vertical={false} />
@@ -45,19 +45,19 @@ export default function DistanceFuelChart({ data }: { data: DailyPoint[] }) {
             yAxisId="distance"
             type="monotone"
             dataKey="distanceKm"
-            stroke="#2dd4bf"
+            stroke="#50a86a"
             strokeWidth={1.75}
             fill="url(#distanceFill)"
-            dot={{ r: 3, fill: "#2dd4bf", strokeWidth: 0 }}
+            dot={{ r: 3, fill: "#50a86a", strokeWidth: 0 }}
           />
           <Area
             yAxisId="fuel"
             type="monotone"
             dataKey="fuelConsumedLiters"
-            stroke="#fb923c"
+            stroke="#ffa049"
             strokeWidth={1.75}
             fill="url(#fuelFill)"
-            dot={{ r: 3, fill: "#fb923c", strokeWidth: 0 }}
+            dot={{ r: 3, fill: "#ffa049", strokeWidth: 0 }}
           />
         </AreaChart>
       </ResponsiveContainer>
