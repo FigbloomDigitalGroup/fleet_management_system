@@ -151,7 +151,7 @@ export default function VehicleHistoryReplay({ vehicleId }: { vehicleId: string 
         <>
           <div className="h-[420px] w-full overflow-hidden rounded ring-1 ring-black/5">
             <GoogleMap mapContainerStyle={containerStyle} center={path[0]} zoom={13} onLoad={setMap}>
-              <Polyline path={path} options={{ strokeColor: "#0d9488", strokeWeight: 4, strokeOpacity: 0.8 }} />
+              <Polyline path={path} options={{ strokeColor: "#0e4f27", strokeWeight: 4, strokeOpacity: 0.8 }} />
 
               {mocked.slice(0, MAX_MOCK_MARKERS).map((p) => (
                 <OverlayView key={`m-${p.recordedAt}`} position={{ lat: p.latitude, lng: p.longitude }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>

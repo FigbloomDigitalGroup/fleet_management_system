@@ -233,7 +233,7 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
                   key={r._id}
                   path={r.waypoints}
                   options={{
-                    strokeColor: r.source === "ai" ? "#a855f7" : "#f97316",
+                    strokeColor: r.source === "ai" ? "#a855f7" : "#ff8a12",
                     strokeWeight: 4,
                     strokeOpacity: 0.8,
                   }}
@@ -246,7 +246,7 @@ export default function RoutesManager({ canManage = false }: { canManage?: boole
               <Polyline
                 path={waypoints}
                 options={{
-                  strokeColor: draftSource === "ai" ? "#a855f7" : "#f97316",
+                  strokeColor: draftSource === "ai" ? "#a855f7" : "#ff8a12",
                   strokeWeight: 4,
                   strokeOpacity: 0.9,
                 }}

@@ -3,45 +3,35 @@
 @theme {
     --color-blue-950: oklch(25.7% 0.09 281.288);
 
-    /* Teal (the app's "green-blue" brand/accent color) and orange, both
-       dimmed a bit site-wide — mixed slightly toward a neutral gray rather
-       than hand-tuned per shade, so the whole scale stays visually coherent.
-       The sidebar is explicitly exempted below, restoring these same shades
-       to their original Tailwind values scoped to `aside`. */
-    --color-teal-50: color-mix(in oklch, oklch(98.4% 0.014 180.72) 88%, #6b7280 12%);
-    --color-teal-100: color-mix(in oklch, oklch(95.3% 0.051 180.801) 88%, #6b7280 12%);
-    --color-teal-200: color-mix(in oklch, oklch(91% 0.096 180.426) 88%, #6b7280 12%);
-    --color-teal-300: color-mix(in oklch, oklch(85.5% 0.138 181.071) 88%, #6b7280 12%);
-    --color-teal-400: color-mix(in oklch, oklch(77.7% 0.152 181.912) 88%, #6b7280 12%);
-    --color-teal-500: color-mix(in oklch, oklch(70.4% 0.14 182.503) 88%, #6b7280 12%);
-    --color-teal-600: color-mix(in oklch, oklch(60% 0.118 184.704) 88%, #6b7280 12%);
-    --color-teal-700: color-mix(in oklch, oklch(51.1% 0.096 186.391) 88%, #6b7280 12%);
-    --color-teal-800: color-mix(in oklch, oklch(43.7% 0.078 188.216) 88%, #6b7280 12%);
-    --color-teal-900: color-mix(in oklch, oklch(38.6% 0.063 188.416) 88%, #6b7280 12%);
-    --color-teal-950: color-mix(in oklch, oklch(27.7% 0.046 192.524) 88%, #6b7280 12%);
+    /* The brand colors come from the Figbloom logo: green #0E4F27 and
+       orange #FF8A12. Every "teal" class in the app (the brand/accent
+       color) draws on this green scale, and every "orange" class on this
+       orange scale — each built around the logo color at the shade the app
+       uses most (teal-600 for buttons/links, orange-500 for highlights),
+       same hue, lighter and darker steps either side. */
+    --color-teal-50: #eefbf0;
+    --color-teal-100: #d6f4dc;
+    --color-teal-200: #b4e6bf;
+    --color-teal-300: #86ce98;
+    --color-teal-400: #50a86a;
+    --color-teal-500: #217941;
+    --color-teal-600: #0e4f27;
+    --color-teal-700: #073e1c;
+    --color-teal-800: #042f14;
+    --color-teal-900: #02230d;
+    --color-teal-950: #011406;
 
-    --color-orange-50: color-mix(in oklch, oklch(98% 0.016 73.684) 88%, #6b7280 12%);
-    --color-orange-100: color-mix(in oklch, oklch(95.4% 0.038 75.164) 88%, #6b7280 12%);
-    --color-orange-200: color-mix(in oklch, oklch(90.1% 0.076 70.697) 88%, #6b7280 12%);
-    --color-orange-300: color-mix(in oklch, oklch(83.7% 0.128 66.29) 88%, #6b7280 12%);
-    --color-orange-400: color-mix(in oklch, oklch(75% 0.183 55.934) 88%, #6b7280 12%);
-    --color-orange-500: color-mix(in oklch, oklch(70.5% 0.213 47.604) 88%, #6b7280 12%);
-    --color-orange-600: color-mix(in oklch, oklch(64.6% 0.222 41.116) 88%, #6b7280 12%);
-    --color-orange-700: color-mix(in oklch, oklch(55.3% 0.195 38.402) 88%, #6b7280 12%);
-    --color-orange-800: color-mix(in oklch, oklch(47% 0.157 37.304) 88%, #6b7280 12%);
-    --color-orange-900: color-mix(in oklch, oklch(40.8% 0.123 38.172) 88%, #6b7280 12%);
-    --color-orange-950: color-mix(in oklch, oklch(26.6% 0.079 36.259) 88%, #6b7280 12%);
-}
-
-/* The sidebar is explicitly excluded from the dimmed teal above — restore
-   the exact shades it uses (background, active/hover nav state, the "AI
-   Agent" ping ring) to their original, undimmed values. CSS variables
-   inherit down the DOM, so redeclaring them here is enough to cover every
-   element inside the sidebar without touching DashboardShell.tsx itself. */
-aside {
-    --color-teal-950: oklch(27.7% 0.046 192.524);
-    --color-teal-900: oklch(38.6% 0.063 188.416);
-    --color-teal-400: oklch(77.7% 0.152 181.912);
+    --color-orange-50: #fff6ed;
+    --color-orange-100: #ffe9d4;
+    --color-orange-200: #ffd1a5;
+    --color-orange-300: #ffb776;
+    --color-orange-400: #ffa049;
+    --color-orange-500: #ff8a12;
+    --color-orange-600: #e16d00;
+    --color-orange-700: #b75400;
+    --color-orange-800: #8f4200;
+    --color-orange-900: #6f3600;
+    --color-orange-950: #3e1c00;
 }
 
 

@@ -8,7 +8,7 @@ const containerStyle = { width: "100%", height: "100%" };
 const defaultCenter = { lat: -1.2921, lng: 36.8219 };
 
 // One colour per driver so each driver's run reads as a group on the map.
-const DRIVER_COLORS = ["#0d9488", "#f97316", "#2563eb", "#9333ea", "#db2777", "#65a30d", "#0891b2", "#ca8a04"];
+const DRIVER_COLORS = ["#0e4f27", "#ff8a12", "#2563eb", "#9333ea", "#db2777", "#65a30d", "#217941", "#ca8a04"];
 
 export function driverColor(index: number) {
   return DRIVER_COLORS[index % DRIVER_COLORS.length];

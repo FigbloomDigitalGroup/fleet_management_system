@@ -170,12 +170,12 @@ export default function PlatformDashboard() {
             description="How fleet size compares across your companies"
             data={vehiclesPerCompany.map((v) => ({ name: v.name, vehicles: v.count }))}
             dataKey="vehicles"
-            color="#ea580c"
+            color="#e16d00"
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <CircleStat percentage={activeCompanyPct} label="Companies active" color="#0d9488" description="Share of companies in active status" />
-          <CircleStat percentage={activeVehiclePct} label="Vehicles active" color="#0d9488" description="Share of vehicles currently active" />
+          <CircleStat percentage={activeCompanyPct} label="Companies active" color="#0e4f27" description="Share of companies in active status" />
+          <CircleStat percentage={activeVehiclePct} label="Vehicles active" color="#0e4f27" description="Share of vehicles currently active" />
         </div>
       </div>
 
@@ -186,7 +186,7 @@ export default function PlatformDashboard() {
           description="Sign-ups per month across the platform"
           data={growth}
           dataKey="companies"
-          color="#0d9488"
+          color="#0e4f27"
         />
       </div>
 

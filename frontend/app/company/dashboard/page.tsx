@@ -134,8 +134,8 @@ export default function CompanyDashboard() {
             title="Fleet status breakdown"
             description="How your vehicles are distributed across statuses"
             data={[
-              { name: "Active", value: vehicleCounts.active, color: "#2dd4bf" },
-              { name: "Idle", value: vehicleCounts.idle, color: "#fb923c" },
+              { name: "Active", value: vehicleCounts.active, color: "#50a86a" },
+              { name: "Idle", value: vehicleCounts.idle, color: "#ffa049" },
               { name: "Offline", value: vehicleCounts.offline, color: "#000000" },
               { name: "Maintenance", value: vehicleCounts.maintenance, color: "#f87171" },
             ]}
@@ -147,7 +147,7 @@ export default function CompanyDashboard() {
             description="Number of trips started each day this week"
             data={tripsPerDay}
             dataKey="trips"
-            color="#ea580c"
+            color="#e16d00"
             size="lg"
           />
         </div>
@@ -155,7 +155,7 @@ export default function CompanyDashboard() {
 
       {/* Fleet active / offline rings */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <CircleStat percentage={activePct} label="Fleet active" color="#2dd4bf" description="Vehicles currently on the move" />
+        <CircleStat percentage={activePct} label="Fleet active" color="#50a86a" description="Vehicles currently on the move" />
         <CircleStat
           percentage={vehicleCounts.total ? Math.round((vehicleCounts.offline / vehicleCounts.total) * 100) : 0}
           label="Offline"
@@ -178,8 +178,8 @@ export default function CompanyDashboard() {
         })) ?? []
       }
       lines={[
-        { dataKey: "vehicleChecks", label: "Vehicle checks", color: "#2dd4bf" },
-        { dataKey: "anomalies", label: "Anomalies", color: "#f97316" },
+        { dataKey: "vehicleChecks", label: "Vehicle checks", color: "#50a86a" },
+        { dataKey: "anomalies", label: "Anomalies", color: "#ff8a12" },
       ]}
     />
   </div>
