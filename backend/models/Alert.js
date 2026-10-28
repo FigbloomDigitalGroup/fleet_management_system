@@ -30,6 +30,8 @@ const alertSchema = new mongoose.Schema(
         "app_logout",
         "inspection_failed",
         "job_failed",
+        "phone_left_vehicle",
+        "wrong_vehicle",
       ],
       required: true,
     },

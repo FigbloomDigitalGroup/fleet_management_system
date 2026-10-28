@@ -22,6 +22,8 @@ const DRIVER_VISIBLE_TYPES = [
   "phone_use",
   "mock_location",
   "inspection_failed",
+  "phone_left_vehicle",
+  "wrong_vehicle",
 ];
 
 // admin_message is a message TO a driver, not an operational alert ABOUT a
