@@ -1,27 +1,25 @@
-import Company from "../models/Company.js";
-import User from "../models/User.js";
-import Geofence from "../models/Geofence.js";
-import Vehicle from "../models/Vehicle.js";
-import Trip from "../models/Trip.js";
-import LocationPing from "../models/LocationPing.js";
+import prisma from "../lib/prisma.js";
+import { toApi } from "../lib/serialize.js";
 import { isInsideGeofence } from "../lib/geo.js";
 import { PLAN_PRICING_KES } from "../config/pricing.js";
 import { setImageField } from "./uploadController.js";
 
+// Updates one company; null when it doesn't exist (Mongo's findByIdAndUpdate).
+async function updateCompany(id, data) {
+  const { count } = await prisma.company.updateMany({ where: { id: String(id) }, data });
+  return count ? prisma.company.findUnique({ where: { id: String(id) } }) : null;
+}
+
 // PLATFORM_ADMIN only — list every company on the platform
 export async function listCompanies(req, res) {
   try {
-    const companies = await Company.find().sort({ createdAt: -1 });
+    const companies = await prisma.company.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { _count: { select: { users: true } } },
+    });
 
-    // attach a quick vehicle/user count per company (useful for the dashboard table)
-    const companiesWithCounts = await Promise.all(
-      companies.map(async (company) => {
-        const userCount = await User.countDocuments({ companyId: company._id });
-        return { ...company.toObject(), userCount };
-      })
-    );
-
-    return res.json(companiesWithCounts);
+    // attach a quick user count per company (useful for the dashboard table)
+    return res.json(companies.map(({ _count, ...company }) => ({ ...toApi(company), userCount: _count.users })));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch companies" });
@@ -31,12 +29,11 @@ export async function listCompanies(req, res) {
 // PLATFORM_ADMIN only — get one company's full detail
 export async function getCompany(req, res) {
   try {
-    const company = await Company.findById(req.params.id);
+    const company = await prisma.company.findUnique({ where: { id: req.params.id }, include: { users: true } });
     if (!company) return res.status(404).json({ error: "Company not found" });
 
-    const users = await User.find({ companyId: company._id }).select("-passwordHash");
-
-    return res.json({ company, users });
+    const { users, ...rest } = company;
+    return res.json({ company: toApi(rest), users: toApi(users) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch company" });
@@ -52,14 +49,10 @@ export async function updateCompanyStatus(req, res) {
       return res.status(400).json({ error: `status must be one of: ${allowed.join(", ")}` });
     }
 
-    const company = await Company.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
+    const company = await updateCompany(req.params.id, { status });
     if (!company) return res.status(404).json({ error: "Company not found" });
 
-    return res.json(company);
+    return res.json(toApi(company));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update company status" });
@@ -73,10 +66,10 @@ export async function getMyCompany(req, res) {
       return res.status(400).json({ error: "This account is not linked to a company" });
     }
 
-    const company = await Company.findById(req.user.companyId);
+    const company = await prisma.company.findUnique({ where: { id: req.user.companyId } });
     if (!company) return res.status(404).json({ error: "Company not found" });
 
-    return res.json(company);
+    return res.json(toApi(company));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch company" });
@@ -95,14 +88,10 @@ export async function updateMyCompany(req, res) {
       return res.status(400).json({ error: "name is required" });
     }
 
-    const company = await Company.findByIdAndUpdate(
-      req.user.companyId,
-      { name: name.trim() },
-      { new: true }
-    );
+    const company = await updateCompany(req.user.companyId, { name: name.trim() });
     if (!company) return res.status(404).json({ error: "Company not found" });
 
-    return res.json(company);
+    return res.json(toApi(company));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update company" });
@@ -123,7 +112,7 @@ export async function updateStartPoint(req, res) {
       return res.status(400).json({ error: "lat and lng are required" });
     }
 
-    const geofences = await Geofence.find({ companyId: req.user.companyId });
+    const geofences = await prisma.geofence.findMany({ where: { companyId: req.user.companyId } });
     const matchedGeofence = geofences.find((g) => isInsideGeofence(lat, lng, g));
     if (!matchedGeofence) {
       return res.status(400).json({
@@ -131,14 +120,12 @@ export async function updateStartPoint(req, res) {
       });
     }
 
-    const company = await Company.findByIdAndUpdate(
-      req.user.companyId,
-      { dailyStartPoint: { lat, lng, geofenceId: matchedGeofence._id, updatedAt: new Date() } },
-      { new: true }
-    );
+    const company = await updateCompany(req.user.companyId, {
+      dailyStartPoint: { lat, lng, geofenceId: matchedGeofence.id, updatedAt: new Date().toISOString() },
+    });
     if (!company) return res.status(404).json({ error: "Company not found" });
 
-    return res.json(company);
+    return res.json(toApi(company));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update starting point" });
@@ -163,14 +150,10 @@ export async function updateMyPlan(req, res) {
       });
     }
 
-    const company = await Company.findByIdAndUpdate(
-      req.user.companyId,
-      { subscriptionPlan: "trial", paymentMethod: null },
-      { new: true }
-    );
+    const company = await updateCompany(req.user.companyId, { subscriptionPlan: "trial", paymentMethod: null });
     if (!company) return res.status(404).json({ error: "Company not found" });
 
-    return res.json(company);
+    return res.json(toApi(company));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update plan" });
@@ -190,19 +173,21 @@ const MS_PER_MONTH = 30 * 24 * 60 * 60 * 1000;
 // one entry per detected drop (with the day it happened), so callers can
 // either sum everything (all-time total) or bucket by day (daily chart).
 async function computeFuelDrops(vehicleIds, since) {
-  const query = { vehicleId: { $in: vehicleIds }, fuelLevelLiters: { $ne: null } };
-  if (since) query.recordedAt = { $gte: since };
-
-  const pings = await LocationPing.find(query)
-    .select("vehicleId fuelLevelLiters recordedAt")
-    .sort({ vehicleId: 1, recordedAt: 1 })
-    .lean();
+  const pings = await prisma.locationPing.findMany({
+    where: {
+      vehicleId: { in: vehicleIds },
+      fuelLevelLiters: { not: null },
+      ...(since ? { recordedAt: { gte: since } } : {}),
+    },
+    select: { vehicleId: true, fuelLevelLiters: true, recordedAt: true },
+    orderBy: [{ vehicleId: "asc" }, { recordedAt: "asc" }],
+  });
 
   const drops = [];
   let prevVehicleId = null;
   let prevLevel = null;
   for (const ping of pings) {
-    const vehicleId = ping.vehicleId.toString();
+    const vehicleId = ping.vehicleId;
     if (vehicleId !== prevVehicleId) {
       prevVehicleId = vehicleId;
       prevLevel = ping.fuelLevelLiters;
@@ -224,10 +209,10 @@ async function computeFuelDrops(vehicleIds, since) {
 // otherwise invisible outside the company's own Vehicles page. Read-only —
 // doesn't touch or recalculate any existing trip/vehicle/alert data.
 async function computeCompanyStats(companyId) {
-  const company = await Company.findById(companyId);
+  const company = await prisma.company.findUnique({ where: { id: String(companyId) } });
   if (!company) return null;
 
-  const vehicles = await Vehicle.find({ companyId: company._id }).select("vehicleType");
+  const vehicles = await prisma.vehicle.findMany({ where: { companyId: company.id }, select: { id: true, vehicleType: true } });
   const vehicleCount = vehicles.length;
   const vehicleTypeBreakdown = vehicles.reduce((acc, v) => {
     const type = v.vehicleType || "car";
@@ -235,12 +220,11 @@ async function computeCompanyStats(companyId) {
     return acc;
   }, {});
 
-  const vehicleIds = vehicles.map((v) => v._id);
-  const [distanceResult] = await Trip.aggregate([
-    { $match: { vehicleId: { $in: vehicleIds } } },
-    { $group: { _id: null, total: { $sum: { $ifNull: ["$distanceKm", 0] } } } },
-  ]);
-  const totalDistanceKm = Math.round((distanceResult?.total || 0) * 10) / 10;
+  const distance = await prisma.trip.aggregate({
+    where: { vehicleId: { in: vehicles.map((v) => v.id) } },
+    _sum: { distanceKm: true },
+  });
+  const totalDistanceKm = Math.round((distance._sum.distanceKm || 0) * 10) / 10;
 
   const monthsSinceJoining = Math.max(1, Math.ceil((Date.now() - company.createdAt.getTime()) / MS_PER_MONTH));
   const pricePerVehicle = PLAN_PRICE_PER_VEHICLE[company.subscriptionPlan];
@@ -267,8 +251,8 @@ const DAILY_STATS_DAYS = 7;
 // (first ping before it, second after) is missed — an acceptable rounding
 // edge for a 7-day dashboard chart, not a billing figure.
 async function computeDailyStats(companyId, days) {
-  const vehicles = await Vehicle.find({ companyId }).select("_id");
-  const vehicleIds = vehicles.map((v) => v._id);
+  const vehicles = await prisma.vehicle.findMany({ where: { companyId: String(companyId) }, select: { id: true } });
+  const vehicleIds = vehicles.map((v) => v.id);
 
   const since = new Date();
   since.setDate(since.getDate() - (days - 1));
@@ -281,16 +265,16 @@ async function computeDailyStats(companyId, days) {
     dayKeys.push(d.toISOString().slice(0, 10));
   }
 
-  const distanceAgg = await Trip.aggregate([
-    { $match: { vehicleId: { $in: vehicleIds }, startTime: { $gte: since } } },
-    {
-      $group: {
-        _id: { $dateToString: { format: "%Y-%m-%d", date: "$startTime" } },
-        total: { $sum: { $ifNull: ["$distanceKm", 0] } },
-      },
-    },
-  ]);
-  const distanceByDay = Object.fromEntries(distanceAgg.map((d) => [d._id, d.total]));
+  // Bucketed by UTC day, as Mongo's $dateToString did.
+  const trips = await prisma.trip.findMany({
+    where: { vehicleId: { in: vehicleIds }, startTime: { gte: since } },
+    select: { startTime: true, distanceKm: true },
+  });
+  const distanceByDay = {};
+  for (const t of trips) {
+    const key = t.startTime.toISOString().slice(0, 10);
+    distanceByDay[key] = (distanceByDay[key] || 0) + (t.distanceKm || 0);
+  }
 
   const fuelDrops = await computeFuelDrops(vehicleIds, since);
   const fuelByDay = {};
@@ -364,14 +348,10 @@ export async function updateMyRevenue(req, res) {
       return res.status(400).json({ error: "totalRevenue must be a number >= 0" });
     }
 
-    const company = await Company.findByIdAndUpdate(
-      req.user.companyId,
-      { totalRevenue },
-      { new: true }
-    );
+    const company = await updateCompany(req.user.companyId, { totalRevenue });
     if (!company) return res.status(404).json({ error: "Company not found" });
 
-    return res.json(company);
+    return res.json(toApi(company));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update revenue" });
@@ -383,11 +363,14 @@ export async function updateMyRevenue(req, res) {
 export async function updateMyLogo(req, res) {
   try {
     if (req.body.uploadId === undefined) return res.status(400).json({ error: "uploadId is required (or null to remove)" });
-    const company = await Company.findById(req.user.companyId);
+    const company = await prisma.company.findUnique({ where: { id: req.user.companyId ?? "" }, select: { id: true } });
     if (!company) return res.status(404).json({ error: "Company not found" });
-    const error = await setImageField(company, "logoUploadId", req.body.uploadId, { companyId: company._id, kind: "logo" });
+    const { error, url } = await setImageField("company", company.id, "logoUploadId", req.body.uploadId, {
+      companyId: company.id,
+      kind: "logo",
+    });
     if (error) return res.status(400).json({ error });
-    return res.json({ logoUrl: company.logoUrl });
+    return res.json({ logoUrl: url });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update company logo" });

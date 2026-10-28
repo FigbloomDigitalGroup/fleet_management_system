@@ -1,6 +1,5 @@
 import jwt from "jsonwebtoken";
-import User from "../models/User.js";
-import Vehicle from "../models/Vehicle.js";
+import prisma from "../lib/prisma.js";
 
 // Verifies the JWT and attaches current user info to req.user
 export async function authenticate(req, res, next) {
@@ -13,13 +12,16 @@ export async function authenticate(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select("role companyId adminAccess");
+    const user = await prisma.user.findUnique({
+      where: { id: String(decoded.id) },
+      select: { id: true, role: true, companyId: true, adminAccess: true },
+    });
     if (!user) {
       return res.status(401).json({ error: "User account no longer exists" });
     }
 
     req.user = {
-      id: user._id,
+      id: user.id,
       role: user.role,
       companyId: user.companyId,
       adminAccess: user.role === "ADMIN" ? user.adminAccess || "full" : null,
@@ -66,7 +68,7 @@ function adminAccessDenial(req) {
 export async function authenticateTracking(req, res, next) {
   const deviceToken = req.headers["x-tracker-token"];
   if (deviceToken) {
-    const vehicle = await Vehicle.findOne({ trackerToken: deviceToken }).select("+trackerToken");
+    const vehicle = await prisma.vehicle.findFirst({ where: { trackerToken: String(deviceToken) } });
     if (!vehicle) return res.status(401).json({ error: "Invalid tracker token" });
     req.trackingVehicle = vehicle;
     req.trackingSource = "device";
@@ -89,7 +91,7 @@ export function authorize(...allowedRoles) {
   };
 }
 
-// Builds a Mongoose filter scoped to the requester's tenant.
+// Builds a Prisma where-clause scoped to the requester's tenant.
 // PLATFORM_ADMIN sees everything; everyone else is locked to their own companyId.
 export function tenantScope(req) {
   if (req.user.role === "PLATFORM_ADMIN") return {};

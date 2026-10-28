@@ -229,9 +229,9 @@ model Company {
   // { speedLimitKph, idleMinutes, offlineMinutes, lowBatteryPercent,
   //   harshBrakingKphPerSec, harshAccelerationKphPerSec, disabledTypes[],
   //   emailRecipientIds[], emailTypes[] } — defaults filled by lib/companySettings.js.
-  alertSettings    Json?
+  alertSettings    Json           @default("{\"speedLimitKph\":80,\"idleMinutes\":10,\"offlineMinutes\":15,\"lowBatteryPercent\":15,\"harshBrakingKphPerSec\":12,\"harshAccelerationKphPerSec\":10,\"disabledTypes\":[],\"emailRecipientIds\":[],\"emailTypes\":[]}")
   // { enabled, start, end, days[] }
-  trackingHours    Json?
+  trackingHours    Json           @default("{\"enabled\":false,\"start\":\"06:00\",\"end\":\"20:00\",\"days\":[1,2,3,4,5,6]}")
   dataRetentionDays Int           @default(180)
   logoUploadId     String?
   createdAt        DateTime       @default(now())

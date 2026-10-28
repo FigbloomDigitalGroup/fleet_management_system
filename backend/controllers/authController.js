@@ -1,9 +1,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import Company from "../models/Company.js";
-import User from "../models/User.js";
-import RefreshToken from "../models/RefreshToken.js";
+import prisma from "../lib/prisma.js";
+import { toApi, isUniqueViolation } from "../lib/serialize.js";
 import { sendPasswordResetEmail } from "../lib/mailer.js";
 import { parseSpreadsheetRows } from "../lib/spreadsheet.js";
 import { getPlatformSettings } from "./settingsController.js";
@@ -27,15 +26,18 @@ function hashToken(token) {
 
 function signAccessToken(user) {
   return jwt.sign(
-    { id: user._id, role: user.role, companyId: user.companyId },
+    { id: user.id, role: user.role, companyId: user.companyId },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || "1h" }
   );
 }
 
+// The random jwtid makes every token unique — without it, two tokens issued
+// to the same user within one second were identical and clashed on tokenHash.
 function signRefreshToken(user) {
-  return jwt.sign({ id: user._id }, process.env.REFRESH_TOKEN_SECRET, {
+  return jwt.sign({ id: user.id }, process.env.REFRESH_TOKEN_SECRET, {
     expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d",
+    jwtid: crypto.randomUUID(),
   });
 }
 
@@ -44,10 +46,8 @@ function signRefreshToken(user) {
 async function issueRefreshToken(user) {
   const token = signRefreshToken(user);
   const { exp } = jwt.decode(token);
-  await RefreshToken.create({
-    userId: user._id,
-    tokenHash: hashToken(token),
-    expiresAt: new Date(exp * 1000),
+  await prisma.refreshToken.create({
+    data: { userId: user.id, tokenHash: hashToken(token), expiresAt: new Date(exp * 1000) },
   });
   return token;
 }
@@ -82,7 +82,7 @@ export async function registerCompany(req, res) {
       return res.status(400).json({ error: `industry must be one of: ${INDUSTRIES.join(", ")}` });
     }
 
-    const existing = await User.findOne({ email: normalizedEmail });
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail }, select: { id: true } });
     if (existing) {
       return res.status(409).json({ error: "An account with this email already exists" });
     }
@@ -94,22 +94,29 @@ export async function registerCompany(req, res) {
     const trialEndsAt =
       subscriptionPlan === "trial" ? new Date(Date.now() + settings.trialDays * 24 * 60 * 60 * 1000) : null;
 
-    const company = await Company.create({
-      name: companyName,
-      slug,
-      status: settings.requireManualApproval ? "pending" : "active",
-      industry: industry || "other",
-      subscriptionPlan,
-      trialEndsAt,
-    });
-
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({
-      email: normalizedEmail,
-      passwordHash,
-      fullName: ownerName,
-      role: "COMPANY_OWNER",
-      companyId: company._id,
+    // Company and owner together, so a failure can't leave an ownerless company.
+    const [company, user] = await prisma.$transaction(async (tx) => {
+      const company = await tx.company.create({
+        data: {
+          name: companyName,
+          slug,
+          status: settings.requireManualApproval ? "pending" : "active",
+          industry: industry || "other",
+          subscriptionPlan,
+          trialEndsAt,
+        },
+      });
+      const user = await tx.user.create({
+        data: {
+          email: normalizedEmail,
+          passwordHash,
+          fullName: ownerName,
+          role: "COMPANY_OWNER",
+          companyId: company.id,
+        },
+      });
+      return [company, user];
     });
 
     const accessToken = signAccessToken(user);
@@ -117,8 +124,8 @@ export async function registerCompany(req, res) {
 
     return res.status(201).json({
       message: "Company and owner account created",
-      company,
-      user: { id: user._id, email: user.email, role: user.role },
+      company: toApi(company),
+      user: { id: user.id, email: user.email, role: user.role },
       accessToken,
       refreshToken,
     });
@@ -154,24 +161,26 @@ export async function createUserUnderCompany(req, res) {
       return res.status(400).json({ error: "companyId is required" });
     }
 
-    const existing = await User.findOne({ email: normalizedEmail });
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail }, select: { id: true } });
     if (existing) {
       return res.status(409).json({ error: "An account with this email already exists" });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({
-      email: normalizedEmail,
-      passwordHash,
-      fullName,
-      role,
-      companyId,
-      ...(role === "ADMIN" ? { adminAccess } : {}),
+    const user = await prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        passwordHash,
+        fullName,
+        role,
+        companyId: String(companyId),
+        ...(role === "ADMIN" ? { adminAccess } : {}),
+      },
     });
 
     return res.status(201).json({
       message: `${role} account created`,
-      user: { id: user._id, email: user.email, role: user.role, companyId: user.companyId },
+      user: { id: user.id, email: user.email, role: user.role, companyId: user.companyId },
     });
   } catch (err) {
     console.error(err);
@@ -232,7 +241,7 @@ export async function bulkImportDrivers(req, res) {
         continue;
       }
 
-      const existing = await User.findOne({ email });
+      const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
       if (existing) {
         results.push({ row: rowNumber, email, status: "failed", error: "An account with this email already exists" });
         continue;
@@ -240,11 +249,13 @@ export async function bulkImportDrivers(req, res) {
 
       try {
         const passwordHash = await bcrypt.hash(password, 10);
-        await User.create({ email, passwordHash, fullName, role: "DRIVER", companyId });
+        await prisma.user.create({
+          data: { email, passwordHash, fullName: String(fullName), role: "DRIVER", companyId: String(companyId) },
+        });
         results.push({ row: rowNumber, email, status: "created", generatedPassword });
         createdCount++;
       } catch (err) {
-        if (err.code === 11000) {
+        if (isUniqueViolation(err)) {
           results.push({ row: rowNumber, email, status: "failed", error: "An account with this email already exists" });
         } else {
           results.push({ row: rowNumber, email, status: "failed", error: "Could not save this row" });
@@ -268,7 +279,7 @@ export async function login(req, res) {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const user = await User.findOne({ email: normalizedEmail });
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
@@ -301,7 +312,7 @@ export async function login(req, res) {
     // Block login based on the user's company state — status and trial
     // expiry were previously only ever set, never actually checked anywhere.
     if (user.companyId) {
-      const company = await Company.findById(user.companyId);
+      const company = await prisma.company.findUnique({ where: { id: user.companyId } });
       if (company && company.status === "suspended") {
         return res.status(403).json({
           error: "Your company's account has been suspended. Please contact support.",
@@ -324,7 +335,7 @@ export async function login(req, res) {
 
     return res.json({
       user: {
-        id: user._id,
+        id: user.id,
         email: user.email,
         fullName: user.fullName,
         role: user.role,
@@ -352,22 +363,21 @@ export async function refresh(req, res) {
 
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
     const tokenHash = hashToken(refreshToken);
-    const stored = await RefreshToken.findOne({ tokenHash });
+    const stored = await prisma.refreshToken.findUnique({ where: { tokenHash } });
 
     if (!stored) {
       return res.status(401).json({ error: "Invalid or expired refresh token" });
     }
 
     if (stored.revoked) {
-      await RefreshToken.updateMany({ userId: stored.userId, revoked: false }, { revoked: true });
+      await prisma.refreshToken.updateMany({ where: { userId: stored.userId, revoked: false }, data: { revoked: true } });
       return res.status(401).json({ error: "This session has been revoked. Please sign in again." });
     }
 
-    const user = await User.findById(decoded.id);
+    const user = await prisma.user.findUnique({ where: { id: String(decoded.id) } });
     if (!user) return res.status(401).json({ error: "Invalid refresh token" });
 
-    stored.revoked = true;
-    await stored.save();
+    await prisma.refreshToken.update({ where: { id: stored.id }, data: { revoked: true } });
 
     const accessToken = signAccessToken(user);
     const newRefreshToken = await issueRefreshToken(user);
@@ -385,7 +395,7 @@ export async function logout(req, res) {
     if (!refreshToken) return res.status(204).send();
 
     const tokenHash = hashToken(refreshToken);
-    await RefreshToken.updateOne({ tokenHash }, { revoked: true });
+    await prisma.refreshToken.updateMany({ where: { tokenHash }, data: { revoked: true } });
     return res.status(204).send();
   } catch (err) {
     // Sign-out should never fail visibly from the client's perspective.
@@ -403,12 +413,16 @@ export async function forgotPassword(req, res) {
       return res.status(400).json({ error: "email is required" });
     }
 
-    const user = await User.findOne({ email });
+    const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });
     if (user) {
       const token = crypto.randomBytes(32).toString("hex");
-      user.resetPasswordTokenHash = hashResetToken(token);
-      user.resetPasswordExpires = new Date(Date.now() + RESET_TOKEN_TTL_MS);
-      await user.save();
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          resetPasswordTokenHash: hashResetToken(token),
+          resetPasswordExpires: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+        },
+      });
 
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
       const resetLink = `${frontendUrl}/reset-password?email=${encodeURIComponent(email)}&token=${token}`;
@@ -441,7 +455,7 @@ export async function resetPassword(req, res) {
       return res.status(400).json({ error: "Password must be at least 8 characters" });
     }
 
-    const user = await User.findOne({ email });
+    const user = await prisma.user.findUnique({ where: { email } });
     if (
       !user ||
       !user.resetPasswordTokenHash ||
@@ -452,14 +466,14 @@ export async function resetPassword(req, res) {
       return res.status(400).json({ error: "This reset link is invalid or has expired" });
     }
 
-    user.passwordHash = await bcrypt.hash(newPassword, 10);
-    user.resetPasswordTokenHash = null;
-    user.resetPasswordExpires = null;
-    await user.save();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: await bcrypt.hash(newPassword, 10), resetPasswordTokenHash: null, resetPasswordExpires: null },
+    });
 
     // The password may have been compromised — invalidate every existing
     // session so a reset also forces re-authentication everywhere.
-    await RefreshToken.updateMany({ userId: user._id, revoked: false }, { revoked: true });
+    await prisma.refreshToken.updateMany({ where: { userId: user.id, revoked: false }, data: { revoked: true } });
 
     return res.json({ message: "Password updated. You can now sign in." });
   } catch (err) {
