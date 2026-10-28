@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const TEAL = { r: 45, g: 212, b: 191 }; // #2dd4bf
+const TEAL = { r: 45, g: 212, b: 191 }; // #50a86a
 const RED = { r: 239, g: 68, b: 68 }; // #ef4444
 
 function lerp(a: number, b: number, t: number) {

@@ -13,7 +13,7 @@ export default function BarChartCard({
   description,
   data,
   dataKey,
-  color = "#ea580c",
+  color = "#e16d00",
   size = "md",
 }: {
   title: string;

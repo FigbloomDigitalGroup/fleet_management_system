@@ -72,7 +72,7 @@ export default function TripReplayMap({ tripId }: { tripId: string }) {
                         {/* The full path, drawn as a line */}
                         <Polyline
                             path={polylinePath}
-                            options={{ strokeColor: "#2dd4bf", strokeWeight: 4, strokeOpacity: 0.8 }}
+                            options={{ strokeColor: "#50a86a", strokeWeight: 4, strokeOpacity: 0.8 }}
                         />
 
                         {/* Start marker */}

@@ -2,7 +2,7 @@ export default function CircleStat({
   percentage,
   label,
   description,
-  color = "#0d9488",
+  color = "#0e4f27",
 }: {
   percentage: number;
   label: string;
