@@ -27,6 +27,8 @@ export const ALERT_TYPE_LABELS = {
   app_logout: "Driver logged out",
   inspection_failed: "Inspection failed",
   job_failed: "Job failed",
+  phone_left_vehicle: "Phone left vehicle",
+  wrong_vehicle: "Phone in another vehicle",
 };
 
 const DEFAULT_DEBOUNCE_MINUTES = 2;
