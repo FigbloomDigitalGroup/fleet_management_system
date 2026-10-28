@@ -132,8 +132,8 @@ export default function AdminDashboard() {
             title="Fleet status breakdown"
             description="How your vehicles are distributed across statuses"
             data={[
-              { name: "Active", value: vehicleCounts.active, color: "#2dd4bf" },
-              { name: "Idle", value: vehicleCounts.idle, color: "#fb923c" },
+              { name: "Active", value: vehicleCounts.active, color: "#50a86a" },
+              { name: "Idle", value: vehicleCounts.idle, color: "#ffa049" },
               { name: "Offline", value: vehicleCounts.offline, color: "#000000" },
               { name: "Maintenance", value: vehicleCounts.maintenance, color: "#f87171" },
             ]}
@@ -145,7 +145,7 @@ export default function AdminDashboard() {
             description="Number of trips started each day this week"
             data={tripsPerDay}
             dataKey="trips"
-            color="#ea580c"
+            color="#e16d00"
             size="lg"
           />
         </div>
@@ -153,8 +153,8 @@ export default function AdminDashboard() {
 
       {/* Fleet active / drivers assigned rings */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <CircleStat percentage={activePct} label="Fleet active" color="#2dd4bf" description="Vehicles currently on the move" />
-        <CircleStat percentage={assignedPct} label="Drivers assigned" color="#0d9488" description="Drivers with a vehicle assigned" />
+        <CircleStat percentage={activePct} label="Fleet active" color="#50a86a" description="Vehicles currently on the move" />
+        <CircleStat percentage={assignedPct} label="Drivers assigned" color="#0e4f27" description="Drivers with a vehicle assigned" />
       </div>
 
       {/* Agent activity on the left, Fleet on the map on the right */}
@@ -171,8 +171,8 @@ export default function AdminDashboard() {
       })) ?? []
     }
     lines={[
-      { dataKey: "vehicleChecks", label: "Vehicle checks", color: "#2dd4bf" },
-      { dataKey: "anomalies", label: "Anomalies", color: "#f97316" },
+      { dataKey: "vehicleChecks", label: "Vehicle checks", color: "#50a86a" },
+      { dataKey: "anomalies", label: "Anomalies", color: "#ff8a12" },
     ]}
   />
 </div>
