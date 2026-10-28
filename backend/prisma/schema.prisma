@@ -1,0 +1,694 @@
+// PostgreSQL schema for FIGBLOOM FLEET — a table-for-table translation of
+// the Mongoose models in ../models. Conventions:
+//
+// - Ids are strings. Rows copied from MongoDB keep their ObjectId hex string
+//   (so links, signed upload URLs and the phones' cached ids keep working);
+//   new rows get a cuid. Controllers still return them as `_id`.
+// - Small nested objects that are always read and written whole (alert
+//   settings, tracking hours, phone status, geofence/route points, inspection
+//   items, proof of delivery, scan details) are JSONB columns, as they were
+//   embedded documents in Mongo.
+// - Mongo's TTL indexes (resolved alerts after 30 min, expired refresh
+//   tokens) have no Postgres equivalent; a cron job deletes those rows.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  PLATFORM_ADMIN
+  COMPANY_OWNER
+  ADMIN
+  DRIVER
+}
+
+enum AdminAccess {
+  full
+  dispatcher
+  viewer
+}
+
+enum CompanyStatus {
+  active
+  suspended
+  pending
+}
+
+enum Industry {
+  logistics_courier
+  public_transport
+  school_transport
+  construction
+  taxi_ride_hailing
+  security_cash_transit
+  agriculture
+  government_municipal
+  oil_gas
+  rental_car
+  other
+}
+
+enum PaymentMethod {
+  mpesa
+  paystack
+}
+
+enum VehicleType {
+  car
+  van
+  truck
+  bus
+  motorcycle
+  tractor
+  excavator
+  crane
+  dump_truck
+  tanker
+  armored_vehicle
+  trailer
+}
+
+enum VehicleStatus {
+  active
+  idle
+  offline
+  maintenance
+}
+
+enum AlertType {
+  speeding
+  geofence_entry
+  geofence_exit
+  unauthorized_movement
+  device_offline
+  maintenance_due
+  route_deviation
+  fuel_anomaly
+  ai_pattern_anomaly
+  sos
+  harsh_braking
+  harsh_acceleration
+  excessive_idling
+  admin_message
+  harsh_cornering
+  phone_use
+  mock_location
+  location_disabled
+  low_battery
+  tracking_stopped
+  app_logout
+  inspection_failed
+  job_failed
+}
+
+enum DrivingEventType {
+  speeding
+  harsh_braking
+  harsh_acceleration
+  harsh_cornering
+  phone_use
+}
+
+enum DrivingEventSource {
+  gps
+  sensor
+  app
+}
+
+enum ExpenseCategory {
+  fuel
+  toll
+  parking
+  repair
+  other
+}
+
+enum GeofenceType {
+  circle
+  polygon
+}
+
+enum JobStatus {
+  assigned
+  started
+  arrived
+  completed
+  failed
+  cancelled
+}
+
+enum PingSource {
+  device
+  driver_app
+  manual
+}
+
+enum MaintenanceKind {
+  record
+  reminder
+}
+
+enum MaintenanceStatus {
+  open
+  done
+}
+
+enum Plan {
+  trial
+  basic
+  pro
+  enterprise
+}
+
+enum PaidPlan {
+  basic
+  pro
+}
+
+enum TransactionStatus {
+  pending
+  success
+  failed
+  abandoned
+}
+
+enum TripPurpose {
+  business
+  private
+}
+
+enum TripEndedBy {
+  auto
+  driver
+}
+
+enum RouteFrequency {
+  daily
+  weekly
+}
+
+enum RouteSource {
+  manual
+  ai
+}
+
+enum UploadKind {
+  inspection
+  receipt
+  pod_photo
+  signature
+  avatar
+  logo
+}
+
+enum ScanStatus {
+  success
+  failed
+}
+
+// ── Tenancy and people ──────────────────────────────────────────────────────
+
+model Company {
+  id               String         @id @default(cuid())
+  name             String
+  slug             String         @unique
+  status           CompanyStatus  @default(pending)
+  subscriptionPlan String         @default("trial")
+  trialEndsAt      DateTime?
+  industry         Industry       @default(other)
+  paymentMethod    PaymentMethod?
+  totalRevenue     Float          @default(0)
+  // { lat, lng, geofenceId, updatedAt } — where drivers start their day.
+  dailyStartPoint  Json?
+  // { speedLimitKph, idleMinutes, offlineMinutes, lowBatteryPercent,
+  //   harshBrakingKphPerSec, harshAccelerationKphPerSec, disabledTypes[],
+  //   emailRecipientIds[], emailTypes[] } — defaults filled by lib/companySettings.js.
+  alertSettings    Json?
+  // { enabled, start, end, days[] }
+  trackingHours    Json?
+  dataRetentionDays Int           @default(180)
+  logoUploadId     String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  logo             Upload?           @relation("CompanyLogo", fields: [logoUploadId], references: [id], onDelete: SetNull)
+  users            User[]
+  vehicles         Vehicle[]
+  alerts           Alert[]
+  drivingEvents    DrivingEvent[]
+  expenses         Expense[]
+  geofences        Geofence[]
+  inspections      Inspection[]
+  jobs             Job[]
+  maintenance      MaintenanceRecord[]
+  messages         Message[]
+  routes           Route[]
+  routeCompletions RouteCompletion[]
+  transactions     Transaction[]
+  uploads          Upload[]          @relation("CompanyUploads")
+}
+
+model User {
+  id                   String      @id @default(cuid())
+  email                String      @unique // stored lowercase, trimmed
+  passwordHash         String
+  fullName             String
+  role                 Role
+  companyId            String?
+  adminAccess          AdminAccess @default(full)
+  // Driver's tracking consent (Kenya Data Protection Act).
+  consentAcceptedAt    DateTime?
+  consentVersion       String?
+  status               String      @default("active")
+  resetPasswordTokenHash String?
+  resetPasswordExpires DateTime?
+  phone                String?
+  dob                  String?
+  nationalId           String?
+  address              String?
+  licenseNumber        String?
+  licenseExpiry        String?
+  emergencyName        String?
+  emergencyPhone       String?
+  avatarUploadId       String?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  company          Company?          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  avatar           Upload?           @relation("UserAvatar", fields: [avatarUploadId], references: [id], onDelete: SetNull)
+  refreshTokens    RefreshToken[]
+  drivenVehicles   Vehicle[]         @relation("VehicleDriver")
+  trips            Trip[]
+  drivingEvents    DrivingEvent[]
+  expenses         Expense[]
+  inspections      Inspection[]
+  jobs             Job[]             @relation("JobDriver")
+  jobsCreated      Job[]             @relation("JobCreator")
+  driverMessages   Message[]         @relation("MessageThread")
+  sentMessages     Message[]         @relation("MessageSender")
+  routeCompletions RouteCompletion[]
+  uploads          Upload[]          @relation("UserUploads")
+
+  @@index([companyId])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique // sha256 of the token, never the raw value
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt]) // swept by the cleanup cron
+}
+
+model PlatformSettings {
+  id                    String   @id @default(cuid())
+  requireManualApproval Boolean  @default(true)
+  defaultPlan           Plan     @default(trial)
+  trialDays             Int      @default(14)
+  // { trial, basic, pro, enterprise } — max vehicles per plan.
+  vehicleLimits         Json     @default("{\"trial\":3,\"basic\":15,\"pro\":50,\"enterprise\":999}")
+  supportEmail          String   @default("support@getour.com")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+// ── Vehicles and tracking ───────────────────────────────────────────────────
+
+model Vehicle {
+  id                      String        @id @default(cuid())
+  companyId               String
+  plateNumber             String
+  make                    String?
+  model                   String?
+  deviceId                String?       @unique
+  trackerToken            String?       // secret; never selected unless verifying a ping
+  vehicleType             VehicleType   @default(car)
+  status                  VehicleStatus @default(offline)
+  statusManuallySet       Boolean       @default(false)
+  driverId                String?
+  startGeofenceId         String?
+  fuelCapacityLiters      Float         @default(60)
+  avgConsumptionLPer100Km Float         @default(12)
+  odometerBaseKm          Float         @default(0)
+  // { lastSeenAt, batteryLevel, isCharging, locationEnabled, permission,
+  //   appState, isSharing, platform, appVersion, offlineAlertedAt }
+  device                  Json?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+
+  company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  driver           User?             @relation("VehicleDriver", fields: [driverId], references: [id], onDelete: SetNull)
+  startGeofence    Geofence?         @relation(fields: [startGeofenceId], references: [id], onDelete: SetNull)
+  pings            LocationPing[]
+  trips            Trip[]
+  alerts           Alert[]
+  drivingEvents    DrivingEvent[]
+  expenses         Expense[]
+  inspections      Inspection[]
+  jobs             Job[]
+  maintenance      MaintenanceRecord[]
+  routes           Route[]
+  routeCompletions RouteCompletion[]
+
+  @@unique([companyId, plateNumber])
+  @@index([trackerToken])
+}
+
+model LocationPing {
+  id              String     @id @default(cuid())
+  vehicleId       String
+  latitude        Float
+  longitude       Float
+  speedKph        Float?
+  heading         Float?
+  fuelLevelLiters Float?
+  accuracyM       Float?
+  isMocked        Boolean    @default(false)
+  source          PingSource @default(manual)
+  recordedAt      DateTime   @default(now())
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, recordedAt(sort: Desc)])
+}
+
+model Trip {
+  id         String       @id @default(cuid())
+  vehicleId  String
+  driverId   String?
+  startTime  DateTime
+  endTime    DateTime?
+  startLat   Float?
+  startLng   Float?
+  endLat     Float?
+  endLng     Float?
+  distanceKm Float?
+  purpose    TripPurpose?
+  note       String       @default("") @db.VarChar(500)
+  endedBy    TripEndedBy?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driver  User?   @relation(fields: [driverId], references: [id], onDelete: SetNull)
+
+  @@index([vehicleId, startTime])
+}
+
+model DrivingEvent {
+  id         String             @id @default(cuid())
+  companyId  String
+  vehicleId  String
+  driverId   String?
+  type       DrivingEventType
+  source     DrivingEventSource
+  value      Float?
+  speedKph   Float?
+  latitude   Float?
+  longitude  Float?
+  recordedAt DateTime
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driver  User?   @relation(fields: [driverId], references: [id], onDelete: SetNull)
+
+  @@index([driverId, recordedAt(sort: Desc)])
+  @@index([companyId, recordedAt(sort: Desc)])
+}
+
+model Alert {
+  id                String    @id @default(cuid())
+  companyId         String
+  vehicleId         String
+  type              AlertType
+  message           String
+  resolved          Boolean   @default(false)
+  hiddenForDriverAt DateTime?
+  resolvedAt        DateTime? // rows resolved over 30 min ago are deleted by cron
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, resolved])
+  @@index([resolvedAt])
+}
+
+model Geofence {
+  id        String       @id @default(cuid())
+  companyId String
+  name      String
+  type      GeofenceType
+  centerLat Float?
+  centerLng Float?
+  radiusM   Float?
+  polygon   Json         @default("[]") // [{ lat, lng }]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  startVehicles Vehicle[]
+
+  @@index([companyId])
+}
+
+// ── Dispatch ────────────────────────────────────────────────────────────────
+
+model Route {
+  id              String         @id @default(cuid())
+  companyId       String
+  vehicleId       String
+  name            String
+  waypoints       Json           @default("[]") // [{ lat, lng }] in order
+  toleranceMeters Float          @default(300)
+  speedLimitKph   Float?
+  active          Boolean        @default(true)
+  frequency       RouteFrequency @default(daily)
+  daysOfWeek      Int[]          @default([])
+  source          RouteSource    @default(manual)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  company     Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  completions RouteCompletion[]
+
+  @@index([vehicleId])
+}
+
+model RouteCompletion {
+  id          String   @id @default(cuid())
+  companyId   String
+  routeId     String
+  vehicleId   String
+  driverId    String?
+  dateKey     String   // "YYYY-MM-DD"
+  completedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  route   Route   @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driver  User?   @relation(fields: [driverId], references: [id], onDelete: SetNull)
+
+  @@index([routeId, dateKey])
+  @@index([vehicleId, dateKey])
+}
+
+model Job {
+  id            String    @id @default(cuid())
+  companyId     String
+  driverId      String?
+  vehicleId     String?
+  title         String
+  address       String
+  latitude      Float
+  longitude     Float
+  contactName   String?
+  contactPhone  String?
+  notes         String?
+  scheduledDate String    // "YYYY-MM-DD"
+  windowStart   DateTime?
+  windowEnd     DateTime?
+  sequence      Int       @default(0)
+  status        JobStatus @default(assigned)
+  failureReason String?
+  startedAt     DateTime?
+  arrivedAt     DateTime?
+  completedAt   DateTime?
+  failedAt      DateTime?
+  // { photoUploadIds[], signatureUploadId, recipientName, notes,
+  //   scannedCode, latitude, longitude, capturedAt }
+  proof         Json?
+  trackingToken String    @unique
+  createdById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  driver    User?    @relation("JobDriver", fields: [driverId], references: [id], onDelete: SetNull)
+  vehicle   Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  createdBy User?    @relation("JobCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([companyId, scheduledDate])
+  @@index([driverId, status, sequence])
+}
+
+model Message {
+  id                String    @id @default(cuid())
+  companyId         String
+  driverId          String // whose thread this belongs to
+  senderId          String
+  fromDriver        Boolean
+  body              String    @db.VarChar(2000)
+  readAt            DateTime?
+  hiddenForDriverAt DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  driver  User    @relation("MessageThread", fields: [driverId], references: [id], onDelete: Cascade)
+  sender  User    @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([driverId, createdAt(sort: Desc)])
+  @@index([companyId, createdAt(sort: Desc)])
+}
+
+// ── Records ─────────────────────────────────────────────────────────────────
+
+model Expense {
+  id              String          @id @default(cuid())
+  companyId       String
+  vehicleId       String
+  driverId        String?
+  category        ExpenseCategory
+  amount          Float // KES
+  note            String?
+  incurredAt      DateTime        @default(now())
+  receiptUploadId String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driver  User?   @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  receipt Upload? @relation("ExpenseReceipt", fields: [receiptUploadId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, incurredAt(sort: Desc)])
+  @@index([vehicleId, incurredAt(sort: Desc)])
+}
+
+model Inspection {
+  id         String   @id @default(cuid())
+  companyId  String
+  vehicleId  String
+  driverId   String
+  items      Json     @default("[]") // [{ key, label, ok, note, photoUploadId }]
+  passed     Boolean
+  odometerKm Float?
+  notes      String?
+  latitude   Float?
+  longitude  Float?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driver  User    @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([vehicleId, createdAt(sort: Desc)])
+}
+
+model MaintenanceRecord {
+  id            String            @id @default(cuid())
+  companyId     String
+  vehicleId     String
+  kind          MaintenanceKind
+  title         String
+  notes         String?
+  performedAt   DateTime?
+  odometerKm    Float?
+  costKes       Float?
+  dueDate       DateTime?
+  dueOdometerKm Float?
+  intervalDays  Int?
+  intervalKm    Float?
+  status        MaintenanceStatus @default(open)
+  alertedAt     DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, kind, status])
+}
+
+model Transaction {
+  id        String            @id @default(cuid())
+  companyId String
+  plan      PaidPlan
+  reference String            @unique
+  amount    Float // KES, not subunits
+  currency  String            @default("KES")
+  status    TransactionStatus @default(pending)
+  channel   String?
+  paidAt    DateTime?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt(sort: Desc)])
+}
+
+// Small images stored in the database (capped at 2 MB in uploadController).
+model Upload {
+  id          String     @id @default(cuid())
+  companyId   String
+  uploadedById String
+  kind        UploadKind
+  contentType String // "image/jpeg" | "image/png"
+  sizeBytes   Int
+  data        Bytes // never selected unless serving the raw image
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  company    Company   @relation("CompanyUploads", fields: [companyId], references: [id], onDelete: Cascade)
+  uploadedBy User      @relation("UserUploads", fields: [uploadedById], references: [id], onDelete: Cascade)
+  logoOf     Company[] @relation("CompanyLogo")
+  avatarOf   User[]    @relation("UserAvatar")
+  receiptOf  Expense[] @relation("ExpenseReceipt")
+}
+
+// ── AI agent ────────────────────────────────────────────────────────────────
+
+model AgentScanLog {
+  id              String     @id @default(cuid())
+  runAt           DateTime   @default(now())
+  vehiclesScanned Int        @default(0)
+  anomaliesFound  Int        @default(0)
+  status          ScanStatus @default(success)
+  errorMessage    String?
+  details         Json       @default("[]") // [{ vehicleId, plateNumber, anomaly, reason }]
+
+  @@index([runAt(sort: Desc)])
+}
