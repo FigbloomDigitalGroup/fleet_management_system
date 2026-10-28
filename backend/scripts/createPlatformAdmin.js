@@ -1,6 +1,7 @@
 // Creates a PLATFORM_ADMIN account. The credentials are passed on the
 // command line rather than written into this file:
-//   node scripts/createPlatformAdmin.js <email> <password> [full name]
+//   npm run create-admin -- <email> <password> [full name]
+// It writes to the database DATABASE_URL points at.
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import prisma from "../lib/prisma.js";
@@ -11,7 +12,7 @@ async function run() {
   const fullName = nameParts.join(" ") || "ADMIN";
 
   if (!email || !password) {
-    console.log("Usage: node scripts/createPlatformAdmin.js <email> <password> [full name]");
+    console.log("Usage: npm run create-admin -- <email> <password> [full name]");
     process.exit(1);
   }
   if (password.length < 8) {
