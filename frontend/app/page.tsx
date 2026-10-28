@@ -357,10 +357,10 @@ export default function LandingPage() {
               const Icon = f.icon;
               return (
                 <div key={f.title} className="rounded-2xl border border-gray-200 p-6 transition-shadow hover:shadow-md">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
-                    <Icon size={17} />
+                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 ring-1 ring-teal-100">
+                    <Icon size={26} />
                   </span>
-                  <h3 className="mt-4 text-base font-semibold text-gray-950">{f.title}</h3>
+                  <h3 className="mt-5 text-base font-semibold text-gray-950">{f.title}</h3>
                   <p className="mt-1.5 text-sm leading-relaxed text-gray-500">{f.text}</p>
                 </div>
               );
