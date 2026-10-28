@@ -3,6 +3,7 @@ import { toApi } from "../lib/serialize.js";
 import { isInsideGeofence } from "../lib/geo.js";
 import { PLAN_PRICING_KES } from "../config/pricing.js";
 import { setImageField } from "./uploadController.js";
+import { sendCompanyApprovedEmail } from "../lib/mailer.js";
 
 // Updates one company; null when it doesn't exist (Mongo's findByIdAndUpdate).
 async function updateCompany(id, data) {
@@ -49,8 +50,18 @@ export async function updateCompanyStatus(req, res) {
       return res.status(400).json({ error: `status must be one of: ${allowed.join(", ")}` });
     }
 
+    const before = await prisma.company.findUnique({ where: { id: req.params.id }, select: { status: true } });
     const company = await updateCompany(req.params.id, { status });
     if (!company) return res.status(404).json({ error: "Company not found" });
+
+    // Tell the owner(s) when a waiting company is approved — in the
+    // background, so an email problem never blocks the approval.
+    if (before?.status === "pending" && status === "active") {
+      prisma.user
+        .findMany({ where: { companyId: company.id, role: "COMPANY_OWNER" }, select: { email: true } })
+        .then((owners) => owners.length && sendCompanyApprovedEmail(owners.map((o) => o.email).join(", "), { companyName: company.name }))
+        .catch((err) => console.error(`[approval email] failed for ${company.name}:`, err.message));
+    }
 
     return res.json(toApi(company));
   } catch (err) {

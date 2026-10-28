@@ -3,11 +3,12 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import prisma from "../lib/prisma.js";
 import { toApi, isUniqueViolation } from "../lib/serialize.js";
-import { sendPasswordResetEmail } from "../lib/mailer.js";
+import { sendPasswordResetEmail, sendCompanyWelcomeEmail, sendUserWelcomeEmail, frontendUrl } from "../lib/mailer.js";
 import { parseSpreadsheetRows } from "../lib/spreadsheet.js";
 import { getPlatformSettings } from "./settingsController.js";
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const WELCOME_LINK_DAYS = 3; // "Set your password" link in the welcome email
 const MAX_IMPORT_ROWS = 500;
 
 function generateTempPassword() {
@@ -17,6 +18,34 @@ function generateTempPassword() {
 function hashResetToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
+
+// Emails a user the company just added: a "Set your password" link (the same
+// mechanism as a password reset, valid WELCOME_LINK_DAYS) plus how to sign
+// in. Runs in the background — a slow or failed email never fails the
+// request that created the user.
+function sendWelcomeInBackground(user, companyName) {
+  (async () => {
+    const token = crypto.randomBytes(32).toString("hex");
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetPasswordTokenHash: hashResetToken(token),
+        resetPasswordExpires: new Date(Date.now() + WELCOME_LINK_DAYS * 86400000),
+      },
+    });
+    const setPasswordLink = `${frontendUrl()}/reset-password?email=${encodeURIComponent(user.email)}&token=${token}`;
+    await sendUserWelcomeEmail(user.email, {
+      fullName: user.fullName,
+      companyName,
+      role: user.role,
+      setPasswordLink,
+      validDays: WELCOME_LINK_DAYS,
+    });
+  })().catch((err) => console.error(`[welcome email] failed for ${user.email}:`, err.message));
+}
+
+const companyNameOf = async (companyId) =>
+  (await prisma.company.findUnique({ where: { id: String(companyId) }, select: { name: true } }))?.name ?? "your company";
 
 // Used for refresh tokens too — same idea, different purpose: we only ever
 // keep a hash of the token server-side, never the raw value.
@@ -119,6 +148,12 @@ export async function registerCompany(req, res) {
       return [company, user];
     });
 
+    sendCompanyWelcomeEmail(user.email, {
+      ownerName: user.fullName,
+      companyName: company.name,
+      pending: company.status === "pending",
+    }).catch((err) => console.error(`[welcome email] failed for ${user.email}:`, err.message));
+
     const accessToken = signAccessToken(user);
     const refreshToken = await issueRefreshToken(user);
 
@@ -177,6 +212,7 @@ export async function createUserUnderCompany(req, res) {
         ...(role === "ADMIN" ? { adminAccess } : {}),
       },
     });
+    sendWelcomeInBackground(user, await companyNameOf(user.companyId));
 
     return res.status(201).json({
       message: `${role} account created`,
@@ -212,6 +248,7 @@ export async function bulkImportDrivers(req, res) {
 
     const results = [];
     let createdCount = 0;
+    let companyName; // looked up once, on the first created driver
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -249,9 +286,11 @@ export async function bulkImportDrivers(req, res) {
 
       try {
         const passwordHash = await bcrypt.hash(password, 10);
-        await prisma.user.create({
+        const created = await prisma.user.create({
           data: { email, passwordHash, fullName: String(fullName), role: "DRIVER", companyId: String(companyId) },
         });
+        companyName ??= await companyNameOf(companyId);
+        sendWelcomeInBackground(created, companyName);
         results.push({ row: rowNumber, email, status: "created", generatedPassword });
         createdCount++;
       } catch (err) {
@@ -424,8 +463,7 @@ export async function forgotPassword(req, res) {
         },
       });
 
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-      const resetLink = `${frontendUrl}/reset-password?email=${encodeURIComponent(email)}&token=${token}`;
+      const resetLink = `${frontendUrl()}/reset-password?email=${encodeURIComponent(email)}&token=${token}`;
       try {
         await sendPasswordResetEmail(email, resetLink);
       } catch (mailErr) {
