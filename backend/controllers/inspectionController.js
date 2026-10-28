@@ -1,5 +1,5 @@
-import Inspection from "../models/Inspection.js";
-import Vehicle from "../models/Vehicle.js";
+import prisma from "../lib/prisma.js";
+import { toApi } from "../lib/serialize.js";
 import { tenantScope } from "../middleware/auth.js";
 import { raiseAlert } from "../lib/alerts.js";
 import { ownedUploadIds, uploadUrl } from "./uploadController.js";
@@ -21,7 +21,7 @@ export const INSPECTION_ITEMS = [
 ];
 
 function present(inspection) {
-  const o = inspection.toObject ? inspection.toObject() : inspection;
+  const o = toApi(inspection);
   return { ...o, items: o.items.map((i) => ({ ...i, photoUrl: uploadUrl(i.photoUploadId) })) };
 }
 
@@ -33,7 +33,7 @@ export function getInspectionTemplate(req, res) {
 // raises an inspection_failed alert listing what's wrong.
 export async function createInspection(req, res) {
   try {
-    const vehicle = await Vehicle.findOne({ driverId: req.user.id });
+    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id }, select: { id: true, companyId: true } });
     if (!vehicle) return res.status(400).json({ error: "No vehicle is assigned to you yet" });
 
     const submitted = Array.isArray(req.body.items) ? req.body.items : [];
@@ -58,22 +58,25 @@ export async function createInspection(req, res) {
     const failed = items.filter((i) => !i.ok);
     const odometerKm = Number(req.body.odometerKm);
 
-    const inspection = await Inspection.create({
-      companyId: vehicle.companyId,
-      vehicleId: vehicle._id,
-      driverId: req.user.id,
-      items,
-      passed: failed.length === 0,
-      odometerKm: Number.isFinite(odometerKm) && odometerKm >= 0 ? odometerKm : null,
-      notes: req.body.notes ? String(req.body.notes).slice(0, 1000) : null,
-      latitude: typeof req.body.latitude === "number" ? req.body.latitude : undefined,
-      longitude: typeof req.body.longitude === "number" ? req.body.longitude : undefined,
+    const inspection = await prisma.inspection.create({
+      data: {
+        companyId: vehicle.companyId,
+        vehicleId: vehicle.id,
+        driverId: req.user.id,
+        items,
+        passed: failed.length === 0,
+        // Number(null) is 0 — only a real reading counts.
+        odometerKm: req.body.odometerKm != null && Number.isFinite(odometerKm) && odometerKm >= 0 ? odometerKm : null,
+        notes: req.body.notes ? String(req.body.notes).slice(0, 1000) : null,
+        latitude: typeof req.body.latitude === "number" ? req.body.latitude : undefined,
+        longitude: typeof req.body.longitude === "number" ? req.body.longitude : undefined,
+      },
     });
 
     if (failed.length) {
       await raiseAlert({
         companyId: vehicle.companyId,
-        vehicleId: vehicle._id,
+        vehicleId: vehicle.id,
         type: "inspection_failed",
         message: `Pre-trip inspection failed on ${failed.length} item(s): ${failed.map((f) => f.label + (f.note ? ` (${f.note})` : "")).join("; ")}.`,
         debounceMinutes: 0,
@@ -90,10 +93,12 @@ export async function createInspection(req, res) {
 // DRIVER — their own recent inspections
 export async function listMyInspections(req, res) {
   try {
-    const inspections = await Inspection.find({ driverId: req.user.id })
-      .populate("vehicleId", "plateNumber")
-      .sort({ createdAt: -1 })
-      .limit(30);
+    const inspections = await prisma.inspection.findMany({
+      where: { driverId: req.user.id },
+      include: { vehicle: { select: { id: true, plateNumber: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+    });
     return res.json(inspections.map(present));
   } catch (err) {
     console.error(err);
@@ -105,15 +110,19 @@ export async function listMyInspections(req, res) {
 // vehicle or driver
 export async function listInspections(req, res) {
   try {
-    const filter = { ...tenantScope(req) };
-    if (req.query.vehicleId) filter.vehicleId = req.query.vehicleId;
-    if (req.query.driverId) filter.driverId = req.query.driverId;
-    if (req.query.passed === "false") filter.passed = false;
-    const inspections = await Inspection.find(filter)
-      .populate("vehicleId", "plateNumber")
-      .populate("driverId", "fullName")
-      .sort({ createdAt: -1 })
-      .limit(100);
+    const where = { ...tenantScope(req) };
+    if (req.query.vehicleId) where.vehicleId = String(req.query.vehicleId);
+    if (req.query.driverId) where.driverId = String(req.query.driverId);
+    if (req.query.passed === "false") where.passed = false;
+    const inspections = await prisma.inspection.findMany({
+      where,
+      include: {
+        vehicle: { select: { id: true, plateNumber: true } },
+        driver: { select: { id: true, fullName: true, avatarUploadId: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
     return res.json(inspections.map(present));
   } catch (err) {
     console.error(err);
