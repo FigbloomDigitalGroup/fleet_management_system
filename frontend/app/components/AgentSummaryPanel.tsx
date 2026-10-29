@@ -1,5 +1,6 @@
 "use client";
 
+import { useFleetTheme } from "../context/FleetThemeContext";
 import { useEffect, useMemo, useState } from "react";
 import { FiCpu } from "react-icons/fi";
 import { apiRequest } from "../lib/api";
@@ -23,6 +24,7 @@ function timeAgo(dateStr: string) {
 // running (presence) and shows, in plain stats and text, what it has found
 // for this fleet specifically. Shared by both the admin and company pages.
 export default function AgentSummaryPanel() {
+  const { colors } = useFleetTheme();
   const [summary, setSummary] = useState<AgentSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -104,8 +106,8 @@ export default function AgentSummaryPanel() {
             anomalies: d.anomalies,
           }))}
           lines={[
-            { dataKey: "vehicleChecks", label: "Vehicle checks", color: "#50a86a" },
-            { dataKey: "anomalies", label: "Anomalies", color: "#ff8a12" },
+            { dataKey: "vehicleChecks", label: "Vehicle checks", color: colors.mainSoft },
+            { dataKey: "anomalies", label: "Anomalies", color: colors.accent },
           ]}
         />
       </div>

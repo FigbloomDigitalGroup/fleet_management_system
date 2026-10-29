@@ -217,33 +217,42 @@ enum ScanStatus {
 // ── Tenancy and people ──────────────────────────────────────────────────────
 
 model Company {
-  id               String         @id @default(cuid())
-  name             String
-  slug             String         @unique
-  status           CompanyStatus  @default(pending)
-  subscriptionPlan String         @default("trial")
-  trialEndsAt      DateTime?
-  industry         Industry       @default(other)
-  paymentMethod    PaymentMethod?
-  totalRevenue     Float          @default(0)
+  id                String         @id @default(cuid())
+  name              String
+  slug              String         @unique
+  status            CompanyStatus  @default(pending)
+  subscriptionPlan  String         @default("trial")
+  trialEndsAt       DateTime?
+  industry          Industry       @default(other)
+  paymentMethod     PaymentMethod?
+  totalRevenue      Float          @default(0)
   // { lat, lng, geofenceId, updatedAt } — where drivers start their day.
-  dailyStartPoint  Json?
+  dailyStartPoint   Json?
   // { speedLimitKph, idleMinutes, offlineMinutes, lowBatteryPercent,
   //   harshBrakingKphPerSec, harshAccelerationKphPerSec, disabledTypes[],
   //   emailRecipientIds[], emailTypes[] } — defaults filled by lib/companySettings.js.
-  alertSettings    Json           @default("{\"speedLimitKph\":80,\"idleMinutes\":10,\"offlineMinutes\":15,\"lowBatteryPercent\":15,\"harshBrakingKphPerSec\":12,\"harshAccelerationKphPerSec\":10,\"disabledTypes\":[],\"emailRecipientIds\":[],\"emailTypes\":[]}")
+  alertSettings     Json           @default("{\"speedLimitKph\":80,\"idleMinutes\":10,\"offlineMinutes\":15,\"lowBatteryPercent\":15,\"harshBrakingKphPerSec\":12,\"harshAccelerationKphPerSec\":10,\"disabledTypes\":[],\"emailRecipientIds\":[],\"emailTypes\":[]}")
   // { enabled, start, end, days[] }
-  trackingHours    Json           @default("{\"enabled\":false,\"start\":\"06:00\",\"end\":\"20:00\",\"days\":[1,2,3,4,5,6]}")
-  dataRetentionDays Int           @default(180)
-  logoUploadId     String?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  trackingHours     Json           @default("{\"enabled\":false,\"start\":\"06:00\",\"end\":\"20:00\",\"days\":[1,2,3,4,5,6]}")
+  dataRetentionDays Int            @default(180)
+  logoUploadId      String?
+  // Dashboard look chosen by the owner: a theme id from the web app's
+  // themes list, and the text size (small | normal | large).
+  theme             String         @default("forest")
+  textSize          String         @default("normal")
+  // With theme "custom": the owner's own colours as "#rrggbb" — main
+  // (sidebar, buttons) and accent (highlights). Shades are built from them.
+  customMainColor   String?
+  customAccentColor String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
-  logo             Upload?           @relation("CompanyLogo", fields: [logoUploadId], references: [id], onDelete: SetNull)
+  logo             Upload?             @relation("CompanyLogo", fields: [logoUploadId], references: [id], onDelete: SetNull)
   users            User[]
   vehicles         Vehicle[]
   alerts           Alert[]
   drivingEvents    DrivingEvent[]
+  geofenceEvents   GeofenceEvent[]
   expenses         Expense[]
   geofences        Geofence[]
   inspections      Inspection[]
@@ -253,34 +262,34 @@ model Company {
   routes           Route[]
   routeCompletions RouteCompletion[]
   transactions     Transaction[]
-  uploads          Upload[]          @relation("CompanyUploads")
+  uploads          Upload[]            @relation("CompanyUploads")
 }
 
 model User {
-  id                   String      @id @default(cuid())
-  email                String      @unique // stored lowercase, trimmed
-  passwordHash         String
-  fullName             String
-  role                 Role
-  companyId            String?
-  adminAccess          AdminAccess @default(full)
+  id                     String      @id @default(cuid())
+  email                  String      @unique // stored lowercase, trimmed
+  passwordHash           String
+  fullName               String
+  role                   Role
+  companyId              String?
+  adminAccess            AdminAccess @default(full)
   // Driver's tracking consent (Kenya Data Protection Act).
-  consentAcceptedAt    DateTime?
-  consentVersion       String?
-  status               String      @default("active")
+  consentAcceptedAt      DateTime?
+  consentVersion         String?
+  status                 String      @default("active")
   resetPasswordTokenHash String?
-  resetPasswordExpires DateTime?
-  phone                String?
-  dob                  String?
-  nationalId           String?
-  address              String?
-  licenseNumber        String?
-  licenseExpiry        String?
-  emergencyName        String?
-  emergencyPhone       String?
-  avatarUploadId       String?
-  createdAt            DateTime    @default(now())
-  updatedAt            DateTime    @updatedAt
+  resetPasswordExpires   DateTime?
+  phone                  String?
+  dob                    String?
+  nationalId             String?
+  address                String?
+  licenseNumber          String?
+  licenseExpiry          String?
+  emergencyName          String?
+  emergencyPhone         String?
+  avatarUploadId         String?
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
 
   company          Company?          @relation(fields: [companyId], references: [id], onDelete: Cascade)
   avatar           Upload?           @relation("UserAvatar", fields: [avatarUploadId], references: [id], onDelete: SetNull)
@@ -288,6 +297,7 @@ model User {
   drivenVehicles   Vehicle[]         @relation("VehicleDriver")
   trips            Trip[]
   drivingEvents    DrivingEvent[]
+  geofenceEvents   GeofenceEvent[]
   expenses         Expense[]
   inspections      Inspection[]
   jobs             Job[]             @relation("JobDriver")
@@ -336,7 +346,7 @@ model Vehicle {
   make                    String?
   model                   String?
   deviceId                String?       @unique
-  trackerToken            String?       // secret; never selected unless verifying a ping
+  trackerToken            String? // secret; never selected unless verifying a ping
   vehicleType             VehicleType   @default(car)
   status                  VehicleStatus @default(offline)
   statusManuallySet       Boolean       @default(false)
@@ -351,13 +361,14 @@ model Vehicle {
   createdAt               DateTime      @default(now())
   updatedAt               DateTime      @updatedAt
 
-  company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  driver           User?             @relation("VehicleDriver", fields: [driverId], references: [id], onDelete: SetNull)
-  startGeofence    Geofence?         @relation(fields: [startGeofenceId], references: [id], onDelete: SetNull)
+  company          Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  driver           User?               @relation("VehicleDriver", fields: [driverId], references: [id], onDelete: SetNull)
+  startGeofence    Geofence?           @relation(fields: [startGeofenceId], references: [id], onDelete: SetNull)
   pings            LocationPing[]
   trips            Trip[]
   alerts           Alert[]
   drivingEvents    DrivingEvent[]
+  geofenceEvents   GeofenceEvent[]
   expenses         Expense[]
   inspections      Inspection[]
   jobs             Job[]
@@ -468,10 +479,41 @@ model Geofence {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
-  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company       Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   startVehicles Vehicle[]
+  events        GeofenceEvent[]
 
   @@index([companyId])
+}
+
+enum GeofenceEventKind {
+  enter
+  exit
+}
+
+// Every time a vehicle crosses a geofence boundary. Kept for reports —
+// unlike the geofence alerts, which are deleted 30 minutes after resolving.
+// The name is copied in so history survives the geofence being deleted.
+model GeofenceEvent {
+  id           String            @id @default(cuid())
+  companyId    String
+  vehicleId    String
+  driverId     String?
+  geofenceId   String?
+  geofenceName String
+  kind         GeofenceEventKind
+  latitude     Float
+  longitude    Float
+  recordedAt   DateTime
+  createdAt    DateTime          @default(now())
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vehicle  Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driver   User?     @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  geofence Geofence? @relation(fields: [geofenceId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, recordedAt(sort: Desc)])
+  @@index([vehicleId, recordedAt])
 }
 
 // ── Dispatch ────────────────────────────────────────────────────────────────
@@ -504,7 +546,7 @@ model RouteCompletion {
   routeId     String
   vehicleId   String
   driverId    String?
-  dateKey     String   // "YYYY-MM-DD"
+  dateKey     String // "YYYY-MM-DD"
   completedAt DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -530,7 +572,7 @@ model Job {
   contactName   String?
   contactPhone  String?
   notes         String?
-  scheduledDate String    // "YYYY-MM-DD"
+  scheduledDate String // "YYYY-MM-DD"
   windowStart   DateTime?
   windowEnd     DateTime?
   sequence      Int       @default(0)
@@ -668,15 +710,15 @@ model Transaction {
 
 // Small images stored in the database (capped at 2 MB in uploadController).
 model Upload {
-  id          String     @id @default(cuid())
-  companyId   String
+  id           String     @id @default(cuid())
+  companyId    String
   uploadedById String
-  kind        UploadKind
-  contentType String // "image/jpeg" | "image/png"
-  sizeBytes   Int
-  data        Bytes // never selected unless serving the raw image
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  kind         UploadKind
+  contentType  String // "image/jpeg" | "image/png"
+  sizeBytes    Int
+  data         Bytes // never selected unless serving the raw image
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   company    Company   @relation("CompanyUploads", fields: [companyId], references: [id], onDelete: Cascade)
   uploadedBy User      @relation("UserUploads", fields: [uploadedById], references: [id], onDelete: Cascade)

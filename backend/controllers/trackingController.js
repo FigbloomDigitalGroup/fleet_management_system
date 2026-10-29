@@ -446,6 +446,20 @@ async function processPing(vehicle, data, source) {
       : false;
 
     if (isInsideNow !== wasInsideBefore) {
+      // Kept for the geofence report; the alert below is cleared later.
+      await prisma.geofenceEvent.create({
+        data: {
+          companyId: vehicle.companyId,
+          vehicleId,
+          driverId: vehicle.driverId ?? null,
+          geofenceId: geofence.id,
+          geofenceName: geofence.name,
+          kind: isInsideNow ? "enter" : "exit",
+          latitude,
+          longitude,
+          recordedAt: t,
+        },
+      });
       await raiseAlert({
         companyId: vehicle.companyId,
         vehicleId,
