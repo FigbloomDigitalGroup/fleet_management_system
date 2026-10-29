@@ -48,6 +48,7 @@ function MetricCard({
   sub,
   change,
   chart,
+  emptyNote,
 }: {
   icon: ReactNode;
   label: string;
@@ -56,6 +57,7 @@ function MetricCard({
   change: ReactNode;
   /** null when there's nothing to draw — a short note shows instead. */
   chart: ReactNode | null;
+  emptyNote?: string;
 }) {
   return (
     <div className="flex flex-col rounded-lg bg-white p-5 shadow-sm ring-1 ring-black/5 print:break-inside-avoid print:shadow-none print:ring-1 print:ring-gray-200">
@@ -67,14 +69,30 @@ function MetricCard({
       {sub && <p className="mt-0.5 text-xs text-gray-500">{sub}</p>}
       <div className="mt-2">{change}</div>
       <div className="mt-3 h-16">
-        {chart ?? <p className="flex h-full items-center justify-center rounded-md bg-gray-50 text-xs text-gray-400">Nothing recorded in this period</p>}
+        {chart ?? (
+          <p className="flex h-full items-center justify-center rounded-md bg-gray-50 px-3 text-center text-xs text-gray-500">
+            {emptyNote ?? "Nothing recorded in this period"}
+          </p>
+        )}
       </div>
     </div>
   );
 }
 
-export default function ReportMetrics({ overview, basePath }: { overview: ReportOverview; basePath: string }) {
+export default function ReportMetrics({
+  overview,
+  basePath,
+  periodDays,
+}: {
+  overview: ReportOverview;
+  basePath: string;
+  periodDays: number;
+}) {
   const { metrics, daily, topDrivers, driverCount } = overview;
+  const lastExpense = metrics.expensesKes.lastLoggedAt;
+  const noExpenseNote = lastExpense
+    ? `No expenses in the last ${periodDays} days — last one logged ${new Date(lastExpense).toLocaleDateString(undefined, { day: "numeric", month: "short" })}`
+    : "No expenses logged yet";
   const series = daily.map((d) => ({ ...d, label: shortDay(d.date) }));
   const score = metrics.avgScore.value;
   const any = (key: "distanceKm" | "trips" | "expensesKes") => series.some((d) => d[key] > 0);
@@ -112,8 +130,9 @@ export default function ReportMetrics({ overview, basePath }: { overview: Report
           icon={<FiDroplet size={15} />}
           label="Fuel & expenses"
           value={formatKes(metrics.expensesKes.value ?? 0)}
-          sub={`Fuel ${formatKes(metrics.expensesKes.fuelKes)}`}
+          sub={metrics.expensesKes.value ? `Fuel ${formatKes(metrics.expensesKes.fuelKes)}` : undefined}
           change={<Change change={metrics.expensesKes.change} goodWhenUp={false} />}
+          emptyNote={noExpenseNote}
           chart={
             !any("expensesKes") ? null : (
             <ResponsiveContainer width="100%" height="100%">

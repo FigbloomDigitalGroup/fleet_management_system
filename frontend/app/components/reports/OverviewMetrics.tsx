@@ -15,7 +15,8 @@ const PERIODS = [
 // top drivers, for the last 7 or 30 days. `basePath` is "/company" or
 // "/admin" — where the driver links point.
 export default function OverviewMetrics({ basePath }: { basePath: string }) {
-  const [days, setDays] = useState(7);
+  // 30 days by default — expenses are logged far less often than trips.
+  const [days, setDays] = useState(30);
   const [overview, setOverview] = useState<ReportOverview | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -55,7 +56,7 @@ export default function OverviewMetrics({ basePath }: { basePath: string }) {
           ))}
         </div>
       </div>
-      {overview ? <ReportMetrics overview={overview} basePath={basePath} /> : <Skeleton rows={1} rowClassName="h-44" />}
+      {overview ? <ReportMetrics overview={overview} basePath={basePath} periodDays={days} /> : <Skeleton rows={1} rowClassName="h-44" />}
     </section>
   );
 }

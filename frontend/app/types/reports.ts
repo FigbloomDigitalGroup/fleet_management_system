@@ -9,7 +9,7 @@ export interface Metric {
 export interface ReportOverview {
   metrics: {
     distanceKm: Metric;
-    expensesKes: Metric & { fuelKes: number };
+    expensesKes: Metric & { fuelKes: number; lastLoggedAt: string | null };
     trips: Metric;
     avgScore: Metric & { grade: string | null };
   };

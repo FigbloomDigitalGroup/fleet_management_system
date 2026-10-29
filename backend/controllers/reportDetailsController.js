@@ -139,12 +139,23 @@ async function buildOverview(req, range) {
 
   const avgScore = averageScore(scores);
   const prevAvgScore = averageScore(prevScores);
+  // So an empty period can say when spending was last logged.
+  const lastExpense = await prisma.expense.findFirst({
+    where: { ...scope, incurredAt: { lte: to } },
+    orderBy: { incurredAt: "desc" },
+    select: { incurredAt: true },
+  });
   return {
     from,
     to,
     metrics: {
       distanceKm: { value: current.distanceKm, change: pctChange(current.distanceKm, previous.distanceKm) },
-      expensesKes: { value: current.expensesKes, fuelKes: current.fuelKes, change: pctChange(current.expensesKes, previous.expensesKes) },
+      expensesKes: {
+        value: current.expensesKes,
+        fuelKes: current.fuelKes,
+        change: pctChange(current.expensesKes, previous.expensesKes),
+        lastLoggedAt: lastExpense?.incurredAt ?? null,
+      },
       trips: { value: current.trips, change: pctChange(current.trips, previous.trips) },
       avgScore: {
         value: avgScore,
