@@ -13,4 +13,7 @@ COPY .  .
 
 EXPOSE 5000
 
-CMD ["npm", "run", "dev"]
+# Production (Render): apply any new database migrations, then start the
+# server (package.json "start"). Local development overrides this with
+# `npm run dev` in docker-compose.yml for auto-reload.
+CMD ["npm", "start"]
