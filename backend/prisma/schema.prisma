@@ -240,6 +240,10 @@ model Company {
   // themes list, and the text size (small | normal | large).
   theme             String         @default("forest")
   textSize          String         @default("normal")
+  // With theme "custom": the owner's own colours as "#rrggbb" — main
+  // (sidebar, buttons) and accent (highlights). Shades are built from them.
+  customMainColor   String?
+  customAccentColor String?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 

@@ -19,7 +19,7 @@ export interface FleetTheme {
   accent: Scale;
 }
 
-export type ThemeId = "forest" | "violet" | "ocean" | "lagoon" | "graphite";
+export type ThemeId = "forest" | "violet" | "ocean" | "lagoon" | "graphite" | "custom";
 
 export const THEMES: FleetTheme[] = [
   {
@@ -63,6 +63,49 @@ export const DEFAULT_THEME: ThemeId = "forest";
 
 export function themeById(id: string | null | undefined): FleetTheme {
   return THEMES.find((t) => t.id === id) ?? THEMES[0];
+}
+
+// ── Custom theme: the owner's own two colours ───────────────────────────────
+
+export const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+// Starting point for a company that hasn't picked colours yet.
+export const DEFAULT_CUSTOM = { main: "#7c3aed", accent: "#f59e0b" };
+
+const toRgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+const toHex = (rgb: number[]) => `#${rgb.map((c) => Math.round(c).toString(16).padStart(2, "0")).join("")}`;
+const mix = (hex: string, toward: number, amount: number) => toHex(toRgb(hex).map((c) => c + (toward - c) * amount));
+
+// How far each shade moves toward white (lighter) or black (darker) from
+// the picked colour, which sits at the shade the app uses it most: 600 for
+// the main colour (buttons, links), 500 for the accent (highlight buttons).
+const MAIN_STEPS = [0.94, 0.86, 0.72, 0.54, 0.34, 0.16, 0, -0.2, -0.38, -0.55, -0.72];
+const ACCENT_STEPS = [0.94, 0.86, 0.7, 0.5, 0.26, 0, -0.15, -0.32, -0.48, -0.6, -0.78];
+
+function buildScale(hex: string, steps: number[]): Scale {
+  return steps.map((a) => (a >= 0 ? mix(hex, 255, a) : mix(hex, 0, -a))) as Scale;
+}
+
+export function makeCustomTheme(main: string, accent: string): FleetTheme {
+  const m = HEX_COLOR.test(main) ? main : DEFAULT_CUSTOM.main;
+  const a = HEX_COLOR.test(accent) ? accent : DEFAULT_CUSTOM.accent;
+  return {
+    id: "custom",
+    name: "Custom",
+    description: "Your own colours",
+    main: buildScale(m, MAIN_STEPS),
+    accent: buildScale(a, ACCENT_STEPS),
+  };
+}
+
+// WCAG contrast of white text on a colour (4.5 reads well, 3 is the floor
+// for large or bold text like buttons).
+export function contrastWithWhite(hex: string): number {
+  const [r, g, b] = toRgb(hex).map((c) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  });
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return 1.05 / (lum + 0.05);
 }
 
 export type TextSize = "small" | "normal" | "large";

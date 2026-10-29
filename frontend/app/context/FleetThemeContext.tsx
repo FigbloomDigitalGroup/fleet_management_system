@@ -3,12 +3,14 @@
 import { ReactNode, createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { apiRequest } from "../lib/api";
 import {
+  DEFAULT_CUSTOM,
   DEFAULT_THEME,
   FleetTheme,
   SHADES,
   TextSize,
   ThemeId,
   chartColors,
+  makeCustomTheme,
   textSizeById,
   themeById,
 } from "../lib/themes";
@@ -24,9 +26,12 @@ import {
 // `saved` is the company's setting; `preview` is a choice being tried on the
 // Settings page, shown until it's saved or dropped.
 
-interface Appearance {
+export interface Appearance {
   theme: ThemeId;
   textSize: TextSize;
+  /** The "custom" theme's own colours, "#rrggbb". */
+  customMain: string;
+  customAccent: string;
 }
 
 interface FleetThemeValue extends Appearance {
@@ -41,7 +46,14 @@ interface FleetThemeValue extends Appearance {
   commit: (appearance: Appearance) => void;
 }
 
-const DEFAULT: Appearance = { theme: DEFAULT_THEME, textSize: "normal" };
+const DEFAULT: Appearance = {
+  theme: DEFAULT_THEME,
+  textSize: "normal",
+  customMain: DEFAULT_CUSTOM.main,
+  customAccent: DEFAULT_CUSTOM.accent,
+};
+
+const themeFor = (a: Appearance) => (a.theme === "custom" ? makeCustomTheme(a.customMain, a.customAccent) : themeById(a.theme));
 const CACHE_KEY = "fleet:appearance";
 
 // Outside a provider (landing page, platform portal) everything is the
@@ -94,10 +106,17 @@ export function FleetThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    apiRequest<{ theme?: string; textSize?: string }>("/api/companies/me")
+    apiRequest<{ theme?: string; textSize?: string; customMainColor?: string | null; customAccentColor?: string | null }>(
+      "/api/companies/me"
+    )
       .then((company) => {
         if (cancelled) return;
-        const next: Appearance = { theme: themeById(company.theme).id, textSize: textSizeById(company.textSize).id };
+        const next: Appearance = {
+          theme: company.theme === "custom" ? "custom" : themeById(company.theme).id,
+          textSize: textSizeById(company.textSize).id,
+          customMain: company.customMainColor || DEFAULT_CUSTOM.main,
+          customAccent: company.customAccentColor || DEFAULT_CUSTOM.accent,
+        };
         setSaved(next);
         writeCache(next);
       })
@@ -108,7 +127,12 @@ export function FleetThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const current: Appearance = { ...saved, ...draft };
-  const themeDef = themeById(current.theme);
+  // Rebuilt only when the look actually changes, not on every render.
+  const themeDef = useMemo(
+    () => themeFor(current),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [current.theme, current.customMain, current.customAccent]
+  );
 
   useIsomorphicLayoutEffect(() => {
     const root = document.documentElement;
@@ -143,7 +167,7 @@ export function FleetThemeProvider({ children }: { children: ReactNode }) {
   const value = useMemo<FleetThemeValue>(
     () => ({ ...current, themeDef, colors: chartColors(themeDef), saved, preview, resetPreview, commit }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [current.theme, current.textSize, themeDef, saved, preview, resetPreview, commit]
+    [current.theme, current.textSize, current.customMain, current.customAccent, themeDef, saved, preview, resetPreview, commit]
   );
 
   return <FleetThemeContext.Provider value={value}>{children}</FleetThemeContext.Provider>;
