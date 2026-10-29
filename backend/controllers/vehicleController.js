@@ -1,12 +1,18 @@
 import crypto from "crypto";
-import Vehicle from "../models/Vehicle.js";
-import Geofence from "../models/Geofence.js";
-import Company from "../models/Company.js";
+import prisma from "../lib/prisma.js";
+import { toApi, isUniqueViolation } from "../lib/serialize.js";
 import { tenantScope } from "../middleware/auth.js";
 import { parseSpreadsheetRows } from "../lib/spreadsheet.js";
 import { getPlatformSettings } from "./settingsController.js";
 
 const MAX_IMPORT_ROWS = 500;
+
+// What .populate("driverId", "fullName email avatarUploadId") and
+// .populate("startGeofenceId", "name") returned.
+const VEHICLE_INCLUDE = {
+  driver: { select: { id: true, fullName: true, email: true, avatarUploadId: true } },
+  startGeofence: { select: { id: true, name: true } },
+};
 
 // How many more vehicles this company's plan allows it to add right now —
 // enforces PlatformSettings.vehicleLimits, which a platform admin configures
@@ -14,7 +20,7 @@ const MAX_IMPORT_ROWS = 500;
 // limit (don't block on an unrecognized/custom plan key).
 async function getVehicleLimitStatus(companyId) {
   const [company, settings] = await Promise.all([
-    Company.findById(companyId).select("subscriptionPlan"),
+    prisma.company.findUnique({ where: { id: String(companyId) }, select: { subscriptionPlan: true } }),
     getPlatformSettings(),
   ]);
   if (!company) return null;
@@ -22,7 +28,7 @@ async function getVehicleLimitStatus(companyId) {
   const limit = settings.vehicleLimits?.[company.subscriptionPlan];
   if (limit === undefined || limit === null) return null;
 
-  const currentCount = await Vehicle.countDocuments({ companyId });
+  const currentCount = await prisma.vehicle.count({ where: { companyId: String(companyId) } });
   return { plan: company.subscriptionPlan, limit, currentCount };
 }
 
@@ -61,14 +67,17 @@ export async function createVehicle(req, res) {
       });
     }
 
-    const vehicle = await Vehicle.create({
-      companyId,
-      plateNumber,
-      make,
-      model,
-      deviceId,
-      vehicleType,
-      avgConsumptionLPer100Km: avgConsumptionLPer100Km !== undefined ? Number(avgConsumptionLPer100Km) : undefined,
+    if (!companyId) return res.status(400).json({ error: "companyId is required" });
+    const vehicle = await prisma.vehicle.create({
+      data: {
+        companyId: String(companyId),
+        plateNumber: String(plateNumber),
+        make,
+        model,
+        deviceId: deviceId || null,
+        vehicleType,
+        avgConsumptionLPer100Km: avgConsumptionLPer100Km !== undefined ? Number(avgConsumptionLPer100Km) : undefined,
+      },
     });
 
     // Closes the race between the limit check above and this create: if two
@@ -76,21 +85,21 @@ export async function createVehicle(req, res) {
     // of them should actually end up over the limit — re-verify now and roll
     // this one back if the count has since crept past the limit.
     if (limitStatus) {
-      const countNow = await Vehicle.countDocuments({ companyId });
+      const countNow = await prisma.vehicle.count({ where: { companyId: String(companyId) } });
       if (countNow > limitStatus.limit) {
-        await Vehicle.deleteOne({ _id: vehicle._id });
+        await prisma.vehicle.delete({ where: { id: vehicle.id } });
         return res.status(403).json({
           error: `Vehicle limit reached for the ${limitStatus.plan} plan (${limitStatus.limit}). Upgrade your plan to add more vehicles.`,
         });
       }
     }
 
-    return res.status(201).json(vehicle);
+    return res.status(201).json(toApi(vehicle));
   } catch (err) {
-    console.error(err);
-    if (err.code === 11000) {
+    if (isUniqueViolation(err)) {
       return res.status(409).json({ error: "A vehicle with this plate number or device ID already exists" });
     }
+    console.error(err);
     return res.status(500).json({ error: "Failed to create vehicle" });
   }
 }
@@ -173,20 +182,22 @@ export async function bulkImportVehicles(req, res) {
       }
 
       try {
-        await Vehicle.create({
-          companyId,
-          plateNumber,
-          make,
-          model,
-          deviceId,
-          vehicleType,
-          avgConsumptionLPer100Km: mileageRaw !== undefined ? Number(mileageRaw) : undefined,
+        await prisma.vehicle.create({
+          data: {
+            companyId: String(companyId),
+            plateNumber: String(plateNumber),
+            make: make === undefined ? undefined : String(make),
+            model: model === undefined ? undefined : String(model),
+            deviceId: deviceId === undefined ? null : String(deviceId),
+            vehicleType,
+            avgConsumptionLPer100Km: mileageRaw !== undefined ? Number(mileageRaw) : undefined,
+          },
         });
         results.push({ row: rowNumber, plateNumber, status: "created" });
         createdCount++;
         remainingSlots--;
       } catch (err) {
-        if (err.code === 11000) {
+        if (isUniqueViolation(err)) {
           results.push({
             row: rowNumber,
             plateNumber,
@@ -213,14 +224,11 @@ export async function listVehicles(req, res) {
     // them), so let them optionally narrow to a single company's vehicles —
     // e.g. from that company's detail page.
     if (req.user.role === "PLATFORM_ADMIN" && req.query.companyId) {
-      scope.companyId = req.query.companyId;
+      scope.companyId = String(req.query.companyId);
     }
 
-    const vehicles = await Vehicle.find(scope)
-      .populate("driverId", "fullName email avatarUploadId")
-      .populate("startGeofenceId", "name")
-      .sort({ createdAt: -1 });
-    return res.json(vehicles);
+    const vehicles = await prisma.vehicle.findMany({ where: scope, include: VEHICLE_INCLUDE, orderBy: { createdAt: "desc" } });
+    return res.json(toApi(vehicles));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch vehicles" });
@@ -229,11 +237,12 @@ export async function listVehicles(req, res) {
 
 export async function getVehicle(req, res) {
   try {
-    const vehicle = await Vehicle.findOne({ _id: req.params.id, ...tenantScope(req) })
-      .populate("driverId", "fullName email avatarUploadId")
-      .populate("startGeofenceId", "name");
+    const vehicle = await prisma.vehicle.findFirst({
+      where: { id: req.params.id, ...tenantScope(req) },
+      include: VEHICLE_INCLUDE,
+    });
     if (!vehicle) return res.status(404).json({ error: "Vehicle not found" });
-    return res.json(vehicle);
+    return res.json(toApi(vehicle));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch vehicle" });
@@ -242,7 +251,7 @@ export async function getVehicle(req, res) {
 
 export async function updateVehicle(req, res) {
   try {
-    const existing = await Vehicle.findOne({ _id: req.params.id, ...tenantScope(req) });
+    const existing = await prisma.vehicle.findFirst({ where: { id: req.params.id, ...tenantScope(req) } });
     if (!existing) return res.status(404).json({ error: "Vehicle not found" });
 
     const { plateNumber, make, model, deviceId, status, driverId, startGeofenceId, vehicleType, avgConsumptionLPer100Km } =
@@ -269,7 +278,17 @@ export async function updateVehicle(req, res) {
       // alone until the vehicle is seen moving again (see ingestLocation).
       update.statusManuallySet = true;
     }
-    if (driverId !== undefined) update.driverId = driverId || null;
+    if (driverId !== undefined) {
+      // Mongo accepted any id here; Postgres enforces the link, so check it.
+      if (driverId) {
+        const driver = await prisma.user.findFirst({
+          where: { id: String(driverId), companyId: existing.companyId, role: "DRIVER" },
+          select: { id: true },
+        });
+        if (!driver) return res.status(400).json({ error: "That driver doesn't belong to this vehicle's company" });
+      }
+      update.driverId = driverId ? String(driverId) : null;
+    }
     if (vehicleType !== undefined) {
       if (!VEHICLE_TYPES.includes(vehicleType)) {
         return res.status(400).json({ error: `vehicleType must be one of: ${VEHICLE_TYPES.join(", ")}` });
@@ -281,19 +300,23 @@ export async function updateVehicle(req, res) {
       if (!startGeofenceId) {
         update.startGeofenceId = null;
       } else {
-        const geofence = await Geofence.findOne({ _id: startGeofenceId, companyId: existing.companyId });
+        const geofence = await prisma.geofence.findFirst({
+          where: { id: String(startGeofenceId), companyId: existing.companyId },
+          select: { id: true },
+        });
         if (!geofence) {
           return res.status(400).json({ error: "That geofence zone doesn't belong to this vehicle's company" });
         }
-        update.startGeofenceId = geofence._id;
+        update.startGeofenceId = geofence.id;
       }
     }
 
-    const vehicle = await Vehicle.findByIdAndUpdate(existing._id, update, { new: true })
-      .populate("driverId", "fullName email avatarUploadId")
-      .populate("startGeofenceId", "name");
-    return res.json(vehicle);
+    const vehicle = await prisma.vehicle.update({ where: { id: existing.id }, data: update, include: VEHICLE_INCLUDE });
+    return res.json(toApi(vehicle));
   } catch (err) {
+    if (isUniqueViolation(err)) {
+      return res.status(409).json({ error: "A vehicle with this plate number or device ID already exists" });
+    }
     console.error(err);
     return res.status(500).json({ error: "Failed to update vehicle" });
   }
@@ -301,10 +324,10 @@ export async function updateVehicle(req, res) {
 
 export async function deleteVehicle(req, res) {
   try {
-    const existing = await Vehicle.findOne({ _id: req.params.id, ...tenantScope(req) });
+    const existing = await prisma.vehicle.findFirst({ where: { id: req.params.id, ...tenantScope(req) }, select: { id: true } });
     if (!existing) return res.status(404).json({ error: "Vehicle not found" });
 
-    await Vehicle.findByIdAndDelete(existing._id);
+    await prisma.vehicle.delete({ where: { id: existing.id } });
     return res.status(204).send();
   } catch (err) {
     console.error(err);
@@ -316,15 +339,14 @@ export async function deleteVehicle(req, res) {
 // authenticate its own pings (x-tracker-token header on POST /api/tracking/ping)
 // — see authenticateTracking in middleware/auth.js. Only returned here, right
 // after generation; it's select:false everywhere else so it's never leaked
-// back out via listVehicles/getVehicle.
+// back out via listVehicles/getVehicle (lib/serialize.js hides it).
 export async function regenerateTrackerToken(req, res) {
   try {
-    const existing = await Vehicle.findOne({ _id: req.params.id, ...tenantScope(req) });
+    const existing = await prisma.vehicle.findFirst({ where: { id: req.params.id, ...tenantScope(req) }, select: { id: true } });
     if (!existing) return res.status(404).json({ error: "Vehicle not found" });
 
     const trackerToken = crypto.randomBytes(24).toString("hex");
-    existing.trackerToken = trackerToken;
-    await existing.save();
+    await prisma.vehicle.update({ where: { id: existing.id }, data: { trackerToken } });
 
     return res.json({ trackerToken });
   } catch (err) {
@@ -336,8 +358,11 @@ export async function regenerateTrackerToken(req, res) {
 // DRIVER — get the vehicle currently assigned to the logged-in driver
 export async function getMyVehicle(req, res) {
   try {
-    const vehicle = await Vehicle.findOne({ driverId: req.user.id }).populate("driverId", "fullName email avatarUploadId");
-    return res.json(vehicle || null);
+    const vehicle = await prisma.vehicle.findFirst({
+      where: { driverId: req.user.id },
+      include: { driver: VEHICLE_INCLUDE.driver },
+    });
+    return res.json(vehicle ? toApi(vehicle) : null);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch assigned vehicle" });

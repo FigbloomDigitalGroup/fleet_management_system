@@ -22,6 +22,8 @@ import {
   FiTrendingUp,
   FiShield,
   FiSlash,
+  FiBluetooth,
+  FiTruck,
 } from "react-icons/fi";
 
 // Mirrors ALERT_TYPE_LABELS in backend/lib/alerts.js — kept here so every
@@ -50,6 +52,8 @@ export const ALERT_TYPE_LABELS: Record<string, string> = {
   app_logout: "Driver logged out",
   inspection_failed: "Inspection failed",
   job_failed: "Job failed",
+  phone_left_vehicle: "Phone left vehicle",
+  wrong_vehicle: "Phone in another vehicle",
   admin_message: "Message to driver",
 };
 
@@ -76,6 +80,8 @@ const ALERT_TYPE_ICONS: Record<string, IconType> = {
   app_logout: FiLogOut,
   inspection_failed: FiClipboard,
   job_failed: FiPackage,
+  phone_left_vehicle: FiBluetooth,
+  wrong_vehicle: FiTruck,
   admin_message: FiMessageSquare,
 };
 
@@ -88,7 +94,7 @@ export function alertTypeIcon(type: string): IconType {
 }
 
 // Types worth a red accent rather than the default orange.
-const CRITICAL_TYPES = new Set(["sos", "mock_location", "unauthorized_movement", "job_failed", "inspection_failed"]);
+const CRITICAL_TYPES = new Set(["sos", "mock_location", "unauthorized_movement", "job_failed", "inspection_failed", "phone_left_vehicle", "wrong_vehicle"]);
 
 export function isCriticalAlert(type: string): boolean {
   return CRITICAL_TYPES.has(type);

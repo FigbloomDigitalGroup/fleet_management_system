@@ -1,8 +1,5 @@
-import Vehicle from "../models/Vehicle.js";
-import Alert from "../models/Alert.js";
-import Trip from "../models/Trip.js";
-import AgentScanLog from "../models/AgentScanLog.js";
-import { generateText, isOllamaReachable } from "./ollamaService.js";
+import prisma from "../lib/prisma.js";
+import { generateText, isAiConfigured } from "./aiService.js";
 
 const SYSTEM_PREAMBLE = `You are the fleet assistant for a vehicle tracking platform. Answer the user's question using ONLY the fleet data provided below — do not invent vehicles, numbers, or events that aren't in it. If the data doesn't contain enough information to answer, say so plainly instead of guessing. Keep the answer conversational and concise (a few sentences, not a report). Do not use markdown formatting.`;
 
@@ -10,7 +7,11 @@ const SYSTEM_PREAMBLE = `You are the fleet assistant for a vehicle tracking plat
 // statuses, recent alerts, recent AI-agent findings, and recent trip
 // activity — for the assistant to ground its answer in.
 async function buildFleetContext(companyId) {
-  const vehicles = await Vehicle.find({ companyId }).populate("driverId", "fullName");
+  const vehicles = await prisma.vehicle.findMany({
+    where: { companyId },
+    include: { driver: { select: { fullName: true } } },
+    orderBy: { createdAt: "asc" },
+  });
 
   const statusCounts = vehicles.reduce((acc, v) => {
     acc[v.status] = (acc[v.status] || 0) + 1;
@@ -18,25 +19,27 @@ async function buildFleetContext(companyId) {
   }, {});
 
   const vehicleLines = vehicles
-    .map((v) => `${v.plateNumber} — status: ${v.status}, driver: ${v.driverId?.fullName || "unassigned"}`)
+    .map((v) => `${v.plateNumber} — status: ${v.status}, driver: ${v.driver?.fullName || "unassigned"}`)
     .join("\n");
 
-  const recentAlerts = await Alert.find({ companyId })
-    .populate("vehicleId", "plateNumber")
-    .sort({ createdAt: -1 })
-    .limit(15);
+  const recentAlerts = await prisma.alert.findMany({
+    where: { companyId },
+    include: { vehicle: { select: { plateNumber: true } } },
+    orderBy: { createdAt: "desc" },
+    take: 15,
+  });
 
   const alertLines = recentAlerts.length
     ? recentAlerts
         .map(
           (a) =>
-            `${a.createdAt.toISOString()} — ${a.vehicleId?.plateNumber || "unknown vehicle"} — ${a.type}: ${a.message} (${a.resolved ? "resolved" : "open"})`
+            `${a.createdAt.toISOString()} — ${a.vehicle?.plateNumber || "unknown vehicle"} — ${a.type}: ${a.message} (${a.resolved ? "resolved" : "open"})`
         )
         .join("\n")
     : "No alerts recorded.";
 
-  const vehicleIds = new Set(vehicles.map((v) => String(v._id)));
-  const recentScans = await AgentScanLog.find().sort({ runAt: -1 }).limit(50);
+  const vehicleIds = new Set(vehicles.map((v) => v.id));
+  const recentScans = await prisma.agentScanLog.findMany({ orderBy: { runAt: "desc" }, take: 50 });
   const findings = [];
   for (const scan of recentScans) {
     for (const d of scan.details) {
@@ -53,16 +56,18 @@ async function buildFleetContext(companyId) {
         .join("\n")
     : "No AI agent findings recorded yet.";
 
-  const recentTrips = await Trip.find({ vehicleId: { $in: [...vehicleIds] } })
-    .populate("vehicleId", "plateNumber")
-    .sort({ startTime: -1 })
-    .limit(10);
+  const recentTrips = await prisma.trip.findMany({
+    where: { vehicleId: { in: [...vehicleIds] } },
+    include: { vehicle: { select: { plateNumber: true } } },
+    orderBy: { startTime: "desc" },
+    take: 10,
+  });
 
   const tripLines = recentTrips.length
     ? recentTrips
         .map(
           (t) =>
-            `${t.vehicleId?.plateNumber || "unknown vehicle"} — started ${t.startTime.toISOString()}, ${t.endTime ? `ended ${t.endTime.toISOString()}` : "still in progress"}, distance: ${t.distanceKm ?? "unknown"}km`
+            `${t.vehicle?.plateNumber || "unknown vehicle"} — started ${t.startTime.toISOString()}, ${t.endTime ? `ended ${t.endTime.toISOString()}` : "still in progress"}, distance: ${t.distanceKm ?? "unknown"}km`
         )
         .join("\n")
     : "No trips recorded recently.";
@@ -85,9 +90,8 @@ ${tripLines}`;
 }
 
 export async function answerFleetQuestion(companyId, question) {
-  const reachable = await isOllamaReachable();
-  if (!reachable) {
-    throw new Error("The AI assistant is temporarily unavailable — the local model isn't reachable right now.");
+  if (!isAiConfigured()) {
+    throw new Error("The AI assistant isn't set up yet — ask your platform admin to add an OpenAI API key.");
   }
 
   const context = await buildFleetContext(companyId);

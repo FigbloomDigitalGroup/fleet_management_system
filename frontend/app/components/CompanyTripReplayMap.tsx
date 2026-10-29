@@ -12,6 +12,13 @@ interface PathPoint {
   recordedAt: string;
 }
 
+// The trip's road-following line (GET /api/trips/:id/road) — null until the
+// finished trip has been matched to the roads; the GPS points are drawn then.
+interface TripRoad {
+  snapped: boolean;
+  geometry: { lat: number; lng: number }[] | null;
+}
+
 const containerStyle = { width: "100%", height: "100%" };
 
 // Pick a handful of evenly-spaced points from the full path, for a clean timeline list
@@ -27,6 +34,7 @@ export default function CompanyTripReplayMap({ tripId }: { tripId: string }) {
   });
 
   const [path, setPath] = useState<PathPoint[]>([]);
+  const [road, setRoad] = useState<TripRoad | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,6 +42,9 @@ export default function CompanyTripReplayMap({ tripId }: { tripId: string }) {
       .then(setPath)
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
+    apiRequest<TripRoad>(`/api/trips/${tripId}/road`)
+      .then(setRoad)
+      .catch(() => setRoad(null));
   }, [tripId]);
 
   if (loading || !isLoaded) return <p className="text-sm text-gray-500">Loading journey…</p>;
@@ -48,6 +59,7 @@ export default function CompanyTripReplayMap({ tripId }: { tripId: string }) {
 
   const center = { lat: path[0].latitude, lng: path[0].longitude };
   const polylinePath = path.map((p) => ({ lat: p.latitude, lng: p.longitude }));
+  const routeLine = road?.geometry ?? polylinePath;
   const waypoints = sampleWaypoints(path);
   const totalDurationMin =
     (new Date(path[path.length - 1].recordedAt).getTime() - new Date(path[0].recordedAt).getTime()) / 60000;
@@ -59,7 +71,7 @@ export default function CompanyTripReplayMap({ tripId }: { tripId: string }) {
         <div className="h-[380px] w-full">
           <GoogleMap mapContainerStyle={containerStyle} center={center} zoom={13}>
             <Polyline
-              path={polylinePath}
+              path={routeLine}
               options={{ strokeColor: "#2563eb", strokeWeight: 3, strokeOpacity: 0.7 }}
             />
             <OverlayView position={polylinePath[0]} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>

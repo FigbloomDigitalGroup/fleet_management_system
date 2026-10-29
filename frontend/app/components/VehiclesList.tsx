@@ -173,7 +173,12 @@ export default function VehiclesList({
   }
 
   async function handleDelete(vehicleId: string, plateNumber: string) {
-    if (!confirm(`Delete vehicle "${plateNumber}"? This can't be undone.`)) return;
+    if (
+      !confirm(
+        `Delete vehicle "${plateNumber}"? Its trips, location history, alerts, expenses and inspections are deleted too. This can't be undone.`
+      )
+    )
+      return;
     setDeleteError(null);
     setDeletingId(vehicleId);
     try {

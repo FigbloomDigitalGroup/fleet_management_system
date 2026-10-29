@@ -1,5 +1,5 @@
-import AgentScanLog from "../models/AgentScanLog.js";
-import Vehicle from "../models/Vehicle.js";
+import prisma from "../lib/prisma.js";
+import { toApi } from "../lib/serialize.js";
 import { runAiAnomalyScan } from "../services/aiAnomalyDetector.js";
 import { answerFleetQuestion } from "../services/fleetAssistant.js";
 import { looksLikeRouteRequest, tryHandleRouteRequest } from "../services/routeAssistant.js";
@@ -14,8 +14,8 @@ const dayKeyNairobi = (date) => date.toLocaleDateString("en-CA", { timeZone: "Af
 export async function listScans(req, res) {
   try {
     const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
-    const scans = await AgentScanLog.find().sort({ runAt: -1 }).limit(limit);
-    return res.json(scans);
+    const scans = await prisma.agentScanLog.findMany({ orderBy: { runAt: "desc" }, take: limit });
+    return res.json(toApi(scans));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch agent scan history" });
@@ -32,15 +32,15 @@ export async function getAgentSummary(req, res) {
       return res.status(400).json({ error: "This account is not linked to a company" });
     }
 
-    const vehicles = await Vehicle.find({ companyId }).select("_id");
-    const vehicleIds = new Set(vehicles.map((v) => String(v._id)));
+    const vehicles = await prisma.vehicle.findMany({ where: { companyId }, select: { id: true } });
+    const vehicleIds = new Set(vehicles.map((v) => v.id));
 
     // A 7-day window, not just "the last 200 scans" — that only covered
     // roughly 2 days at the agent's 15-min cadence, too short to chart a
     // week of activity.
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const recentScans = await AgentScanLog.find({ runAt: { $gte: sevenDaysAgo } }).sort({ runAt: -1 });
-    const lastScan = recentScans[0] || (await AgentScanLog.findOne().sort({ runAt: -1 }));
+    const recentScans = await prisma.agentScanLog.findMany({ where: { runAt: { gte: sevenDaysAgo } }, orderBy: { runAt: "desc" } });
+    const lastScan = recentScans[0] || (await prisma.agentScanLog.findFirst({ orderBy: { runAt: "desc" } }));
 
     let scansCoveringFleet = 0;
     let vehicleChecksLogged = 0;
@@ -156,7 +156,7 @@ export async function askAboutFleet(req, res) {
 export async function triggerScan(req, res) {
   try {
     const log = await runAiAnomalyScan();
-    return res.status(201).json(log);
+    return res.status(201).json(toApi(log));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to run agent scan" });

@@ -1,6 +1,5 @@
-import mongoose from "mongoose";
-import Message from "../models/Message.js";
-import User from "../models/User.js";
+import prisma from "../lib/prisma.js";
+import { toApi } from "../lib/serialize.js";
 import { tenantScope } from "../middleware/auth.js";
 
 const MAX_BODY = 2000;
@@ -10,29 +9,33 @@ const MAX_BODY = 2000;
 export async function listThreads(req, res) {
   try {
     const scope = tenantScope(req);
-    const match = scope.companyId ? { companyId: new mongoose.Types.ObjectId(String(scope.companyId)) } : {};
-    const rows = await Message.aggregate([
-      { $match: match },
-      { $sort: { createdAt: -1 } },
-      {
-        $group: {
-          _id: "$driverId",
-          lastMessage: { $first: "$$ROOT" },
-          unread: { $sum: { $cond: [{ $and: ["$fromDriver", { $eq: ["$readAt", null] }] }, 1, 0] } },
-        },
-      },
-      { $sort: { "lastMessage.createdAt": -1 } },
-    ]);
-    const drivers = await User.find({ _id: { $in: rows.map((r) => r._id) } }).select("fullName email");
-    const byId = new Map(drivers.map((d) => [String(d._id), d]));
+    const companyId = scope.companyId ? String(scope.companyId) : null;
+    // Latest message per driver, newest conversation first.
+    const latest = await prisma.$queryRaw`
+      SELECT DISTINCT ON ("driverId") "driverId", body, "fromDriver", "createdAt"
+      FROM "Message"
+      WHERE ${companyId}::text IS NULL OR "companyId" = ${companyId}
+      ORDER BY "driverId", "createdAt" DESC`;
+    latest.sort((a, b) => b.createdAt - a.createdAt);
+    const unreadRows = await prisma.message.groupBy({
+      by: ["driverId"],
+      where: { ...scope, fromDriver: true, readAt: null },
+      _count: { _all: true },
+    });
+    const unread = new Map(unreadRows.map((r) => [r.driverId, r._count._all]));
+    const drivers = await prisma.user.findMany({
+      where: { id: { in: latest.map((r) => r.driverId) } },
+      select: { id: true, fullName: true },
+    });
+    const byId = new Map(drivers.map((d) => [d.id, d]));
     return res.json(
-      rows
-        .filter((r) => byId.has(String(r._id)))
+      latest
+        .filter((r) => byId.has(r.driverId))
         .map((r) => ({
-          driverId: r._id,
-          driverName: byId.get(String(r._id)).fullName,
-          lastMessage: { body: r.lastMessage.body, fromDriver: r.lastMessage.fromDriver, createdAt: r.lastMessage.createdAt },
-          unread: r.unread,
+          driverId: r.driverId,
+          driverName: byId.get(r.driverId).fullName,
+          lastMessage: { body: r.body, fromDriver: r.fromDriver, createdAt: r.createdAt },
+          unread: unread.get(r.driverId) ?? 0,
         }))
     );
   } catch (err) {
@@ -43,22 +46,25 @@ export async function listThreads(req, res) {
 
 async function threadFor(driverId, markReadFromDriver) {
   // The driver's own view leaves out messages they deleted.
-  const query = markReadFromDriver ? { driverId } : { driverId, hiddenForDriverAt: null };
-  const messages = await Message.find(query).sort({ createdAt: -1 }).limit(200);
+  const where = markReadFromDriver ? { driverId } : { driverId, hiddenForDriverAt: null };
+  const messages = await prisma.message.findMany({ where, orderBy: { createdAt: "desc" }, take: 200 });
   // Opening a thread marks the other side's messages as read.
-  await Message.updateMany(
-    { driverId, fromDriver: markReadFromDriver, readAt: null },
-    { $set: { readAt: new Date() } }
-  );
-  return messages.reverse();
+  await prisma.message.updateMany({
+    where: { driverId, fromDriver: markReadFromDriver, readAt: null },
+    data: { readAt: new Date() },
+  });
+  return toApi(messages.reverse());
 }
 
 // ADMIN/COMPANY_OWNER — one driver's conversation (?driverId=)
 export async function getThread(req, res) {
   try {
-    const driver = await User.findOne({ _id: req.query.driverId, role: "DRIVER", ...tenantScope(req) }).select("_id");
+    const driver = await prisma.user.findFirst({
+      where: { id: String(req.query.driverId ?? ""), role: "DRIVER", ...tenantScope(req) },
+      select: { id: true },
+    });
     if (!driver) return res.status(404).json({ error: "Driver not found" });
-    return res.json(await threadFor(driver._id, true));
+    return res.json(await threadFor(driver.id, true));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch messages" });
@@ -78,7 +84,9 @@ export async function getMyThread(req, res) {
 // DRIVER — unread messages from dispatch (for the app's badge)
 export async function getMyUnreadCount(req, res) {
   try {
-    const count = await Message.countDocuments({ driverId: req.user.id, fromDriver: false, readAt: null, hiddenForDriverAt: null });
+    const count = await prisma.message.count({
+      where: { driverId: req.user.id, fromDriver: false, readAt: null, hiddenForDriverAt: null },
+    });
     return res.json({ count });
   } catch (err) {
     console.error(err);
@@ -100,21 +108,20 @@ export async function sendMessage(req, res) {
       driverId = req.user.id;
       companyId = req.user.companyId;
     } else {
-      const driver = await User.findOne({ _id: req.body.driverId, role: "DRIVER", ...tenantScope(req) }).select("companyId");
+      const driver = await prisma.user.findFirst({
+        where: { id: String(req.body.driverId ?? ""), role: "DRIVER", ...tenantScope(req) },
+        select: { id: true, companyId: true },
+      });
       if (!driver) return res.status(404).json({ error: "Driver not found" });
-      driverId = driver._id;
+      driverId = driver.id;
       companyId = driver.companyId;
     }
     if (!companyId) return res.status(400).json({ error: "Your account isn't linked to a company" });
 
-    const message = await Message.create({
-      companyId,
-      driverId,
-      senderId: req.user.id,
-      fromDriver: req.user.role === "DRIVER",
-      body,
+    const message = await prisma.message.create({
+      data: { companyId, driverId, senderId: req.user.id, fromDriver: req.user.role === "DRIVER", body },
     });
-    return res.status(201).json(message);
+    return res.status(201).json(toApi(message));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to send message" });
@@ -125,12 +132,11 @@ export async function sendMessage(req, res) {
 // none). Dispatch keeps the full history.
 export async function hideMyMessage(req, res) {
   try {
-    const message = await Message.findOneAndUpdate(
-      { _id: req.params.id, driverId: req.user.id },
-      { $set: { hiddenForDriverAt: new Date() } },
-      { new: true }
-    );
-    if (!message) return res.status(404).json({ error: "Message not found" });
+    const { count } = await prisma.message.updateMany({
+      where: { id: req.params.id, driverId: req.user.id },
+      data: { hiddenForDriverAt: new Date() },
+    });
+    if (!count) return res.status(404).json({ error: "Message not found" });
     return res.json({ ok: true });
   } catch (err) {
     console.error(err);

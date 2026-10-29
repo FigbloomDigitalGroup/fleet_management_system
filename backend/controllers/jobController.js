@@ -1,8 +1,6 @@
 import crypto from "crypto";
-import Job from "../models/Job.js";
-import User from "../models/User.js";
-import Vehicle from "../models/Vehicle.js";
-import LocationPing from "../models/LocationPing.js";
+import prisma from "../lib/prisma.js";
+import { toApi } from "../lib/serialize.js";
 import { tenantScope } from "../middleware/auth.js";
 import { raiseAlert } from "../lib/alerts.js";
 import { getPlaceLocation } from "../services/googleMapsService.js";
@@ -21,12 +19,34 @@ const EDITABLE_FIELDS = ["title", "address", "contactName", "contactPhone", "not
 const todayKey = () => new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Nairobi" });
 const isDateKey = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
 
+const JOB_STATUSES = ["assigned", "started", "arrived", "completed", "failed", "cancelled"];
+
+// Highest sequence among a driver's jobs on a day (0 when none), optionally
+// ignoring one job.
+async function lastSequenceFor(driverId, scheduledDate, exceptId) {
+  const last = await prisma.job.findFirst({
+    where: { driverId, scheduledDate, ...(exceptId ? { id: { not: exceptId } } : {}) },
+    orderBy: { sequence: "desc" },
+    select: { sequence: true },
+  });
+  return last?.sequence ?? 0;
+}
+
 export function isLate(job) {
   return !!(job.windowEnd && job.completedAt && new Date(job.completedAt) > new Date(job.windowEnd));
 }
 
+// What the Mongo version populated on the dashboard's job lists.
+const LIST_INCLUDE = {
+  driver: { select: { id: true, fullName: true, avatarUploadId: true } },
+  vehicle: { select: { id: true, plateNumber: true } },
+};
+
+// Drivers without a job sort first, as Mongo sorted nulls.
+const LIST_ORDER = [{ driverId: { sort: "asc", nulls: "first" } }, { sequence: "asc" }, { createdAt: "asc" }];
+
 function present(job) {
-  const o = job.toObject ? job.toObject() : job;
+  const o = toApi(job);
   return {
     ...o,
     late: isLate(o),
@@ -43,26 +63,28 @@ function present(job) {
 
 async function resolveDriverAndVehicle(req, driverId) {
   if (!driverId) return { driverId: null, vehicleId: null };
-  const driver = await User.findOne({ _id: driverId, role: "DRIVER", ...tenantScope(req) }).select("_id companyId");
+  const driver = await prisma.user.findFirst({
+    where: { id: String(driverId), role: "DRIVER", ...tenantScope(req) },
+    select: { id: true, companyId: true },
+  });
   if (!driver) return { error: "Driver not found" };
-  const vehicle = await Vehicle.findOne({ driverId: driver._id }).select("_id");
-  return { driverId: driver._id, vehicleId: vehicle?._id ?? null, companyId: driver.companyId };
+  const vehicle = await prisma.vehicle.findFirst({ where: { driverId: driver.id }, select: { id: true } });
+  return { driverId: driver.id, vehicleId: vehicle?.id ?? null, companyId: driver.companyId };
 }
 
 // ADMIN/COMPANY_OWNER — jobs for a day (default today), optionally one driver/status
 export async function listJobs(req, res) {
   try {
-    const filter = { ...tenantScope(req) };
-    if (isDateKey(req.query.date)) filter.scheduledDate = req.query.date;
-    else if (!req.query.from) filter.scheduledDate = todayKey();
-    if (isDateKey(req.query.from) && isDateKey(req.query.to)) filter.scheduledDate = { $gte: req.query.from, $lte: req.query.to };
-    if (req.query.driverId) filter.driverId = req.query.driverId;
-    if (req.query.status) filter.status = req.query.status;
-    const jobs = await Job.find(filter)
-      .populate("driverId", "fullName")
-      .populate("vehicleId", "plateNumber")
-      .sort({ driverId: 1, sequence: 1, createdAt: 1 })
-      .limit(1000);
+    const where = { ...tenantScope(req) };
+    if (isDateKey(req.query.date)) where.scheduledDate = req.query.date;
+    else if (!req.query.from) where.scheduledDate = todayKey();
+    if (isDateKey(req.query.from) && isDateKey(req.query.to)) where.scheduledDate = { gte: req.query.from, lte: req.query.to };
+    if (req.query.driverId) where.driverId = String(req.query.driverId);
+    if (req.query.status) {
+      if (!JOB_STATUSES.includes(req.query.status)) return res.json([]);
+      where.status = req.query.status;
+    }
+    const jobs = await prisma.job.findMany({ where, include: LIST_INCLUDE, orderBy: LIST_ORDER, take: 1000 });
     return res.json(jobs.map(present));
   } catch (err) {
     console.error(err);
@@ -72,9 +94,13 @@ export async function listJobs(req, res) {
 
 export async function getJob(req, res) {
   try {
-    const job = await Job.findOne({ _id: req.params.id, ...tenantScope(req) })
-      .populate("driverId", "fullName phone")
-      .populate("vehicleId", "plateNumber");
+    const job = await prisma.job.findFirst({
+      where: { id: req.params.id, ...tenantScope(req) },
+      include: {
+        driver: { select: { id: true, fullName: true, phone: true, avatarUploadId: true } },
+        vehicle: LIST_INCLUDE.vehicle,
+      },
+    });
     if (!job) return res.status(404).json({ error: "Job not found" });
     return res.json(present(job));
   } catch (err) {
@@ -106,27 +132,27 @@ export async function createJob(req, res) {
     if (!companyId) return res.status(400).json({ error: "companyId is required" });
 
     const scheduledDate = isDateKey(req.body.scheduledDate) ? req.body.scheduledDate : todayKey();
-    const lastSequence = assignment.driverId
-      ? await Job.findOne({ driverId: assignment.driverId, scheduledDate }).sort({ sequence: -1 }).select("sequence")
-      : null;
+    const lastSequence = assignment.driverId ? await lastSequenceFor(assignment.driverId, scheduledDate) : 0;
 
-    const job = await Job.create({
-      companyId,
-      driverId: assignment.driverId,
-      vehicleId: assignment.vehicleId,
-      title: title.trim(),
-      address: resolvedAddress,
-      latitude,
-      longitude,
-      contactName: req.body.contactName || null,
-      contactPhone: req.body.contactPhone || null,
-      notes: req.body.notes || null,
-      scheduledDate,
-      windowStart: req.body.windowStart ? new Date(req.body.windowStart) : null,
-      windowEnd: req.body.windowEnd ? new Date(req.body.windowEnd) : null,
-      sequence: (lastSequence?.sequence ?? 0) + 1,
-      trackingToken: crypto.randomBytes(18).toString("hex"),
-      createdBy: req.user.id,
+    const job = await prisma.job.create({
+      data: {
+        companyId: String(companyId),
+        driverId: assignment.driverId,
+        vehicleId: assignment.vehicleId,
+        title: title.trim(),
+        address: resolvedAddress,
+        latitude,
+        longitude,
+        contactName: req.body.contactName || null,
+        contactPhone: req.body.contactPhone || null,
+        notes: req.body.notes || null,
+        scheduledDate,
+        windowStart: req.body.windowStart ? new Date(req.body.windowStart) : null,
+        windowEnd: req.body.windowEnd ? new Date(req.body.windowEnd) : null,
+        sequence: lastSequence + 1,
+        trackingToken: crypto.randomBytes(18).toString("hex"),
+        createdById: req.user.id,
+      },
     });
     return res.status(201).json(present(job));
   } catch (err) {
@@ -137,42 +163,46 @@ export async function createJob(req, res) {
 
 export async function updateJob(req, res) {
   try {
-    const job = await Job.findOne({ _id: req.params.id, ...tenantScope(req) });
+    const job = await prisma.job.findFirst({ where: { id: req.params.id, ...tenantScope(req) } });
     if (!job) return res.status(404).json({ error: "Job not found" });
 
+    const data = {};
     for (const field of EDITABLE_FIELDS) {
       if (!(field in req.body)) continue;
-      if (field === "windowStart" || field === "windowEnd") job[field] = req.body[field] ? new Date(req.body[field]) : null;
+      const value = req.body[field];
+      if (field === "windowStart" || field === "windowEnd") data[field] = value ? new Date(value) : null;
       else if (field === "scheduledDate") {
-        if (isDateKey(req.body.scheduledDate)) job.scheduledDate = req.body.scheduledDate;
-      } else job[field] = req.body[field];
+        if (isDateKey(value)) data.scheduledDate = value;
+      } else if (field === "sequence") data.sequence = Math.round(Number(value)) || 0;
+      else if (field === "title" || field === "address") data[field] = String(value);
+      else data[field] = value == null || value === "" ? null : String(value);
     }
     if ("latitude" in req.body && "longitude" in req.body) {
-      job.latitude = Number(req.body.latitude);
-      job.longitude = Number(req.body.longitude);
+      data.latitude = Number(req.body.latitude);
+      data.longitude = Number(req.body.longitude);
     } else if ("address" in req.body) {
-      const place = await getPlaceLocation(job.address);
+      const place = await getPlaceLocation(data.address);
       if (place.error) return res.status(400).json({ error: `Couldn't find that address: ${place.error}` });
-      job.latitude = place.lat;
-      job.longitude = place.lng;
+      data.latitude = place.lat;
+      data.longitude = place.lng;
     }
     if ("driverId" in req.body) {
       const assignment = await resolveDriverAndVehicle(req, req.body.driverId);
       if (assignment.error) return res.status(404).json({ error: assignment.error });
-      job.driverId = assignment.driverId;
-      job.vehicleId = assignment.vehicleId;
+      data.driverId = assignment.driverId;
+      data.vehicleId = assignment.vehicleId;
     }
-    if (req.body.status === "cancelled" && OPEN_STATUSES.includes(job.status)) job.status = "cancelled";
+    if (req.body.status === "cancelled" && OPEN_STATUSES.includes(job.status)) data.status = "cancelled";
     // Moved to another driver or day without an explicit position: put it
     // at the end of that list rather than colliding with an existing stop.
-    if ((job.isModified("driverId") || job.isModified("scheduledDate")) && !("sequence" in req.body) && job.driverId) {
-      const last = await Job.findOne({ _id: { $ne: job._id }, driverId: job.driverId, scheduledDate: job.scheduledDate })
-        .sort({ sequence: -1 })
-        .select("sequence");
-      job.sequence = (last?.sequence ?? 0) + 1;
+    const driverId = "driverId" in data ? data.driverId : job.driverId;
+    const scheduledDate = data.scheduledDate ?? job.scheduledDate;
+    const moved = driverId !== job.driverId || scheduledDate !== job.scheduledDate;
+    if (moved && !("sequence" in req.body) && driverId) {
+      data.sequence = (await lastSequenceFor(driverId, scheduledDate, job.id)) + 1;
     }
-    await job.save();
-    return res.json(present(job));
+    const updated = await prisma.job.update({ where: { id: job.id }, data });
+    return res.json(present(updated));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update job" });
@@ -181,8 +211,8 @@ export async function updateJob(req, res) {
 
 export async function deleteJob(req, res) {
   try {
-    const job = await Job.findOneAndDelete({ _id: req.params.id, ...tenantScope(req) });
-    if (!job) return res.status(404).json({ error: "Job not found" });
+    const { count } = await prisma.job.deleteMany({ where: { id: req.params.id, ...tenantScope(req) } });
+    if (!count) return res.status(404).json({ error: "Job not found" });
     return res.status(204).send();
   } catch (err) {
     console.error(err);
@@ -199,11 +229,14 @@ export async function optimizeJobs(req, res) {
     if (assignment.error || !assignment.driverId) return res.status(404).json({ error: "Driver not found" });
     const scheduledDate = isDateKey(req.body.date) ? req.body.date : todayKey();
 
-    const jobs = await Job.find({ driverId: assignment.driverId, scheduledDate, status: { $in: OPEN_STATUSES } });
+    const jobs = await prisma.job.findMany({
+      where: { driverId: assignment.driverId, scheduledDate, status: { in: OPEN_STATUSES } },
+      orderBy: { createdAt: "asc" },
+    });
     if (jobs.length === 0) return res.json({ jobs: [], distanceKm: 0, lateMinutes: 0, estimatedFinishAt: null, startedFrom: null });
 
     const lastPing = assignment.vehicleId
-      ? await LocationPing.findOne({ vehicleId: assignment.vehicleId }).sort({ recordedAt: -1 })
+      ? await prisma.locationPing.findFirst({ where: { vehicleId: assignment.vehicleId }, orderBy: { recordedAt: "desc" } })
       : null;
     const start = lastPing ? { lat: lastPing.latitude, lng: lastPing.longitude } : { lat: jobs[0].latitude, lng: jobs[0].longitude };
 
@@ -212,12 +245,13 @@ export async function optimizeJobs(req, res) {
     const pending = jobs.filter((j) => j.status === "assigned");
     const result = optimizeStops(pending, start, new Date());
     const ordered = [...inProgress, ...result.order];
-    await Promise.all(ordered.map((j, i) => Job.updateOne({ _id: j._id }, { $set: { sequence: i + 1 } })));
+    await prisma.$transaction(ordered.map((j, i) => prisma.job.update({ where: { id: j.id }, data: { sequence: i + 1 } })));
 
-    const fresh = await Job.find({ _id: { $in: ordered.map((j) => j._id) } })
-      .populate("driverId", "fullName")
-      .populate("vehicleId", "plateNumber")
-      .sort({ sequence: 1 });
+    const fresh = await prisma.job.findMany({
+      where: { id: { in: ordered.map((j) => j.id) } },
+      include: LIST_INCLUDE,
+      orderBy: { sequence: "asc" },
+    });
     return res.json({
       jobs: fresh.map(present),
       distanceKm: Math.round(result.km * 10) / 10,
@@ -236,13 +270,16 @@ export async function optimizeJobs(req, res) {
 export async function listMyJobs(req, res) {
   try {
     const today = todayKey();
-    const jobs = await Job.find({
-      driverId: req.user.id,
-      $or: [
-        { status: { $in: OPEN_STATUSES }, scheduledDate: { $lte: today } },
-        { scheduledDate: today, status: { $in: ["completed", "failed"] } },
-      ],
-    }).sort({ scheduledDate: 1, sequence: 1 });
+    const jobs = await prisma.job.findMany({
+      where: {
+        driverId: req.user.id,
+        OR: [
+          { status: { in: OPEN_STATUSES }, scheduledDate: { lte: today } },
+          { scheduledDate: today, status: { in: ["completed", "failed"] } },
+        ],
+      },
+      orderBy: [{ scheduledDate: "asc" }, { sequence: "asc" }, { createdAt: "asc" }],
+    });
     return res.json(jobs.map(present));
   } catch (err) {
     console.error(err);
@@ -253,7 +290,7 @@ export async function listMyJobs(req, res) {
 // DRIVER — one of their own jobs, whatever its date or status
 export async function getMyJob(req, res) {
   try {
-    const job = await Job.findOne({ _id: req.params.id, driverId: req.user.id });
+    const job = await prisma.job.findFirst({ where: { id: req.params.id, driverId: req.user.id } });
     if (!job) return res.status(404).json({ error: "Job not found" });
     return res.json(present(job));
   } catch (err) {
@@ -267,7 +304,7 @@ export async function getMyJob(req, res) {
 // signature, or a note.
 export async function updateMyJobStatus(req, res) {
   try {
-    const job = await Job.findOne({ _id: req.params.id, driverId: req.user.id });
+    const job = await prisma.job.findFirst({ where: { id: req.params.id, driverId: req.user.id } });
     if (!job) return res.status(404).json({ error: "Job not found" });
 
     const { status } = req.body;
@@ -281,22 +318,23 @@ export async function updateMyJobStatus(req, res) {
     if (status === "failed") {
       const reason = String(req.body.failureReason || "").trim();
       if (!reason) return res.status(400).json({ error: "Please give a reason the job couldn't be completed" });
-      job.status = "failed";
-      job.failureReason = reason.slice(0, 500);
-      job.failedAt = now;
-      await job.save();
-      if (job.vehicleId) {
+      const failed = await prisma.job.update({
+        where: { id: job.id },
+        data: { status: "failed", failureReason: reason.slice(0, 500), failedAt: now },
+      });
+      if (failed.vehicleId) {
         await raiseAlert({
-          companyId: job.companyId,
-          vehicleId: job.vehicleId,
+          companyId: failed.companyId,
+          vehicleId: failed.vehicleId,
           type: "job_failed",
-          message: `Job "${job.title}" at ${job.address} couldn't be completed: ${job.failureReason}`,
+          message: `Job "${failed.title}" at ${failed.address} couldn't be completed: ${failed.failureReason}`,
           debounceMinutes: 0,
         });
       }
-      return res.json(present(job));
+      return res.json(present(failed));
     }
 
+    const data = {};
     if (status === "completed") {
       const proof = req.body.proof || {};
       const photoUploadIds = await ownedUploadIds(proof.photoUploadIds, job.companyId);
@@ -305,7 +343,7 @@ export async function updateMyJobStatus(req, res) {
       if (!photoUploadIds.length && !signatureUploadId && !notes) {
         return res.status(400).json({ error: "Add a photo, a signature or a note as proof of delivery" });
       }
-      job.proof = {
+      data.proof = {
         photoUploadIds,
         signatureUploadId: signatureUploadId || null,
         recipientName: proof.recipientName ? String(proof.recipientName).slice(0, 200) : null,
@@ -313,15 +351,15 @@ export async function updateMyJobStatus(req, res) {
         scannedCode: proof.scannedCode ? String(proof.scannedCode).slice(0, 200) : null,
         latitude: lat,
         longitude: lng,
-        capturedAt: now,
+        capturedAt: now.toISOString(),
       };
-      job.completedAt = now;
+      data.completedAt = now;
     }
-    if (status === "started") job.startedAt = now;
-    if (status === "arrived") job.arrivedAt = now;
-    job.status = status;
-    await job.save();
-    return res.json(present(job));
+    if (status === "started") data.startedAt = now;
+    if (status === "arrived") data.arrivedAt = now;
+    data.status = status;
+    const updated = await prisma.job.update({ where: { id: job.id }, data });
+    return res.json(present(updated));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update job" });
@@ -333,17 +371,21 @@ export async function updateMyJobStatus(req, res) {
 // only while the driver is actually on the way.
 export async function getPublicTracking(req, res) {
   try {
-    const job = await Job.findOne({ trackingToken: req.params.token })
-      .populate("driverId", "fullName")
-      .populate("vehicleId", "plateNumber")
-      .populate("companyId", "name");
+    const job = await prisma.job.findUnique({
+      where: { trackingToken: String(req.params.token) },
+      include: {
+        driver: { select: { fullName: true } },
+        vehicle: { select: { id: true, plateNumber: true } },
+        company: { select: { name: true } },
+      },
+    });
     if (!job) return res.status(404).json({ error: "This tracking link isn't valid" });
 
     let driverLocation = null;
     let etaMinutes = null;
     let distanceRemainingKm = null;
-    if (["started", "arrived"].includes(job.status) && job.vehicleId) {
-      const ping = await LocationPing.findOne({ vehicleId: job.vehicleId._id }).sort({ recordedAt: -1 });
+    if (["started", "arrived"].includes(job.status) && job.vehicle) {
+      const ping = await prisma.locationPing.findFirst({ where: { vehicleId: job.vehicle.id }, orderBy: { recordedAt: "desc" } });
       if (ping && Date.now() - ping.recordedAt.getTime() < 30 * 60000) {
         driverLocation = { latitude: ping.latitude, longitude: ping.longitude, recordedAt: ping.recordedAt };
         distanceRemainingKm = Math.round(distanceKm(ping.latitude, ping.longitude, job.latitude, job.longitude) * 13) / 10;
@@ -353,15 +395,15 @@ export async function getPublicTracking(req, res) {
 
     res.set("Cache-Control", "no-store");
     return res.json({
-      companyName: job.companyId?.name ?? null,
+      companyName: job.company?.name ?? null,
       title: job.title,
       address: job.address,
       destination: { latitude: job.latitude, longitude: job.longitude },
       status: job.status,
       windowStart: job.windowStart,
       windowEnd: job.windowEnd,
-      driverFirstName: job.driverId?.fullName?.split(" ")[0] ?? null,
-      plateNumber: job.vehicleId?.plateNumber ?? null,
+      driverFirstName: job.driver?.fullName?.split(" ")[0] ?? null,
+      plateNumber: job.vehicle?.plateNumber ?? null,
       driverLocation,
       etaMinutes,
       distanceRemainingKm,

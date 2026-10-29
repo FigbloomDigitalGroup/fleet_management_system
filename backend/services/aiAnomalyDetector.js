@@ -1,9 +1,5 @@
-import Vehicle from "../models/Vehicle.js";
-import LocationPing from "../models/LocationPing.js";
-import Trip from "../models/Trip.js";
-import Alert from "../models/Alert.js";
-import AgentScanLog from "../models/AgentScanLog.js";
-import { askOllama, isOllamaReachable } from "./ollamaService.js";
+import prisma from "../lib/prisma.js";
+import { askJson, isAiConfigured } from "./aiService.js";
 
 const LOOKBACK_MINUTES = 15;
 
@@ -37,22 +33,23 @@ ${tripLines}`;
 }
 
 // Runs one full scan pass: pulls every vehicle with a GPS ping in the last
-// LOOKBACK_MINUTES minutes, asks the local Ollama model whether its recent
+// LOOKBACK_MINUTES minutes, asks the AI model whether its recent
 // behavior looks unusual, raises an `ai_pattern_anomaly` Alert for positive
 // hits, and always persists an AgentScanLog — including a "no anomaly" entry
-// per vehicle checked, and a "failed" log (with the error) if Ollama itself
-// is unreachable, rather than throwing out of the cron job.
+// per vehicle checked, and a "failed" log (with the error) if no AI key
+// is configured, rather than throwing out of the cron job.
+const saveScanLog = (data) => prisma.agentScanLog.create({ data });
+
 export async function runAiAnomalyScan() {
   const runAt = new Date();
 
-  const reachable = await isOllamaReachable();
-  if (!reachable) {
-    return AgentScanLog.create({
+  if (!isAiConfigured()) {
+    return saveScanLog({
       runAt,
       vehiclesScanned: 0,
       anomaliesFound: 0,
       status: "failed",
-      errorMessage: `Ollama is unreachable at ${process.env.OLLAMA_URL || "http://localhost:11434"}`,
+      errorMessage: "OPENAI_API_KEY is not set — the AI agent is switched off",
       details: [],
     });
   }
@@ -61,37 +58,43 @@ export async function runAiAnomalyScan() {
   const details = [];
 
   try {
-    const recentVehicleIds = await LocationPing.distinct("vehicleId", { recordedAt: { $gte: since } });
-    const vehicles = await Vehicle.find({ _id: { $in: recentVehicleIds } });
+    const recent = await prisma.locationPing.findMany({
+      where: { recordedAt: { gte: since } },
+      distinct: ["vehicleId"],
+      select: { vehicleId: true },
+    });
+    const vehicles = await prisma.vehicle.findMany({ where: { id: { in: recent.map((p) => p.vehicleId) } } });
 
     for (const vehicle of vehicles) {
       const [pings, trips] = await Promise.all([
-        LocationPing.find({ vehicleId: vehicle._id, recordedAt: { $gte: since } }).sort({ recordedAt: 1 }),
-        Trip.find({ vehicleId: vehicle._id, startTime: { $gte: since } }),
+        prisma.locationPing.findMany({ where: { vehicleId: vehicle.id, recordedAt: { gte: since } }, orderBy: { recordedAt: "asc" } }),
+        prisma.trip.findMany({ where: { vehicleId: vehicle.id, startTime: { gte: since } } }),
       ]);
 
       const summary = buildVehicleSummary(vehicle, pings, trips);
 
       try {
-        const result = await askOllama(`${PROMPT_INSTRUCTIONS}\n\n${summary}`);
+        const result = await askJson(`${PROMPT_INSTRUCTIONS}\n\n${summary}`);
         const anomaly = Boolean(result?.anomaly);
         const reason = typeof result?.reason === "string" ? result.reason : "";
 
-        details.push({ vehicleId: vehicle._id, plateNumber: vehicle.plateNumber, anomaly, reason });
+        details.push({ vehicleId: vehicle.id, plateNumber: vehicle.plateNumber, anomaly, reason });
 
         if (anomaly) {
-          await Alert.create({
-            companyId: vehicle.companyId,
-            vehicleId: vehicle._id,
-            type: "ai_pattern_anomaly",
-            message: reason || "AI agent flagged an unusual pattern for this vehicle.",
+          await prisma.alert.create({
+            data: {
+              companyId: vehicle.companyId,
+              vehicleId: vehicle.id,
+              type: "ai_pattern_anomaly",
+              message: reason || "AI agent flagged an unusual pattern for this vehicle.",
+            },
           });
         }
       } catch (perVehicleErr) {
         // One vehicle's model call failing (bad JSON, timeout, etc.) shouldn't
         // sink the whole run — record it and keep going.
         details.push({
-          vehicleId: vehicle._id,
+          vehicleId: vehicle.id,
           plateNumber: vehicle.plateNumber,
           anomaly: false,
           reason: `Skipped — ${perVehicleErr.message}`,
@@ -99,7 +102,7 @@ export async function runAiAnomalyScan() {
       }
     }
 
-    return AgentScanLog.create({
+    return saveScanLog({
       runAt,
       vehiclesScanned: details.length,
       anomaliesFound: details.filter((d) => d.anomaly).length,
@@ -108,7 +111,7 @@ export async function runAiAnomalyScan() {
       details,
     });
   } catch (err) {
-    return AgentScanLog.create({
+    return saveScanLog({
       runAt,
       vehiclesScanned: details.length,
       anomaliesFound: details.filter((d) => d.anomaly).length,

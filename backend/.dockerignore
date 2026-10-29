@@ -1,0 +1,7 @@
+# Installed fresh inside the image.
+node_modules
+# Secrets are passed in at run time (env_file in docker-compose.yml, or the
+# host's environment settings), never baked into the image.
+.env
+.env.*
+scripts/_tmp_*
