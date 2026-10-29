@@ -19,7 +19,7 @@ import AlertToastStack from "./AlertToast";
 import AgentChatWidget from "./AgentChatWidget";
 import SessionExpiredModal from "./SessionExpiredModal";
 import OverviewSlides from "./OverviewSlides";
-import WheelIcon from "./WheelIcon";
+import VehicleAssignmentPanel from "./VehicleAssignmentPanel";
 
 // The portals' shell, arranged like Traccar's web app:
 // - on the company side the Live Map is a full-screen page with its own
@@ -181,17 +181,20 @@ export default function AppShell({ children, portal }: { children: ReactNode; po
             <span key={i} className={`h-2 w-2 bg-teal-600 ${i % 3 === 0 ? "rounded-full" : "rotate-45"}`} />
           ))}
         </div>
-        <WheelIcon
-          className="spin-slow pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 text-teal-600/20"
-          size={72}
-        />
-        <div className="relative max-w-md">
-          <OverviewSlides isOwner={isOwner} />
-          {companyIndustry && (
-            <span className="mt-3 inline-flex items-center rounded-full bg-teal-50 px-3 py-1 text-[9px] font-medium uppercase tracking-wide text-teal-600">
-              {industryLabel(companyIndustry)}
-            </span>
-          )}
+        {/* Offer slides on the left, the fleet's vehicle count on the right */}
+        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1">
+            <div className="max-w-md">
+              <OverviewSlides isOwner={isOwner} />
+            </div>
+            {companyIndustry && (
+              <span className="mt-3 inline-flex items-center rounded-full bg-teal-50 px-3 py-1 text-[9px] font-medium uppercase tracking-wide text-teal-600">
+                {industryLabel(companyIndustry)}
+              </span>
+            )}
+          </div>
+          <div className="hidden h-24 w-px bg-gray-100 sm:block" aria-hidden="true" />
+          <VehicleAssignmentPanel vehiclesHref={`/${portal}/vehicles`} />
         </div>
         <p className="relative mt-4 text-right text-[11px] text-blue-950/50">Powered by Movec</p>
       </div>
