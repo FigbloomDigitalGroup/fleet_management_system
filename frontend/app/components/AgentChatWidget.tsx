@@ -123,7 +123,7 @@ export default function AgentChatWidget() {
     <>
       {open && (
         <div className="fixed bottom-24 right-6 z-50 flex h-[28rem] w-[22rem] max-w-[90vw] flex-col overflow-hidden rounded-lg bg-white shadow-2xl ring-1 ring-black/10">
-          <div className="flex items-center justify-between bg-gradient-to-br from-teal-600 via-teal-500 to-cyan-600 px-4 py-3">
+          <div className="flex items-center justify-between bg-gradient-to-br from-teal-600 via-teal-500 to-teal-500 px-4 py-3">
             <div className="flex items-center gap-2 text-white">
               <RiRobot3Fill size={18} />
               <p className="text-sm font-semibold">Fleet AI Assistant</p>
@@ -204,7 +204,7 @@ export default function AgentChatWidget() {
         <button
           onClick={() => setOpen((o) => !o)}
           aria-label={open ? "Close fleet assistant" : "Ask the fleet assistant"}
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-600 to-cyan-600 text-white shadow-lg transition-transform hover:scale-105"
+          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-600 to-teal-500 text-white shadow-lg transition-transform hover:scale-105"
         >
           <RiRobot3Fill size={24} />
         </button>

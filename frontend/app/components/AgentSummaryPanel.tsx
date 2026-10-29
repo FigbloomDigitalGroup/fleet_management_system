@@ -104,8 +104,8 @@ export default function AgentSummaryPanel() {
             anomalies: d.anomalies,
           }))}
           lines={[
-            { dataKey: "vehicleChecks", label: "Vehicle checks", color: "#2dd4bf" },
-            { dataKey: "anomalies", label: "Anomalies", color: "#f97316" },
+            { dataKey: "vehicleChecks", label: "Vehicle checks", color: "#50a86a" },
+            { dataKey: "anomalies", label: "Anomalies", color: "#ff8a12" },
           ]}
         />
       </div>

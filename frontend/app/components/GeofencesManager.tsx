@@ -190,9 +190,9 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
                 center={clickedCenter}
                 radius={parseFloat(radiusM) || 0}
                 options={{
-                  fillColor: "#fb923c",
+                  fillColor: "#ffa049",
                   fillOpacity: 0.15,
-                  strokeColor: "#fb923c",
+                  strokeColor: "#ffa049",
                   strokeWeight: 2,
                   strokeOpacity: 0.6,
                 }}

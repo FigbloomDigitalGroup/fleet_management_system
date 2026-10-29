@@ -1,4 +1,4 @@
-import { askOllama, isOllamaReachable } from "./ollamaService.js";
+import { askJson, isAiConfigured } from "./aiService.js";
 import { getDrivingRoute } from "./googleMapsService.js";
 
 const ROUTE_INTENT_PATTERN = /\b(draw|plan|create|make|set up)\b.*\broute\b/i;
@@ -12,7 +12,7 @@ export function looksLikeRouteRequest(question) {
 
 // The model is only ever asked to pull out place NAMES already present in
 // the user's own sentence — never to recall or invent coordinates, which is
-// exactly the kind of thing local LLMs hallucinate. Real geography is
+// exactly the kind of thing language models hallucinate. Real geography is
 // resolved afterward by Google's Directions API, not the model.
 async function extractOriginDestination(question) {
   const match = question.match(FROM_TO_PATTERN);
@@ -20,15 +20,14 @@ async function extractOriginDestination(question) {
     return { origin: match[1].trim(), destination: match[2].trim() };
   }
 
-  const reachable = await isOllamaReachable();
-  if (!reachable) return null;
+  if (!isAiConfigured()) return null;
 
   const prompt = `Extract the starting place and destination place from this route request. Respond with ONLY JSON in the form {"origin": "...", "destination": "..."} and nothing else — no explanation, no markdown fence. If you can't find a clear origin AND destination, respond with {"origin": null, "destination": null}.
 
 Request: "${question}"`;
 
   try {
-    const result = await askOllama(prompt);
+    const result = await askJson(prompt);
     if (!result?.origin || !result?.destination) return null;
     return { origin: String(result.origin), destination: String(result.destination) };
   } catch {

@@ -1,4 +1,4 @@
-import Company from "../models/Company.js";
+import prisma from "./prisma.js";
 
 export const ALERT_SETTING_DEFAULTS = {
   speedLimitKph: 80,
@@ -19,11 +19,11 @@ export const TRACKING_HOURS_DEFAULTS = { enabled: false, start: "06:00", end: "2
 export const DATA_RETENTION_DEFAULT_DAYS = 180;
 export const TRACKING_TIMEZONE = "Africa/Nairobi";
 
-// Companies created before these settings existed have no subdocument at
-// all, so every reader goes through here to get a complete object.
+// Companies created before these settings existed have no settings at all
+// (null JSON columns), so every reader goes through here to get a complete object.
 export function resolveSettings(company) {
-  const alert = { ...ALERT_SETTING_DEFAULTS, ...(company?.alertSettings?.toObject?.() ?? company?.alertSettings ?? {}) };
-  const hours = { ...TRACKING_HOURS_DEFAULTS, ...(company?.trackingHours?.toObject?.() ?? company?.trackingHours ?? {}) };
+  const alert = { ...ALERT_SETTING_DEFAULTS, ...(company?.alertSettings ?? {}) };
+  const hours = { ...TRACKING_HOURS_DEFAULTS, ...(company?.trackingHours ?? {}) };
   return {
     alertSettings: alert,
     trackingHours: hours,
@@ -40,7 +40,10 @@ export async function getCompanySettings(companyId) {
   const key = String(companyId);
   const hit = cache.get(key);
   if (hit && hit.expires > Date.now()) return hit.value;
-  const company = await Company.findById(companyId).select("alertSettings trackingHours dataRetentionDays name");
+  const company = await prisma.company.findUnique({
+    where: { id: key },
+    select: { alertSettings: true, trackingHours: true, dataRetentionDays: true, name: true },
+  });
   const value = { ...resolveSettings(company), companyName: company?.name ?? "" };
   cache.set(key, { value, expires: Date.now() + CACHE_MS });
   return value;

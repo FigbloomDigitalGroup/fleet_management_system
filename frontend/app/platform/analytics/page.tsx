@@ -101,13 +101,13 @@ export default function AnalyticsPage() {
                         {
                             label: "Pro",
                             value: billing?.planCounts?.pro || 0,
-                            color: "#2dd4bf",
+                            color: "#50a86a",
                             description: "Full-featured plan for growing fleets",
                         },
                         {
                             label: "Enterprise",
                             value: billing?.planCounts?.enterprise || 0,
-                            color: "#fb923c",
+                            color: "#ffa049",
                             description: "Highest tier, largest fleets and custom needs",
                         },
                     ]}
@@ -123,7 +123,7 @@ export default function AnalyticsPage() {
                         description="How fleet size compares across your companies"
                         data={data.vehiclesPerCompany.map((v) => ({ name: v.name, vehicles: v.count }))}
                         dataKey="vehicles"
-                        color="#ea580c"
+                        color="#e16d00"
                     />
 
                 </div>
@@ -139,7 +139,7 @@ export default function AnalyticsPage() {
                 description="Sign-ups per month across the platform"
                 data={data.growth}
                 dataKey="companies"
-                color="#0d9488"
+                color="#0e4f27"
                 size="sm"
             />
         </div>

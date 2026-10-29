@@ -4,6 +4,7 @@ import {
   listTrips,
   getTrip,
   getTripPath,
+  getTripRoad,
   listMyTrips,
   getMyCurrentTrip,
   updateMyCurrentTrip,
@@ -18,6 +19,7 @@ router.post("/me/current/end", authenticate, authorize("DRIVER"), endMyCurrentTr
 router.get("/", authenticate, listTrips);
 router.get("/:id", authenticate, getTrip);
 router.get("/:id/path", authenticate, getTripPath);
+router.get("/:id/road", authenticate, getTripRoad);
 
 export default router;
 

@@ -6,9 +6,33 @@ services:
       - "5000:5000"
     env_file:
       - .env
+    environment:
+      # Inside Docker the database is the postgres service below; .env's
+      # DATABASE_URL (localhost:5433) is for running Prisma from the host.
+      DATABASE_URL: postgresql://fleet:fleet@postgres:5432/fleet
     volumes:
       - .:/app
       - /app/node_modules
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      - postgres
     restart: unless-stopped
+
+  # Local PostgreSQL for development. Port 5433 on the host so it doesn't
+  # clash with any other Postgres already on 5432.
+  postgres:
+    image: postgres:17
+    container_name: fleet-postgres
+    environment:
+      POSTGRES_USER: fleet
+      POSTGRES_PASSWORD: fleet
+      POSTGRES_DB: fleet
+    ports:
+      - "5433:5432"
+    volumes:
+      - fleet-postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  fleet-postgres-data:

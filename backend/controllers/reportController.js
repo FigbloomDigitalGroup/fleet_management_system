@@ -1,11 +1,5 @@
 import ExcelJS from "exceljs";
-import Trip from "../models/Trip.js";
-import Vehicle from "../models/Vehicle.js";
-import User from "../models/User.js";
-import Job from "../models/Job.js";
-import Expense from "../models/Expense.js";
-import Inspection from "../models/Inspection.js";
-import LocationPing from "../models/LocationPing.js";
+import prisma from "../lib/prisma.js";
 import { tenantScope } from "../middleware/auth.js";
 import { analyzePings } from "../lib/stops.js";
 import { computeDriverScores } from "../lib/driverScore.js";
@@ -46,14 +40,20 @@ const emptyRow = (id, name) => ({
 async function buildReport(req, { from, to }, groupBy) {
   const scope = tenantScope(req);
   const byDriver = groupBy === "driver";
+  const asc = { orderBy: { createdAt: "asc" } };
   const subjects = byDriver
-    ? await User.find({ role: "DRIVER", ...scope }).select("fullName")
-    : await Vehicle.find(scope).select("plateNumber");
-  const rows = new Map(subjects.map((s) => [String(s._id), emptyRow(String(s._id), byDriver ? s.fullName : s.plateNumber)]));
-  const vehicleIds = byDriver ? (await Vehicle.find(scope).select("_id")).map((v) => v._id) : subjects.map((s) => s._id);
+    ? await prisma.user.findMany({ where: { role: "DRIVER", ...scope }, select: { id: true, fullName: true }, ...asc })
+    : await prisma.vehicle.findMany({ where: scope, select: { id: true, plateNumber: true }, ...asc });
+  const rows = new Map(subjects.map((s) => [s.id, emptyRow(s.id, byDriver ? s.fullName : s.plateNumber)]));
+  const vehicleIds = byDriver
+    ? (await prisma.vehicle.findMany({ where: scope, select: { id: true } })).map((v) => v.id)
+    : subjects.map((s) => s.id);
   const keyOf = (doc) => String(byDriver ? doc.driverId : doc.vehicleId);
 
-  const trips = await Trip.find({ vehicleId: { $in: vehicleIds }, startTime: { $gte: from, $lte: to } }).lean();
+  const trips = await prisma.trip.findMany({
+    where: { vehicleId: { in: vehicleIds }, startTime: { gte: from, lte: to } },
+    ...asc,
+  });
   for (const trip of trips) {
     const row = rows.get(keyOf(trip));
     if (!row) continue;
@@ -61,17 +61,18 @@ async function buildReport(req, { from, to }, groupBy) {
     row.trips += 1;
     row.distanceKm += trip.distanceKm || 0;
     row.drivingHours += (end - new Date(trip.startTime)) / 3600000;
-    const pings = await LocationPing.find({ vehicleId: trip.vehicleId, recordedAt: { $gte: trip.startTime, $lte: end } })
-      .select("latitude longitude speedKph recordedAt")
-      .sort({ recordedAt: 1 })
-      .limit(MAX_PINGS_PER_TRIP)
-      .lean();
+    const pings = await prisma.locationPing.findMany({
+      where: { vehicleId: trip.vehicleId, recordedAt: { gte: trip.startTime, lte: end } },
+      select: { latitude: true, longitude: true, speedKph: true, recordedAt: true },
+      orderBy: { recordedAt: "asc" },
+      take: MAX_PINGS_PER_TRIP,
+    });
     const analysis = analyzePings(pings);
     row.idleMinutes += analysis.idleMinutes;
     row.stops += analysis.stops.length;
   }
 
-  const jobs = await Job.find({ ...scope, scheduledDate: { $gte: dateKey(from), $lte: dateKey(to) } }).lean();
+  const jobs = await prisma.job.findMany({ where: { ...scope, scheduledDate: { gte: dateKey(from), lte: dateKey(to) } } });
   for (const job of jobs) {
     const row = rows.get(keyOf(job));
     if (!row) continue;
@@ -82,13 +83,13 @@ async function buildReport(req, { from, to }, groupBy) {
     if (job.status === "failed") row.jobsFailed += 1;
   }
 
-  const expenses = await Expense.find({ ...scope, incurredAt: { $gte: from, $lte: to } }).lean();
+  const expenses = await prisma.expense.findMany({ where: { ...scope, incurredAt: { gte: from, lte: to } } });
   for (const e of expenses) {
     const row = rows.get(keyOf(e));
     if (row) row.expensesKes += e.amount;
   }
 
-  const inspections = await Inspection.find({ ...scope, createdAt: { $gte: from, $lte: to } }).lean();
+  const inspections = await prisma.inspection.findMany({ where: { ...scope, createdAt: { gte: from, lte: to } } });
   for (const i of inspections) {
     const row = rows.get(keyOf(i));
     if (!row) continue;
@@ -98,7 +99,7 @@ async function buildReport(req, { from, to }, groupBy) {
 
   if (byDriver && subjects.length) {
     const days = Math.max(7, Math.ceil((to - from) / 86400000));
-    const scores = await computeDriverScores(subjects.map((s) => s._id), days);
+    const scores = await computeDriverScores(subjects.map((s) => s.id), days);
     for (const [id, s] of scores) if (rows.has(id)) rows.get(id).score = s.score;
   }
 
