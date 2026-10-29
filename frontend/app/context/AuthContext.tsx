@@ -17,8 +17,13 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (payload: RegisterPayload) => Promise<User>;
+  register: (payload: RegisterPayload) => Promise<RegisterResult>;
   logout: () => void;
+}
+
+interface RegisterResult {
+  user: User;
+  pending: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -68,13 +73,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.user;
   }
 
-  async function register(payload: RegisterPayload): Promise<User> {
-    const data = await apiRequest<LoginResponse>("/api/auth/register-company", {
+  // A company that needs platform approval first comes back "pending": no
+  // session is kept (every request would be refused until it's approved),
+  // and the caller shows the "awaiting approval" message instead.
+  async function register(payload: RegisterPayload): Promise<RegisterResult> {
+    const data = await apiRequest<LoginResponse & { company?: { status?: string } }>("/api/auth/register-company", {
       method: "POST",
       body: JSON.stringify(payload),
     });
+    if (data.company?.status === "pending") return { user: data.user, pending: true };
     persistSession(data);
-    return data.user;
+    return { user: data.user, pending: false };
   }
 
   function logout() {
