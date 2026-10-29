@@ -147,10 +147,25 @@ function InlinePhoto({ src, alt }: { src: string; alt: string }) {
     <img
       src={src}
       alt={alt}
-      className="mx-1 inline-block h-[0.95em] w-[1.9em] rounded-md object-cover align-[-0.08em] md:h-[1.05em] md:w-[2.2em]"
+      className="mx-1 inline-block h-[0.95em] w-[1.9em] rounded-full object-cover align-[-0.1em] shadow-sm ring-2 ring-white md:h-[1.05em] md:w-[2.2em]"
     />
   );
 }
+
+// A key phrase in the "Why" sentence: brand green on a soft green pill,
+// never split across two lines.
+function Pill({ children }: { children: React.ReactNode }) {
+  return <span className="whitespace-nowrap rounded-lg bg-teal-50 px-1.5 text-teal-600 ring-1 ring-teal-100">{children}</span>;
+}
+
+// The five things the "Why" sentence names, as tiles under it.
+const PILLARS = [
+  { icon: FaMapMarkerAlt, title: "Track & replay", text: "Every vehicle live on one map, and any trip replayed." },
+  { icon: FaRoute, title: "Dispatch", text: "Jobs in order, with photo and signature proof of delivery." },
+  { icon: FaTools, title: "Inspect & maintain", text: "Pre-trip checks and service reminders by date or mileage." },
+  { icon: FaMobileAlt, title: "Driver app", text: "Jobs, trips, messages and SOS in one app." },
+  { icon: FaChartLine, title: "Reports", text: "Trips, safety and costs — export to Excel." },
+];
 
 // Dark highlight behind a phrase, as in the template.
 function Mark({ children }: { children: React.ReactNode }) {
@@ -288,16 +303,40 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* SENTENCE WITH INLINE PHOTOS */}
-        <section className="rounded-3xl bg-white px-6 py-16 md:py-24">
-          <p className="mx-auto max-w-3xl text-2xl font-semibold leading-snug tracking-tight text-gray-950 md:text-4xl md:leading-snug">
-            Our fleet platform brings together <InlinePhoto src="/live tracking.jpg" alt="" /> <Mark>live tracking</Mark> and{" "}
-            <InlinePhoto src="/dariuszsankowski-navigation-1048294_1920.jpg" alt="" /> trip replay to catch problems early, streamline{" "}
-            <Mark>dispatch</Mark> with <InlinePhoto src="/skica911-driver-3978839_1920.jpg" alt="" /> proof of delivery, and keep every
-            vehicle road-ready with <Mark>inspections and maintenance</Mark>. Drivers get{" "}
-            <InlinePhoto src="/driver-app-phone.jpg" alt="" /> one app for jobs, trips and SOS, and you get{" "}
-            <span className="underline decoration-orange-500 decoration-4 underline-offset-4">reports you can act on</span>.
+        {/* WHY — one sentence with inline photos, then the five pillars it names */}
+        <section className="rounded-3xl bg-gradient-to-b from-teal-50 via-white to-white px-6 py-16 md:py-24">
+          <p className="mb-6 text-center text-xs font-semibold uppercase tracking-[0.2em] text-orange-500">Why FIGBLOOM FLEET</p>
+          <p className="mx-auto max-w-3xl text-center text-2xl font-semibold leading-snug tracking-tight text-gray-500 md:text-4xl md:leading-snug">
+            Our fleet platform brings together <InlinePhoto src="/live tracking.jpg" alt="" /> <Pill>live tracking</Pill> and{" "}
+            <InlinePhoto src="/dariuszsankowski-navigation-1048294_1920.jpg" alt="" /> <Pill>trip replay</Pill> to catch problems early,
+            streamline <Pill>dispatch</Pill> with <InlinePhoto src="/skica911-driver-3978839_1920.jpg" alt="" />{" "}
+            <Pill>proof of delivery</Pill>, and keep every vehicle road-ready with <Pill>inspections</Pill> and{" "}
+            <Pill>maintenance</Pill>. Drivers get <InlinePhoto src="/driver-app-phone.jpg" alt="" />{" "}
+            <span className="whitespace-nowrap text-gray-950">one app</span> for jobs, trips and SOS, and you get{" "}
+            <span className="whitespace-nowrap text-orange-500 underline decoration-orange-300 decoration-4 underline-offset-[6px]">
+              reports you can act on
+            </span>
+            .
           </p>
+
+          <div className="mx-auto mt-12 grid max-w-5xl gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {PILLARS.map((p) => {
+              const Icon = p.icon;
+              return (
+                <a
+                  key={p.title}
+                  href="#features"
+                  className="group rounded-2xl border border-gray-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md"
+                >
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-600 text-white transition-colors group-hover:bg-orange-500">
+                    <Icon size={15} />
+                  </span>
+                  <h3 className="mt-3 text-sm font-semibold text-gray-950">{p.title}</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-gray-500">{p.text}</p>
+                </a>
+              );
+            })}
+          </div>
         </section>
 
         {/* FEATURES */}
@@ -318,10 +357,10 @@ export default function LandingPage() {
               const Icon = f.icon;
               return (
                 <div key={f.title} className="rounded-2xl border border-gray-200 p-6 transition-shadow hover:shadow-md">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
-                    <Icon size={17} />
+                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 ring-1 ring-teal-100">
+                    <Icon size={26} />
                   </span>
-                  <h3 className="mt-4 text-base font-semibold text-gray-950">{f.title}</h3>
+                  <h3 className="mt-5 text-base font-semibold text-gray-950">{f.title}</h3>
                   <p className="mt-1.5 text-sm leading-relaxed text-gray-500">{f.text}</p>
                 </div>
               );
