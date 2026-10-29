@@ -11,6 +11,7 @@ import FullPageLoading from "@/app/components/FullPageLoading";
 import MapMetricsCard from "../../components/MapMetricsCard";
 import WheelIcon from "../../components/WheelIcon";
 import { usePageHeader } from "../../components/DashboardShell";
+import OverviewMetrics from "../../components/reports/OverviewMetrics";
 import { routeDistanceKm, estimateFuelRangeLiters } from "../../lib/routeEstimate";
 import { routeStatusBadge } from "../../lib/routeStatus";
 import {
@@ -125,6 +126,8 @@ export default function CompanyDashboard() {
           Couldn't refresh dashboard data — showing the last loaded values. ({loadError})
         </div>
       )}
+
+      <OverviewMetrics basePath="/company" />
 
       {/* Fleet status breakdown beside the trips chart — first thing below
           the header. */}
