@@ -2,6 +2,9 @@ services:
   backend:
     build: .
     container_name: fleet-backend-container
+    # Auto-reload while developing; the image itself starts in production
+    # mode (npm start — see Dockerfile).
+    command: npm run dev
     ports:
       - "5000:5000"
     env_file:
