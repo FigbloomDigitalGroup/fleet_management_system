@@ -23,6 +23,8 @@ export default function RegisterPage() {
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isHuman, setIsHuman] = useState(false);
+    // Set once a company is registered but still needs platform approval.
+    const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
     async function handleSubmit(e: FormEvent) {
         e.preventDefault();
@@ -35,7 +37,11 @@ export default function RegisterPage() {
 
         setIsSubmitting(true);
         try {
-            const user = await register({ companyName, industry: industry || undefined, ownerName: fullName, email, password });
+            const { user, pending } = await register({ companyName, industry: industry || undefined, ownerName: fullName, email, password });
+            if (pending) {
+                setPendingEmail(user.email);
+                return;
+            }
             router.push(redirectPathForRole(user.role));
         } catch (err: any) {
             setError(err.message || "Unable to create your account. Please try again.");
@@ -91,6 +97,31 @@ export default function RegisterPage() {
 
             {/* RIGHT — Form panel */}
             <div className="lg:w-1/2 flex items-center justify-center p-8">
+                {pendingEmail ? (
+                <div className="w-full max-w-sm text-center" role="status">
+                    <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-teal-50">
+                        <svg viewBox="0 0 24 24" className="h-8 w-8 text-teal-600" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                    </div>
+                    <h2 className="text-3xl font-extrabold text-teal-950 mb-3">Application received</h2>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                        Thanks for registering <span className="font-semibold text-gray-800">{companyName}</span>. Our team
+                        reviews every new company before it goes live — we&apos;ll email{" "}
+                        <span className="font-semibold text-gray-800">{pendingEmail}</span> as soon as your account is
+                        approved, and you can sign in then.
+                    </p>
+                    <a
+                        href="/login"
+                        className="mt-8 inline-block w-full py-2.5 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600"
+                    >
+                        Go to sign in
+                    </a>
+                    <a href="/" className="mt-4 inline-block text-sm text-gray-500 hover:text-teal-700">
+                        Back to home
+                    </a>
+                </div>
+                ) : (
                 <div className="w-full max-w-sm">
                     <h2 className="text-5xl font-extrabold text-teal-950 mb-2">Create your account</h2>
                     <p className="text-sm text-gray-500 mb-8">Register your vehicle company.</p>
@@ -212,6 +243,7 @@ export default function RegisterPage() {
                         </button>
                     </form>
                 </div>
+                )}
             </div>
         </div>
     );

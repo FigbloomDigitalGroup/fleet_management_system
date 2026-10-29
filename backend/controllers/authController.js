@@ -116,7 +116,14 @@ export async function registerCompany(req, res) {
       return res.status(409).json({ error: "An account with this email already exists" });
     }
 
-    const slug = companyName.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    // Without these the account would be created but sign-in tokens couldn't
+    // be issued — refuse before writing anything, and say why in the logs.
+    if (!process.env.JWT_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
+      console.error("[register-company] JWT_SECRET or REFRESH_TOKEN_SECRET is not set");
+      return res.status(500).json({ error: "Registration is unavailable right now — the server is missing its sign-in settings" });
+    }
+
+    const slug = await uniqueCompanySlug(companyName);
 
     const settings = await getPlatformSettings();
     const subscriptionPlan = settings.defaultPlan;
@@ -165,8 +172,27 @@ export async function registerCompany(req, res) {
       refreshToken,
     });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "Failed to register company" });
+    console.error("[register-company]", err);
+    // Two sign-ups racing for the same email.
+    if (isUniqueViolation(err) && String(err.meta?.target ?? "").includes("email")) {
+      return res.status(409).json({ error: "An account with this email already exists" });
+    }
+    return res.status(500).json({ error: "Failed to register company", code: err?.code });
+  }
+}
+
+// "Acme Logistics" → "acme-logistics"; if another company already has that,
+// "acme-logistics-2", "-3"… Names with no usable letters fall back to "company".
+async function uniqueCompanySlug(companyName) {
+  const base =
+    companyName.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "") ||
+    "company";
+  const taken = new Set(
+    (await prisma.company.findMany({ where: { slug: { startsWith: base } }, select: { slug: true } })).map((c) => c.slug)
+  );
+  if (!taken.has(base)) return base;
+  for (let n = 2; ; n++) {
+    if (!taken.has(`${base}-${n}`)) return `${base}-${n}`;
   }
 }
 
