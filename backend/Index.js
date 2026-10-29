@@ -105,11 +105,19 @@ const PORT = process.env.PORT || 5000;
 // Fail fast if the database (PostgreSQL — Supabase in production) can't be
 // reached, rather than starting a server whose every request would error.
 async function connectDatabase() {
+  if (!process.env.DATABASE_URL) {
+    console.error(
+      "Failed to connect to PostgreSQL: DATABASE_URL is not set. Add it to the environment (Render → Environment) — the Supabase session pooler connection string."
+    );
+    process.exit(1);
+  }
   try {
     await prisma.$queryRaw`SELECT 1`;
     console.log("PostgreSQL connected");
   } catch (err) {
-    console.error("Failed to connect to PostgreSQL:", err.message);
+    // Prisma puts the database's own reason in meta, not always the message.
+    const reason = err.meta?.driverAdapterError?.cause;
+    console.error("Failed to connect to PostgreSQL:", err.message, reason ? JSON.stringify(reason) : "");
     process.exit(1);
   }
 }
