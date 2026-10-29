@@ -1,5 +1,6 @@
 "use client";
 
+import { useFleetTheme } from "../../context/FleetThemeContext";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { apiRequest } from "../../lib/api";
@@ -39,6 +40,7 @@ export default function AdminDashboard() {
   };
 
   usePageHeader("Fleet Overview", "Real-time visibility across your entire fleet.");
+  const { colors } = useFleetTheme();
 
   useEffect(() => {
     async function loadAll() {
@@ -149,7 +151,6 @@ export default function AdminDashboard() {
             description="Number of trips started each day this week"
             data={tripsPerDay}
             dataKey="trips"
-            color="#e16d00"
             size="lg"
           />
         </div>
@@ -157,8 +158,8 @@ export default function AdminDashboard() {
 
       {/* Fleet active / drivers assigned rings */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <CircleStat percentage={activePct} label="Fleet active" color="#50a86a" description="Vehicles currently on the move" />
-        <CircleStat percentage={assignedPct} label="Drivers assigned" color="#0e4f27" description="Drivers with a vehicle assigned" />
+        <CircleStat percentage={activePct} label="Fleet active" color={colors.mainSoft} description="Vehicles currently on the move" />
+        <CircleStat percentage={assignedPct} label="Drivers assigned" color={colors.main} description="Drivers with a vehicle assigned" />
       </div>
 
       {/* Agent activity on the left, Fleet on the map on the right */}
@@ -175,8 +176,8 @@ export default function AdminDashboard() {
       })) ?? []
     }
     lines={[
-      { dataKey: "vehicleChecks", label: "Vehicle checks", color: "#50a86a" },
-      { dataKey: "anomalies", label: "Anomalies", color: "#ff8a12" },
+      { dataKey: "vehicleChecks", label: "Vehicle checks", color: colors.mainSoft },
+      { dataKey: "anomalies", label: "Anomalies", color: colors.accent },
     ]}
   />
 </div>

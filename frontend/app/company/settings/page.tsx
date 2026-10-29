@@ -6,6 +6,7 @@ import FullPageLoading from "@/app/components/FullPageLoading";
 import { CompanyRecord } from "../../types/auth";
 import { usePageHeader } from "../../components/DashboardShell";
 import CompanyOpsSettings from "../../components/CompanyOpsSettings";
+import AppearanceSettings from "../../components/AppearanceSettings";
 import Avatar from "../../components/Avatar";
 import ImageUploadButton from "../../components/ImageUploadButton";
 
@@ -106,6 +107,8 @@ export default function CompanySettingsPage() {
           {saving ? "Saving…" : "Save changes"}
         </button>
       </form>
+
+      <AppearanceSettings />
 
       <CompanyOpsSettings />
     </div>

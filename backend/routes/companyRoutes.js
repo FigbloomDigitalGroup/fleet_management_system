@@ -6,6 +6,7 @@ import {
   updateCompanyStatus,
   getMyCompany,
   updateMyCompany,
+  updateMyAppearance,
   updateStartPoint,
   updateMyPlan,
   getMyCompanyStats,
@@ -22,6 +23,7 @@ router.use(authenticate);
 router.get("/", authorize("PLATFORM_ADMIN"), listCompanies);
 router.get("/me", authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN", "DRIVER"), getMyCompany);
 router.patch("/me", authorize("COMPANY_OWNER"), updateMyCompany);
+router.patch("/me/appearance", authorize("COMPANY_OWNER"), updateMyAppearance);
 router.patch("/me/start-point", authorize("ADMIN", "COMPANY_OWNER"), updateStartPoint);
 router.patch("/me/plan", authorize("COMPANY_OWNER"), updateMyPlan);
 router.get("/me/stats", authorize("ADMIN", "COMPANY_OWNER"), getMyCompanyStats);

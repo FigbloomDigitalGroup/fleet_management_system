@@ -1,5 +1,6 @@
 "use client";
 
+import { useFleetTheme } from "../context/FleetThemeContext";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
 
 const titleSizes = {
@@ -13,7 +14,7 @@ export default function BarChartCard({
   description,
   data,
   dataKey,
-  color = "#e16d00",
+  color: colorProp,
   size = "md",
 }: {
   title: string;
@@ -23,6 +24,8 @@ export default function BarChartCard({
   color?: string;
   size?: "sm" | "md" | "lg";
 }) {
+  const { colors } = useFleetTheme();
+  const color = colorProp ?? colors.accentDark;
   const seriesLabel = dataKey.charAt(0).toUpperCase() + dataKey.slice(1);
 
   return (

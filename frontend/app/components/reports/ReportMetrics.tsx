@@ -1,5 +1,6 @@
 "use client";
 
+import { useFleetTheme } from "../../context/FleetThemeContext";
 import Link from "next/link";
 import { ReactNode } from "react";
 import { Area, AreaChart, Bar, BarChart, PolarAngleAxis, RadialBar, RadialBarChart, ResponsiveContainer, Tooltip } from "recharts";
@@ -9,10 +10,6 @@ import { scoreBadgeClass } from "../DriverScoreCard";
 import { formatKes } from "../../lib/pricing";
 import { ReportOverview } from "../../types/reports";
 
-// Brand palette (globals.css): teal-600 green, teal-400, orange-500.
-const GREEN = "#0e4f27";
-const GREEN_SOFT = "#50a86a";
-const ORANGE = "#ff8a12";
 
 const shortDay = (key: string) =>
   new Date(`${key}T00:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short" });
@@ -89,6 +86,11 @@ export default function ReportMetrics({
   periodDays: number;
 }) {
   const { metrics, daily, topDrivers, driverCount } = overview;
+  // The company's theme colours (Settings → Appearance).
+  const { colors } = useFleetTheme();
+  const GREEN = colors.main;
+  const GREEN_SOFT = colors.mainSoft;
+  const ORANGE = colors.accent;
   const lastExpense = metrics.expensesKes.lastLoggedAt;
   const noExpenseNote = lastExpense
     ? `No expenses in the last ${periodDays} days — last one logged ${new Date(lastExpense).toLocaleDateString(undefined, { day: "numeric", month: "short" })}`
@@ -148,7 +150,7 @@ export default function ReportMetrics({
                   dataKey={(d: { expensesKes: number; fuelKes: number }) => d.expensesKes - d.fuelKes}
                   name="other"
                   stackId="kes"
-                  fill="#ffd2a3"
+                  fill={colors.accentPale}
                   radius={[3, 3, 0, 0]}
                 />
               </BarChart>

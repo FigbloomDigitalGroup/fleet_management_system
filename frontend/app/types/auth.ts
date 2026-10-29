@@ -29,6 +29,8 @@ export interface CompanyRecord {
   totalRevenue?: number;
   industry?: string;
   logoUrl?: string | null;
+  theme?: string;
+  textSize?: string;
   createdAt: string;
   userCount?: number;
   dailyStartPoint?: {

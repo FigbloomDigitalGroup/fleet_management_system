@@ -109,6 +109,39 @@ export async function updateMyCompany(req, res) {
   }
 }
 
+// The web app's themes (frontend app/lib/themes.ts) and text sizes.
+export const THEMES = ["forest", "violet", "ocean", "lagoon", "graphite"];
+export const TEXT_SIZES = ["small", "normal", "large"];
+
+// COMPANY_OWNER — the dashboard's look for everyone in the company.
+export async function updateMyAppearance(req, res) {
+  try {
+    if (!req.user.companyId) {
+      return res.status(400).json({ error: "This account is not linked to a company" });
+    }
+    const { theme, textSize } = req.body;
+    const data = {};
+    if (theme !== undefined) {
+      if (!THEMES.includes(theme)) return res.status(400).json({ error: `theme must be one of: ${THEMES.join(", ")}` });
+      data.theme = theme;
+    }
+    if (textSize !== undefined) {
+      if (!TEXT_SIZES.includes(textSize)) {
+        return res.status(400).json({ error: `textSize must be one of: ${TEXT_SIZES.join(", ")}` });
+      }
+      data.textSize = textSize;
+    }
+    if (!Object.keys(data).length) return res.status(400).json({ error: "theme or textSize is required" });
+
+    const company = await updateCompany(req.user.companyId, data);
+    if (!company) return res.status(404).json({ error: "Company not found" });
+    return res.json(toApi(company));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to update appearance" });
+  }
+}
+
 // ADMIN / COMPANY_OWNER — set where drivers should start their day. Must
 // land inside an existing geofence zone, so it's tied to a place the fleet
 // already monitors rather than an arbitrary point on the map.

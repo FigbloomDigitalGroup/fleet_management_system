@@ -1,5 +1,6 @@
 "use client";
 
+import { useFleetTheme } from "../../context/FleetThemeContext";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { apiRequest } from "../../lib/api";
@@ -44,6 +45,7 @@ export default function CompanyDashboard() {
   };
 
   usePageHeader("Fleet Overview", "Everything your fleet needs, in one place.");
+  const { colors } = useFleetTheme();
 
   useEffect(() => {
     async function loadAll() {
@@ -151,7 +153,6 @@ export default function CompanyDashboard() {
             description="Number of trips started each day this week"
             data={tripsPerDay}
             dataKey="trips"
-            color="#e16d00"
             size="lg"
           />
         </div>
@@ -159,7 +160,7 @@ export default function CompanyDashboard() {
 
       {/* Fleet active / offline rings */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <CircleStat percentage={activePct} label="Fleet active" color="#50a86a" description="Vehicles currently on the move" />
+        <CircleStat percentage={activePct} label="Fleet active" color={colors.mainSoft} description="Vehicles currently on the move" />
         <CircleStat
           percentage={vehicleCounts.total ? Math.round((vehicleCounts.offline / vehicleCounts.total) * 100) : 0}
           label="Offline"
@@ -182,8 +183,8 @@ export default function CompanyDashboard() {
         })) ?? []
       }
       lines={[
-        { dataKey: "vehicleChecks", label: "Vehicle checks", color: "#50a86a" },
-        { dataKey: "anomalies", label: "Anomalies", color: "#ff8a12" },
+        { dataKey: "vehicleChecks", label: "Vehicle checks", color: colors.mainSoft },
+        { dataKey: "anomalies", label: "Anomalies", color: colors.accent },
       ]}
     />
   </div>

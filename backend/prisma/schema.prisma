@@ -236,6 +236,10 @@ model Company {
   trackingHours     Json           @default("{\"enabled\":false,\"start\":\"06:00\",\"end\":\"20:00\",\"days\":[1,2,3,4,5,6]}")
   dataRetentionDays Int            @default(180)
   logoUploadId      String?
+  // Dashboard look chosen by the owner: a theme id from the web app's
+  // themes list, and the text size (small | normal | large).
+  theme             String         @default("forest")
+  textSize          String         @default("normal")
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 

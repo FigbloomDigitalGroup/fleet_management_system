@@ -1,14 +1,17 @@
+import { useFleetTheme } from "../context/FleetThemeContext";
 export default function CircleStat({
   percentage,
   label,
   description,
-  color = "#0e4f27",
+  color,
 }: {
   percentage: number;
   label: string;
   description?: string;
   color?: string;
 }) {
+  const { colors } = useFleetTheme();
+  const stroke = color ?? colors.main;
   const radius = 38;
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.max(0, Math.min(100, percentage));
@@ -23,7 +26,7 @@ export default function CircleStat({
           cy="50"
           r={radius}
           fill="none"
-          stroke={color}
+          stroke={stroke}
           strokeWidth="9"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
