@@ -1,22 +1,18 @@
-import mongoose from "mongoose";
-import MaintenanceRecord from "../models/MaintenanceRecord.js";
-import Vehicle from "../models/Vehicle.js";
-import Trip from "../models/Trip.js";
+import prisma from "../lib/prisma.js";
+import { toApi } from "../lib/serialize.js";
 import { tenantScope } from "../middleware/auth.js";
 import { raiseAlert } from "../lib/alerts.js";
 
 // Odometer = the reading entered at onboarding (odometerBaseKm) plus every
 // kilometre recorded on trips since.
 export async function currentOdometerKm(vehicle) {
-  const [row] = await Trip.aggregate([
-    { $match: { vehicleId: new mongoose.Types.ObjectId(String(vehicle._id)) } },
-    { $group: { _id: null, km: { $sum: { $ifNull: ["$distanceKm", 0] } } } },
-  ]);
-  return Math.round(((vehicle.odometerBaseKm || 0) + (row?.km || 0)) * 10) / 10;
+  const row = await prisma.trip.aggregate({ where: { vehicleId: vehicle.id }, _sum: { distanceKm: true } });
+  return Math.round(((vehicle.odometerBaseKm || 0) + (row._sum.distanceKm || 0)) * 10) / 10;
 }
 
 const numOrNull = (v) => (v === undefined || v === null || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
 const dateOrNull = (v) => (v ? new Date(v) : null);
+const intOrNull = (v) => (numOrNull(v) == null ? null : Math.round(Number(v)));
 
 function reminderState(r, odometerKm) {
   if (r.kind !== "reminder" || r.status === "done") return null;
@@ -31,27 +27,31 @@ function reminderState(r, odometerKm) {
 // with its current odometer and each reminder's due state.
 export async function listMaintenance(req, res) {
   try {
-    const filter = { ...tenantScope(req) };
-    if (req.query.vehicleId) filter.vehicleId = req.query.vehicleId;
-    const items = await MaintenanceRecord.find(filter).populate("vehicleId", "plateNumber odometerBaseKm").sort({ createdAt: -1 }).limit(500);
+    const where = { ...tenantScope(req) };
+    if (req.query.vehicleId) where.vehicleId = String(req.query.vehicleId);
+    const items = await prisma.maintenanceRecord.findMany({
+      where,
+      include: { vehicle: { select: { id: true, plateNumber: true, odometerBaseKm: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 500,
+    });
 
     const odometers = new Map();
     for (const i of items) {
-      const v = i.vehicleId;
-      if (v && !odometers.has(String(v._id))) odometers.set(String(v._id), await currentOdometerKm(v));
+      if (!odometers.has(i.vehicle.id)) odometers.set(i.vehicle.id, await currentOdometerKm(i.vehicle));
     }
     let vehicleOdometerKm = null;
     if (req.query.vehicleId) {
-      const v = await Vehicle.findOne({ _id: req.query.vehicleId, ...tenantScope(req) }).select("odometerBaseKm");
+      const v = await prisma.vehicle.findFirst({
+        where: { id: String(req.query.vehicleId), ...tenantScope(req) },
+        select: { id: true, odometerBaseKm: true },
+      });
       if (v) vehicleOdometerKm = await currentOdometerKm(v);
     }
 
     return res.json({
       odometerKm: vehicleOdometerKm,
-      items: items.map((i) => {
-        const odo = i.vehicleId ? odometers.get(String(i.vehicleId._id)) : null;
-        return { ...i.toObject(), state: reminderState(i, odo ?? 0) };
-      }),
+      items: items.map((i) => ({ ...toApi(i), state: reminderState(i, odometers.get(i.vehicle.id) ?? 0) })),
     });
   } catch (err) {
     console.error(err);
@@ -64,15 +64,15 @@ export async function createMaintenance(req, res) {
     const { vehicleId, kind, title } = req.body;
     if (!["record", "reminder"].includes(kind)) return res.status(400).json({ error: "kind must be record or reminder" });
     if (!title?.trim()) return res.status(400).json({ error: "title is required" });
-    const vehicle = await Vehicle.findOne({ _id: vehicleId, ...tenantScope(req) });
+    const vehicle = await prisma.vehicle.findFirst({ where: { id: String(vehicleId ?? ""), ...tenantScope(req) } });
     if (!vehicle) return res.status(404).json({ error: "Vehicle not found" });
 
     const doc = {
       companyId: vehicle.companyId,
-      vehicleId: vehicle._id,
+      vehicleId: vehicle.id,
       kind,
       title: title.trim(),
-      notes: req.body.notes || null,
+      notes: req.body.notes ? String(req.body.notes) : null,
     };
     if (kind === "record") {
       Object.assign(doc, {
@@ -83,7 +83,7 @@ export async function createMaintenance(req, res) {
       });
     } else {
       const intervalKm = numOrNull(req.body.intervalKm);
-      const intervalDays = numOrNull(req.body.intervalDays);
+      const intervalDays = intOrNull(req.body.intervalDays);
       let dueDate = dateOrNull(req.body.dueDate);
       let dueOdometerKm = numOrNull(req.body.dueOdometerKm);
       // An interval with no explicit due point counts from today/now.
@@ -94,8 +94,8 @@ export async function createMaintenance(req, res) {
       }
       Object.assign(doc, { dueDate, dueOdometerKm, intervalKm, intervalDays });
     }
-    const item = await MaintenanceRecord.create(doc);
-    return res.status(201).json(item);
+    const item = await prisma.maintenanceRecord.create({ data: doc });
+    return res.status(201).json(toApi(item));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to save maintenance" });
@@ -104,14 +104,17 @@ export async function createMaintenance(req, res) {
 
 export async function updateMaintenance(req, res) {
   try {
-    const item = await MaintenanceRecord.findOne({ _id: req.params.id, ...tenantScope(req) });
+    const item = await prisma.maintenanceRecord.findFirst({ where: { id: req.params.id, ...tenantScope(req) }, select: { id: true } });
     if (!item) return res.status(404).json({ error: "Not found" });
-    for (const f of ["title", "notes"]) if (f in req.body) item[f] = req.body[f];
-    for (const f of ["odometerKm", "costKes", "dueOdometerKm", "intervalKm", "intervalDays"]) if (f in req.body) item[f] = numOrNull(req.body[f]);
-    for (const f of ["performedAt", "dueDate"]) if (f in req.body) item[f] = dateOrNull(req.body[f]);
-    if ("dueDate" in req.body || "dueOdometerKm" in req.body) item.alertedAt = null;
-    await item.save();
-    return res.json(item);
+    const data = {};
+    if ("title" in req.body) data.title = String(req.body.title);
+    if ("notes" in req.body) data.notes = req.body.notes == null ? null : String(req.body.notes);
+    for (const f of ["odometerKm", "costKes", "dueOdometerKm", "intervalKm"]) if (f in req.body) data[f] = numOrNull(req.body[f]);
+    if ("intervalDays" in req.body) data.intervalDays = intOrNull(req.body.intervalDays);
+    for (const f of ["performedAt", "dueDate"]) if (f in req.body) data[f] = dateOrNull(req.body[f]);
+    if ("dueDate" in req.body || "dueOdometerKm" in req.body) data.alertedAt = null;
+    const updated = await prisma.maintenanceRecord.update({ where: { id: item.id }, data });
+    return res.json(toApi(updated));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update maintenance" });
@@ -120,8 +123,8 @@ export async function updateMaintenance(req, res) {
 
 export async function deleteMaintenance(req, res) {
   try {
-    const item = await MaintenanceRecord.findOneAndDelete({ _id: req.params.id, ...tenantScope(req) });
-    if (!item) return res.status(404).json({ error: "Not found" });
+    const { count } = await prisma.maintenanceRecord.deleteMany({ where: { id: req.params.id, ...tenantScope(req) } });
+    if (!count) return res.status(404).json({ error: "Not found" });
     return res.status(204).send();
   } catch (err) {
     console.error(err);
@@ -133,41 +136,50 @@ export async function deleteMaintenance(req, res) {
 // reminder, schedules the next one from today's date/odometer.
 export async function completeReminder(req, res) {
   try {
-    const reminder = await MaintenanceRecord.findOne({ _id: req.params.id, kind: "reminder", ...tenantScope(req) });
+    const reminder = await prisma.maintenanceRecord.findFirst({
+      where: { id: req.params.id, kind: "reminder", ...tenantScope(req) },
+      include: { vehicle: { select: { id: true, odometerBaseKm: true } } },
+    });
     if (!reminder) return res.status(404).json({ error: "Reminder not found" });
     if (reminder.status === "done") return res.status(400).json({ error: "Already completed" });
-    const vehicle = await Vehicle.findById(reminder.vehicleId);
-    const odometerKm = await currentOdometerKm(vehicle);
+    const odometerKm = await currentOdometerKm(reminder.vehicle);
 
-    reminder.status = "done";
-    await reminder.save();
-    const record = await MaintenanceRecord.create({
-      companyId: reminder.companyId,
-      vehicleId: reminder.vehicleId,
-      kind: "record",
-      title: reminder.title,
-      notes: req.body.notes || reminder.notes,
-      performedAt: new Date(),
-      odometerKm: numOrNull(req.body.odometerKm) ?? odometerKm,
-      costKes: numOrNull(req.body.costKes),
-      status: "done",
-    });
-
-    let next = null;
-    if (reminder.intervalDays || reminder.intervalKm) {
-      next = await MaintenanceRecord.create({
-        companyId: reminder.companyId,
-        vehicleId: reminder.vehicleId,
-        kind: "reminder",
-        title: reminder.title,
-        notes: reminder.notes,
-        intervalDays: reminder.intervalDays,
-        intervalKm: reminder.intervalKm,
-        dueDate: reminder.intervalDays ? new Date(Date.now() + reminder.intervalDays * 86400000) : null,
-        dueOdometerKm: reminder.intervalKm ? (record.odometerKm ?? odometerKm) + reminder.intervalKm : null,
-      });
-    }
-    return res.json({ record, next });
+    const recordOdometerKm = numOrNull(req.body.odometerKm) ?? odometerKm;
+    // Close the reminder, log the service and schedule the next one together.
+    const [, record, next] = await prisma.$transaction([
+      prisma.maintenanceRecord.update({ where: { id: reminder.id }, data: { status: "done" } }),
+      prisma.maintenanceRecord.create({
+        data: {
+          companyId: reminder.companyId,
+          vehicleId: reminder.vehicleId,
+          kind: "record",
+          title: reminder.title,
+          notes: req.body.notes ? String(req.body.notes) : reminder.notes,
+          performedAt: new Date(),
+          odometerKm: recordOdometerKm,
+          costKes: numOrNull(req.body.costKes),
+          status: "done",
+        },
+      }),
+      ...(reminder.intervalDays || reminder.intervalKm
+        ? [
+            prisma.maintenanceRecord.create({
+              data: {
+                companyId: reminder.companyId,
+                vehicleId: reminder.vehicleId,
+                kind: "reminder",
+                title: reminder.title,
+                notes: reminder.notes,
+                intervalDays: reminder.intervalDays,
+                intervalKm: reminder.intervalKm,
+                dueDate: reminder.intervalDays ? new Date(Date.now() + reminder.intervalDays * 86400000) : null,
+                dueOdometerKm: reminder.intervalKm ? recordOdometerKm + reminder.intervalKm : null,
+              },
+            }),
+          ]
+        : []),
+    ]);
+    return res.json({ record: toApi(record), next: next ? toApi(next) : null });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to complete reminder" });
@@ -177,11 +189,13 @@ export async function completeReminder(req, res) {
 // Scheduled (index.js) — one maintenance_due alert per reminder once it's
 // due by date or odometer.
 export async function sweepMaintenanceReminders() {
-  const reminders = await MaintenanceRecord.find({ kind: "reminder", status: "open", alertedAt: null });
+  const reminders = await prisma.maintenanceRecord.findMany({
+    where: { kind: "reminder", status: "open", alertedAt: null },
+    include: { vehicle: { select: { id: true, plateNumber: true, odometerBaseKm: true } } },
+  });
   let alerted = 0;
   for (const r of reminders) {
-    const vehicle = await Vehicle.findById(r.vehicleId).select("plateNumber odometerBaseKm companyId");
-    if (!vehicle) continue;
+    const { vehicle } = r;
     const odo = await currentOdometerKm(vehicle);
     if (reminderState(r, odo) !== "overdue") continue;
     const why = r.dueDate && new Date(r.dueDate) <= new Date()
@@ -194,8 +208,7 @@ export async function sweepMaintenanceReminders() {
       message: `${r.title} for ${vehicle.plateNumber} ${why}.`,
       debounceMinutes: 0,
     });
-    r.alertedAt = new Date();
-    await r.save();
+    await prisma.maintenanceRecord.update({ where: { id: r.id }, data: { alertedAt: new Date() } });
     alerted += 1;
   }
   return alerted;

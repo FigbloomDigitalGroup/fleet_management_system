@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cron from "node-cron";
-import { connectDB } from "./config/db.js";
+import prisma from "./lib/prisma.js";
 import authRoutes from "./routes/authRoutes.js";
 import companyRoutes from "./routes/companyRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -27,6 +27,7 @@ import { runAiAnomalyScan } from "./services/aiAnomalyDetector.js";
 import { closeStaleTrips, sweepOfflineDevices } from "./controllers/trackingController.js";
 import { sweepMaintenanceReminders } from "./controllers/maintenanceController.js";
 import { purgeExpiredLocationData } from "./controllers/settingsCompanyController.js";
+import { purgeExpiredRecords } from "./lib/cleanup.js";
 
 
 import cors from "cors";
@@ -101,7 +102,19 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-connectDB().then(() => {
+// Fail fast if the database (PostgreSQL — Supabase in production) can't be
+// reached, rather than starting a server whose every request would error.
+async function connectDatabase() {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    console.log("PostgreSQL connected");
+  } catch (err) {
+    console.error("Failed to connect to PostgreSQL:", err.message);
+    process.exit(1);
+  }
+}
+
+connectDatabase().then(() => {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port:${PORT}`);
   });
@@ -142,6 +155,12 @@ connectDB().then(() => {
     sweepMaintenanceReminders()
       .then((n) => n > 0 && console.log(`[maintenance] ${n} reminder(s) due`))
       .catch((err) => console.error("[maintenance] reminder sweep crashed:", err));
+  });
+
+  // Resolved alerts (30 min after resolving) and expired sign-in tokens —
+  // MongoDB's TTL indexes did this before PostgreSQL.
+  cron.schedule("* * * * *", () => {
+    purgeExpiredRecords().catch((err) => console.error("[cleanup] purge crashed:", err));
   });
 
   // Data retention — nightly at 02:30 Nairobi time.

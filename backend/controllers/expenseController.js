@@ -1,16 +1,16 @@
-import Expense from "../models/Expense.js";
-import Vehicle from "../models/Vehicle.js";
+import prisma from "../lib/prisma.js";
+import { toApi } from "../lib/serialize.js";
 import { tenantScope } from "../middleware/auth.js";
 import { ownedUploadIds, uploadUrl } from "./uploadController.js";
 
 const CATEGORIES = ["fuel", "toll", "parking", "repair", "other"];
 
-const withReceiptUrl = (e) => ({ ...e.toObject(), receiptUrl: uploadUrl(e.receiptUploadId) });
+const withReceiptUrl = (e) => ({ ...toApi(e), receiptUrl: uploadUrl(e.receiptUploadId) });
 
 // DRIVER — log an expense against the vehicle currently assigned to them.
 export async function createMyExpense(req, res) {
   try {
-    const vehicle = await Vehicle.findOne({ driverId: req.user.id });
+    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id }, select: { id: true, companyId: true } });
     if (!vehicle) return res.status(400).json({ error: "No vehicle is assigned to you yet" });
 
     const { category, amount, note, incurredAt, receiptUploadId } = req.body;
@@ -21,15 +21,19 @@ export async function createMyExpense(req, res) {
       return res.status(400).json({ error: "amount must be a positive number" });
     }
 
-    const expense = await Expense.create({
-      companyId: vehicle.companyId,
-      vehicleId: vehicle._id,
-      driverId: req.user.id,
-      category,
-      amount,
-      note: note || null,
-      incurredAt: incurredAt ? new Date(incurredAt) : new Date(),
-      receiptUploadId: (await ownedUploadIds([receiptUploadId], vehicle.companyId))[0] || null,
+    const when = incurredAt ? new Date(incurredAt) : new Date();
+    if (Number.isNaN(when.getTime())) return res.status(400).json({ error: "incurredAt must be a valid date" });
+    const expense = await prisma.expense.create({
+      data: {
+        companyId: vehicle.companyId,
+        vehicleId: vehicle.id,
+        driverId: req.user.id,
+        category,
+        amount,
+        note: note ? String(note) : null,
+        incurredAt: when,
+        receiptUploadId: (await ownedUploadIds([receiptUploadId], vehicle.companyId))[0] || null,
+      },
     });
 
     return res.status(201).json(withReceiptUrl(expense));
@@ -42,10 +46,10 @@ export async function createMyExpense(req, res) {
 // DRIVER — their own expense history
 export async function listMyExpenses(req, res) {
   try {
-    const vehicle = await Vehicle.findOne({ driverId: req.user.id });
+    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id }, select: { id: true } });
     if (!vehicle) return res.json([]);
 
-    const expenses = await Expense.find({ vehicleId: vehicle._id }).sort({ incurredAt: -1 }).limit(50);
+    const expenses = await prisma.expense.findMany({ where: { vehicleId: vehicle.id }, orderBy: { incurredAt: "desc" }, take: 50 });
     return res.json(expenses.map(withReceiptUrl));
   } catch (err) {
     console.error(err);
@@ -58,18 +62,19 @@ export async function listMyExpenses(req, res) {
 export async function listExpenses(req, res) {
   try {
     const scope = tenantScope(req);
-    const expenses = await Expense.find(scope)
-      .populate("vehicleId", "plateNumber")
-      .populate("driverId", "fullName")
-      .sort({ incurredAt: -1 })
-      .limit(200);
+    const expenses = await prisma.expense.findMany({
+      where: scope,
+      include: {
+        vehicle: { select: { id: true, plateNumber: true } },
+        driver: { select: { id: true, fullName: true, avatarUploadId: true } },
+      },
+      orderBy: { incurredAt: "desc" },
+      take: 200,
+    });
 
-    const [{ total } = { total: 0 }] = await Expense.aggregate([
-      { $match: scope },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
-    ]);
+    const total = await prisma.expense.aggregate({ where: scope, _sum: { amount: true } });
 
-    return res.json({ expenses: expenses.map(withReceiptUrl), totalKes: total });
+    return res.json({ expenses: expenses.map(withReceiptUrl), totalKes: total._sum.amount ?? 0 });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch expenses" });

@@ -1,8 +1,17 @@
-import Trip from "../models/Trip.js";
-import Vehicle from "../models/Vehicle.js";
+import prisma from "../lib/prisma.js";
+import { toApi } from "../lib/serialize.js";
 import { tenantScope } from "../middleware/auth.js";
-import LocationPing from "../models/LocationPing.js";
-import { sumTripDistanceKm } from "../lib/geo.js";
+import { tripPath, queueRoadPath } from "../lib/tripRoad.js";
+import { tripDistanceKm } from "./trackingController.js";
+
+// What the Mongo version populated: vehicleId → plate + mileage.
+const TRIP_VEHICLE = { select: { id: true, plateNumber: true, avgConsumptionLPer100Km: true } };
+
+// Ids of the vehicles the requester's tenant owns.
+async function scopedVehicleIds(req) {
+  const vehicles = await prisma.vehicle.findMany({ where: tenantScope(req), select: { id: true } });
+  return vehicles.map((v) => v.id);
+}
 
 // List trips for the requester's tenant, newest first. Optionally narrowed
 // to a single vehicle via ?vehicleId= — still constrained to vehicles the
@@ -11,32 +20,30 @@ import { sumTripDistanceKm } from "../lib/geo.js";
 // the latest 100; with one, up to 1000.
 export async function listTrips(req, res) {
   try {
-    const vehicles = await Vehicle.find(tenantScope(req)).select("_id");
-    const vehicleIds = vehicles.map((v) => v._id);
+    const vehicleIds = await scopedVehicleIds(req);
+    const allowedIds = req.query.vehicleId ? vehicleIds.filter((v) => v === req.query.vehicleId) : vehicleIds;
 
-    const scopedVehicleIds = req.query.vehicleId
-      ? vehicleIds.filter((v) => String(v) === req.query.vehicleId)
-      : vehicleIds;
-
-    const query = { vehicleId: { $in: scopedVehicleIds } };
+    const where = { vehicleId: { in: allowedIds } };
     const from = req.query.from ? new Date(req.query.from) : null;
     const to = req.query.to ? new Date(req.query.to) : null;
     if ((from && Number.isNaN(from.getTime())) || (to && Number.isNaN(to.getTime()))) {
       return res.status(400).json({ error: "from and to must be valid dates" });
     }
     if (from || to) {
-      query.startTime = {};
-      if (from) query.startTime.$gte = from;
-      if (to) query.startTime.$lte = to;
+      where.startTime = {};
+      if (from) where.startTime.gte = from;
+      if (to) where.startTime.lte = to;
     }
 
-    const trips = await Trip.find(query)
-      .populate("vehicleId", "plateNumber avgConsumptionLPer100Km")
-      .populate("driverId", "fullName")
-      .sort({ startTime: -1 })
-      .limit(from || to ? 1000 : 100);
+    const trips = await prisma.trip.findMany({
+      where,
+      omit: { roadPath: true },
+      include: { vehicle: TRIP_VEHICLE, driver: { select: { id: true, fullName: true, avatarUploadId: true } } },
+      orderBy: { startTime: "desc" },
+      take: from || to ? 1000 : 100,
+    });
 
-    return res.json(trips);
+    return res.json(toApi(trips));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch trips" });
@@ -45,39 +52,41 @@ export async function listTrips(req, res) {
 
 export async function getTrip(req, res) {
   try {
-    const vehicles = await Vehicle.find(tenantScope(req)).select("_id");
-    const vehicleIds = vehicles.map((v) => v._id);
-
-    const trip = await Trip.findOne({ _id: req.params.id, vehicleId: { $in: vehicleIds } })
-      .populate("vehicleId", "plateNumber avgConsumptionLPer100Km")
-      .populate("driverId", "fullName email");
+    const trip = await prisma.trip.findFirst({
+      where: { id: req.params.id, vehicleId: { in: await scopedVehicleIds(req) } },
+      omit: { roadPath: true },
+      include: { vehicle: TRIP_VEHICLE, driver: { select: { id: true, fullName: true, email: true, avatarUploadId: true } } },
+    });
 
     if (!trip) return res.status(404).json({ error: "Trip not found" });
 
-    return res.json(trip);
+    return res.json(toApi(trip));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch trip" });
   }
 }
 
+// GET /api/trips/:id/road — the road-following line for drawing the trip
+// (null geometry while it's in progress or not matched yet — see lib/tripRoad.js).
+export async function getTripRoad(req, res) {
+  try {
+    const trip = await prisma.trip.findFirst({ where: { id: req.params.id, vehicleId: { in: await scopedVehicleIds(req) } } });
+    if (!trip) return res.status(404).json({ error: "Trip not found" });
+    const { geometry, snapped } = await tripPath(trip);
+    return res.json({ snapped, geometry });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to fetch trip road" });
+  }
+}
+
 export async function getTripPath(req, res) {
   try {
-    const vehicles = await Vehicle.find(tenantScope(req)).select("_id");
-    const vehicleIds = vehicles.map((v) => v._id);
-
-    const trip = await Trip.findOne({ _id: req.params.id, vehicleId: { $in: vehicleIds } });
+    const trip = await prisma.trip.findFirst({ where: { id: req.params.id, vehicleId: { in: await scopedVehicleIds(req) } } });
     if (!trip) return res.status(404).json({ error: "Trip not found" });
 
-    const pings = await LocationPing.find({
-      vehicleId: trip.vehicleId,
-      recordedAt: {
-        $gte: trip.startTime,
-        $lte: trip.endTime || new Date(),
-      },
-    }).sort({ recordedAt: 1 });
-
-    return res.json(pings);
+    return res.json((await tripPath(trip)).points);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch trip path" });
@@ -86,15 +95,18 @@ export async function getTripPath(req, res) {
 
 export async function listMyTrips(req, res) {
   try {
-    const vehicle = await Vehicle.findOne({ driverId: req.user.id });
+    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id }, select: { id: true } });
     if (!vehicle) return res.json([]);
 
-    const trips = await Trip.find({ vehicleId: vehicle._id })
-      .populate("vehicleId", "plateNumber avgConsumptionLPer100Km")
-      .sort({ startTime: -1 })
-      .limit(50);
+    const trips = await prisma.trip.findMany({
+      where: { vehicleId: vehicle.id },
+      omit: { roadPath: true },
+      include: { vehicle: TRIP_VEHICLE },
+      orderBy: { startTime: "desc" },
+      take: 50,
+    });
 
-    return res.json(trips);
+    return res.json(toApi(trips));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch your trips" });
@@ -128,16 +140,18 @@ function tripDetailsFromBody(body) {
 }
 
 async function findMyOpenTrip(driverId) {
-  const vehicle = await Vehicle.findOne({ driverId });
+  const vehicle = await prisma.vehicle.findFirst({ where: { driverId } });
   if (!vehicle) return { vehicle: null, trip: null };
-  const trip = await Trip.findOne({ vehicleId: vehicle._id, endTime: { $exists: false } }).sort({ startTime: -1 });
+  const trip = await prisma.trip.findFirst({ where: { vehicleId: vehicle.id, endTime: null }, orderBy: { startTime: "desc" } });
   return { vehicle, trip };
 }
 
 async function tripPingsUpTo(trip, until) {
-  return LocationPing.find({ vehicleId: trip.vehicleId, recordedAt: { $gte: trip.startTime, $lte: until } })
-    .select("latitude longitude recordedAt")
-    .sort({ recordedAt: 1 });
+  return prisma.locationPing.findMany({
+    where: { vehicleId: trip.vehicleId, recordedAt: { gte: trip.startTime, lte: until } },
+    select: { latitude: true, longitude: true, recordedAt: true, isMocked: true, accuracyM: true, speedKph: true },
+    orderBy: { recordedAt: "asc" },
+  });
 }
 
 // GET /api/trips/me/current — the driver's trip in progress (or null), with
@@ -149,11 +163,11 @@ export async function getMyCurrentTrip(req, res) {
 
     const pings = await tripPingsUpTo(trip, new Date());
     return res.json({
-      _id: trip._id,
+      _id: trip.id,
       startTime: trip.startTime,
       purpose: trip.purpose,
       note: trip.note,
-      distanceKm: Math.round(sumTripDistanceKm(pings) * 10) / 10,
+      distanceKm: tripDistanceKm(pings),
       lastUpdateAt: pings.length ? pings[pings.length - 1].recordedAt : null,
     });
   } catch (err) {
@@ -171,9 +185,8 @@ export async function updateMyCurrentTrip(req, res) {
     const { trip } = await findMyOpenTrip(req.user.id);
     if (!trip) return res.status(404).json({ error: "You don't have a trip in progress" });
 
-    Object.assign(trip, update);
-    await trip.save();
-    return res.json({ _id: trip._id, purpose: trip.purpose, note: trip.note });
+    const updated = await prisma.trip.update({ where: { id: trip.id }, data: update });
+    return res.json({ _id: updated.id, purpose: updated.purpose, note: updated.note });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update your trip" });
@@ -196,15 +209,21 @@ export async function endMyCurrentTrip(req, res) {
     const pings = await tripPingsUpTo(trip, endTime);
     const last = pings[pings.length - 1];
 
-    Object.assign(trip, update);
-    trip.endTime = endTime;
-    trip.endLat = last ? last.latitude : trip.startLat;
-    trip.endLng = last ? last.longitude : trip.startLng;
-    trip.distanceKm = Math.round(sumTripDistanceKm(pings) * 10) / 10;
-    trip.endedBy = "driver";
-    await trip.save();
+    const ended = await prisma.trip.update({
+      where: { id: trip.id },
+      data: {
+        ...update,
+        endTime,
+        endLat: last ? last.latitude : trip.startLat,
+        endLng: last ? last.longitude : trip.startLng,
+        distanceKm: tripDistanceKm(pings),
+        endedBy: "driver",
+        roadPath: null,
+      },
+    });
+    queueRoadPath(ended.id);
 
-    return res.json(trip);
+    return res.json(toApi(ended));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to end your trip" });

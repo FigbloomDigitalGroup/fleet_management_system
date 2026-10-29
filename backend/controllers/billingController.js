@@ -1,23 +1,22 @@
-import Company from "../models/Company.js";
-import User from "../models/User.js";
-import Vehicle from "../models/Vehicle.js";
-import Transaction from "../models/Transaction.js";
+import prisma from "../lib/prisma.js";
+import { toApi } from "../lib/serialize.js";
 import { initializeTransaction, verifyTransaction, verifyWebhookSignature } from "../services/paystackService.js";
 import { priceForPlan } from "../config/pricing.js";
 
 // PLATFORM_ADMIN only — overview of all companies' subscription plans
 export async function getBillingOverview(req, res) {
   try {
-    const companies = await Company.find()
-      .select("name status subscriptionPlan paymentMethod createdAt")
-      .sort({ createdAt: -1 });
+    const companies = await prisma.company.findMany({
+      select: { id: true, name: true, status: true, subscriptionPlan: true, paymentMethod: true, createdAt: true, logoUploadId: true },
+      orderBy: { createdAt: "desc" },
+    });
 
     const planCounts = companies.reduce((acc, c) => {
       acc[c.subscriptionPlan] = (acc[c.subscriptionPlan] || 0) + 1;
       return acc;
     }, {});
 
-    return res.json({ companies, planCounts });
+    return res.json({ companies: toApi(companies), planCounts });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch billing overview" });
@@ -35,14 +34,10 @@ export async function updateCompanyPlan(req, res) {
       return res.status(400).json({ error: `subscriptionPlan must be one of: ${allowed.join(", ")}` });
     }
 
-    const company = await Company.findByIdAndUpdate(
-      req.params.id,
-      { subscriptionPlan },
-      { new: true }
-    );
-    if (!company) return res.status(404).json({ error: "Company not found" });
+    const { count } = await prisma.company.updateMany({ where: { id: req.params.id }, data: { subscriptionPlan } });
+    if (!count) return res.status(404).json({ error: "Company not found" });
 
-    return res.json(company);
+    return res.json(toApi(await prisma.company.findUnique({ where: { id: req.params.id } })));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update plan" });
@@ -54,17 +49,15 @@ export async function updateCompanyPlan(req, res) {
 // company's own self-reported totalRevenue figure.
 export async function listAllTransactions(req, res) {
   try {
-    const transactions = await Transaction.find()
-      .populate("companyId", "name")
-      .sort({ createdAt: -1 })
-      .limit(200);
+    const transactions = await prisma.transaction.findMany({
+      include: { company: { select: { id: true, name: true, logoUploadId: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    });
 
-    const [{ total } = { total: 0 }] = await Transaction.aggregate([
-      { $match: { status: "success" } },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
-    ]);
+    const total = await prisma.transaction.aggregate({ where: { status: "success" }, _sum: { amount: true } });
 
-    return res.json({ transactions, totalRevenueKes: total });
+    return res.json({ transactions: toApi(transactions), totalRevenueKes: total._sum.amount ?? 0 });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch transactions" });
@@ -86,21 +79,17 @@ export async function initializeCheckout(req, res) {
     }
 
     const [company, owner, vehicleCount] = await Promise.all([
-      Company.findById(req.user.companyId),
-      User.findById(req.user.id).select("email"),
-      Vehicle.countDocuments({ companyId: req.user.companyId }),
+      prisma.company.findUnique({ where: { id: req.user.companyId }, select: { id: true } }),
+      prisma.user.findUnique({ where: { id: req.user.id }, select: { email: true } }),
+      prisma.vehicle.count({ where: { companyId: req.user.companyId } }),
     ]);
     if (!company) return res.status(404).json({ error: "Company not found" });
 
     const amount = priceForPlan(plan) * Math.max(vehicleCount, 1);
-    const reference = `fig_${company._id}_${Date.now()}`;
+    const reference = `fig_${company.id}_${Date.now()}`;
 
-    const transaction = await Transaction.create({
-      companyId: company._id,
-      plan,
-      reference,
-      amount,
-      currency: "KES",
+    const transaction = await prisma.transaction.create({
+      data: { companyId: company.id, plan, reference, amount, currency: "KES" },
     });
 
     const paystackData = await initializeTransaction({
@@ -109,7 +98,7 @@ export async function initializeCheckout(req, res) {
       currency: "KES",
       reference,
       channels: ["card", "mobile_money"],
-      metadata: { companyId: company._id.toString(), plan, vehicleCount },
+      metadata: { companyId: company.id, plan, vehicleCount },
     });
 
     return res.status(201).json({
@@ -128,26 +117,33 @@ export async function initializeCheckout(req, res) {
 // Marks a transaction as succeeded/failed from a Paystack payload — shared
 // by the webhook (the authoritative path) and the verify endpoint (a
 // same-request fallback for when the browser is still waiting on a result).
-// Idempotent: once a transaction is "success" it's never re-applied.
+// Idempotent: once a transaction is "success" it's never re-applied — the
+// status check is part of the update, so the webhook and the verify call
+// arriving together can't both apply it. Returns the transaction as stored.
 async function applyPaystackResult(transaction, data) {
   if (transaction.status === "success") return transaction;
 
   if (data.status === "success") {
-    transaction.status = "success";
-    transaction.channel = data.channel || null;
-    transaction.paidAt = data.paid_at ? new Date(data.paid_at) : new Date();
-    await transaction.save();
-
-    await Company.findByIdAndUpdate(transaction.companyId, {
-      subscriptionPlan: transaction.plan,
-      paymentMethod: transaction.channel === "mobile_money" ? "mpesa" : "paystack",
+    const channel = data.channel || null;
+    await prisma.$transaction(async (tx) => {
+      const { count } = await tx.transaction.updateMany({
+        where: { id: transaction.id, status: { not: "success" } },
+        data: { status: "success", channel, paidAt: data.paid_at ? new Date(data.paid_at) : new Date() },
+      });
+      if (!count) return;
+      await tx.company.update({
+        where: { id: transaction.companyId },
+        data: { subscriptionPlan: transaction.plan, paymentMethod: channel === "mobile_money" ? "mpesa" : "paystack" },
+      });
     });
   } else if (["failed", "abandoned"].includes(data.status)) {
-    transaction.status = data.status;
-    await transaction.save();
+    await prisma.transaction.updateMany({
+      where: { id: transaction.id, status: { not: "success" } },
+      data: { status: data.status },
+    });
   }
 
-  return transaction;
+  return prisma.transaction.findUnique({ where: { id: transaction.id } });
 }
 
 // COMPANY_OWNER — the frontend calls this right after the Paystack popup
@@ -156,18 +152,17 @@ async function applyPaystackResult(transaction, data) {
 // anything, same as the webhook does independently.
 export async function verifyCheckout(req, res) {
   try {
-    const transaction = await Transaction.findOne({
-      reference: req.params.reference,
-      companyId: req.user.companyId,
+    let transaction = await prisma.transaction.findFirst({
+      where: { reference: req.params.reference, companyId: req.user.companyId ?? "" },
     });
     if (!transaction) return res.status(404).json({ error: "Transaction not found" });
 
     if (transaction.status !== "success") {
       const data = await verifyTransaction(transaction.reference);
-      await applyPaystackResult(transaction, data);
+      transaction = await applyPaystackResult(transaction, data);
     }
 
-    return res.json({ status: transaction.status, transaction });
+    return res.json({ status: transaction.status, transaction: toApi(transaction) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: err.message || "Failed to verify payment" });
@@ -189,7 +184,7 @@ export async function paystackWebhook(req, res) {
     const event = JSON.parse(req.body.toString("utf8"));
 
     if (event.event === "charge.success") {
-      const transaction = await Transaction.findOne({ reference: event.data.reference });
+      const transaction = await prisma.transaction.findUnique({ where: { reference: String(event.data.reference) } });
       if (transaction) {
         await applyPaystackResult(transaction, event.data);
       }
@@ -211,10 +206,12 @@ export async function listMyTransactions(req, res) {
     if (!req.user.companyId) {
       return res.status(400).json({ error: "This account is not linked to a company" });
     }
-    const transactions = await Transaction.find({ companyId: req.user.companyId })
-      .sort({ createdAt: -1 })
-      .limit(50);
-    return res.json(transactions);
+    const transactions = await prisma.transaction.findMany({
+      where: { companyId: req.user.companyId },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+    return res.json(toApi(transactions));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch transactions" });
