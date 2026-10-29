@@ -4,7 +4,7 @@ import ReportsView from "../../components/ReportsView";
 import { usePageHeader } from "../../components/DashboardShell";
 
 export default function AdminReportsPage() {
-  usePageHeader("Reports", "Distance, driving time, jobs, costs and safety per vehicle or driver");
+  usePageHeader("Reports", "Distance, fuel, trips, safety, geofences and maintenance across your fleet");
 
   return (
     <div>

@@ -14,7 +14,7 @@ const numOrNull = (v) => (v === undefined || v === null || v === "" || !Number.i
 const dateOrNull = (v) => (v ? new Date(v) : null);
 const intOrNull = (v) => (numOrNull(v) == null ? null : Math.round(Number(v)));
 
-function reminderState(r, odometerKm) {
+export function reminderState(r, odometerKm) {
   if (r.kind !== "reminder" || r.status === "done") return null;
   const byDate = r.dueDate && new Date(r.dueDate) <= new Date();
   const byKm = r.dueOdometerKm != null && odometerKm >= r.dueOdometerKm;

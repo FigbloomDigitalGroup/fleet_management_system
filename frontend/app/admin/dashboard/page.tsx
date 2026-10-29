@@ -1,5 +1,6 @@
 "use client";
 
+import { useFleetTheme } from "../../context/FleetThemeContext";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { apiRequest } from "../../lib/api";
@@ -9,6 +10,7 @@ import DonutChartCard from "../../components/DonutChartCard";
 import LineChartCard from "../../components/LineChartCard";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import { usePageHeader } from "../../components/DashboardShell";
+import OverviewMetrics from "../../components/reports/OverviewMetrics";
 import { VehicleRecord, DriverRecord, TripRecord, AgentSummary, DailyStatPoint, RouteRecord } from "../../types/auth";
 import MapMetricsCard from "../../components/MapMetricsCard";
 import WheelIcon from "../../components/WheelIcon";
@@ -38,6 +40,7 @@ export default function AdminDashboard() {
   };
 
   usePageHeader("Fleet Overview", "Real-time visibility across your entire fleet.");
+  const { colors } = useFleetTheme();
 
   useEffect(() => {
     async function loadAll() {
@@ -124,10 +127,13 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      <OverviewMetrics basePath="/admin" />
+
       {/* Fleet status breakdown beside the trips chart — first thing below
           the header. */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
-        <div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
+        {/* Same size side by side; each card fills its half's full height */}
+        <div className="[&>div]:h-full">
           <DonutChartCard
             title="Fleet status breakdown"
             description="How your vehicles are distributed across statuses"
@@ -139,13 +145,12 @@ export default function AdminDashboard() {
             ]}
           />
         </div>
-        <div className="lg:col-span-2">
+        <div className="[&>div]:h-full">
           <BarChartCard
             title="Trips — last 7 days"
             description="Number of trips started each day this week"
             data={tripsPerDay}
             dataKey="trips"
-            color="#e16d00"
             size="lg"
           />
         </div>
@@ -153,8 +158,8 @@ export default function AdminDashboard() {
 
       {/* Fleet active / drivers assigned rings */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <CircleStat percentage={activePct} label="Fleet active" color="#50a86a" description="Vehicles currently on the move" />
-        <CircleStat percentage={assignedPct} label="Drivers assigned" color="#0e4f27" description="Drivers with a vehicle assigned" />
+        <CircleStat percentage={activePct} label="Fleet active" color={colors.mainSoft} description="Vehicles currently on the move" />
+        <CircleStat percentage={assignedPct} label="Drivers assigned" color={colors.main} description="Drivers with a vehicle assigned" />
       </div>
 
       {/* Agent activity on the left, Fleet on the map on the right */}
@@ -171,8 +176,8 @@ export default function AdminDashboard() {
       })) ?? []
     }
     lines={[
-      { dataKey: "vehicleChecks", label: "Vehicle checks", color: "#50a86a" },
-      { dataKey: "anomalies", label: "Anomalies", color: "#ff8a12" },
+      { dataKey: "vehicleChecks", label: "Vehicle checks", color: colors.mainSoft },
+      { dataKey: "anomalies", label: "Anomalies", color: colors.accent },
     ]}
   />
 </div>

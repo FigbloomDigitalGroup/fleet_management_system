@@ -1,5 +1,6 @@
 "use client";
 
+import { useFleetTheme } from "../context/FleetThemeContext";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
 
 interface DailyPoint {
@@ -16,6 +17,7 @@ function dayLabel(dateStr: string) {
 // (left = km, right = L) instead of sharing one scale, which would make
 // whichever number is naturally larger drown out the other.
 export default function DistanceFuelChart({ data }: { data: DailyPoint[] }) {
+  const { colors } = useFleetTheme();
   const chartData = data.map((d) => ({ name: dayLabel(d.date), distanceKm: d.distanceKm, fuelConsumedLiters: d.fuelConsumedLiters }));
 
   return (
@@ -24,8 +26,8 @@ export default function DistanceFuelChart({ data }: { data: DailyPoint[] }) {
         <AreaChart data={chartData}>
           <defs>
             <linearGradient id="distanceFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#50a86a" stopOpacity={0.22} />
-              <stop offset="95%" stopColor="#50a86a" stopOpacity={0} />
+              <stop offset="5%" stopColor={colors.mainSoft} stopOpacity={0.22} />
+              <stop offset="95%" stopColor={colors.mainSoft} stopOpacity={0} />
             </linearGradient>
             <linearGradient id="fuelFill" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#ffa049" stopOpacity={0.22} />
@@ -45,10 +47,10 @@ export default function DistanceFuelChart({ data }: { data: DailyPoint[] }) {
             yAxisId="distance"
             type="monotone"
             dataKey="distanceKm"
-            stroke="#50a86a"
+            stroke={colors.mainSoft}
             strokeWidth={1.75}
             fill="url(#distanceFill)"
-            dot={{ r: 3, fill: "#50a86a", strokeWidth: 0 }}
+            dot={{ r: 3, fill: colors.mainSoft, strokeWidth: 0 }}
           />
           <Area
             yAxisId="fuel"
