@@ -109,6 +109,58 @@ export async function updateMyCompany(req, res) {
   }
 }
 
+// The web app's themes (frontend app/lib/themes.ts) and text sizes.
+export const THEMES = ["forest", "violet", "ocean", "lagoon", "graphite", "custom"];
+export const TEXT_SIZES = ["small", "normal", "large"];
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
+// COMPANY_OWNER — the dashboard's look for everyone in the company.
+export async function updateMyAppearance(req, res) {
+  try {
+    if (!req.user.companyId) {
+      return res.status(400).json({ error: "This account is not linked to a company" });
+    }
+    const { theme, textSize, customMainColor, customAccentColor } = req.body;
+    const data = {};
+    for (const [key, value] of [
+      ["customMainColor", customMainColor],
+      ["customAccentColor", customAccentColor],
+    ]) {
+      if (value === undefined) continue;
+      if (!HEX_COLOR.test(String(value))) return res.status(400).json({ error: `${key} must be a colour like #1a2b3c` });
+      data[key] = String(value).toLowerCase();
+    }
+    if (theme === "custom") {
+      // Both colours must be known — sent now or saved before.
+      const stored = await prisma.company.findUnique({
+        where: { id: req.user.companyId },
+        select: { customMainColor: true, customAccentColor: true },
+      });
+      if (!(data.customMainColor ?? stored?.customMainColor) || !(data.customAccentColor ?? stored?.customAccentColor)) {
+        return res.status(400).json({ error: "Pick a main and an accent colour for the custom theme" });
+      }
+    }
+    if (theme !== undefined) {
+      if (!THEMES.includes(theme)) return res.status(400).json({ error: `theme must be one of: ${THEMES.join(", ")}` });
+      data.theme = theme;
+    }
+    if (textSize !== undefined) {
+      if (!TEXT_SIZES.includes(textSize)) {
+        return res.status(400).json({ error: `textSize must be one of: ${TEXT_SIZES.join(", ")}` });
+      }
+      data.textSize = textSize;
+    }
+    if (!Object.keys(data).length) return res.status(400).json({ error: "Nothing to change" });
+
+    const company = await updateCompany(req.user.companyId, data);
+    if (!company) return res.status(404).json({ error: "Company not found" });
+    return res.json(toApi(company));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to update appearance" });
+  }
+}
+
 // ADMIN / COMPANY_OWNER — set where drivers should start their day. Must
 // land inside an existing geofence zone, so it's tied to a place the fleet
 // already monitors rather than an arbitrary point on the map.

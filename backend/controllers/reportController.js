@@ -8,9 +8,9 @@ import { isLate } from "./jobController.js";
 const MAX_RANGE_DAYS = 93;
 const MAX_PINGS_PER_TRIP = 5000;
 
-const dateKey = (d) => d.toLocaleDateString("en-CA", { timeZone: "Africa/Nairobi" });
+export const dateKey = (d) => d.toLocaleDateString("en-CA", { timeZone: "Africa/Nairobi" });
 
-function parseRange(req) {
+export function parseRange(req) {
   const to = req.query.to ? new Date(req.query.to) : new Date();
   const from = req.query.from ? new Date(req.query.from) : new Date(to.getTime() - 7 * 86400000);
   if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from >= to) return { error: "from must be before to" };
