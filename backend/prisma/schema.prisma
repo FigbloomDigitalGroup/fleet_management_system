@@ -105,6 +105,8 @@ enum AlertType {
   app_logout
   inspection_failed
   job_failed
+  phone_left_vehicle
+  wrong_vehicle
 }
 
 enum DrivingEventType {
