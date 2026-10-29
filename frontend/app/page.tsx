@@ -43,7 +43,7 @@ const NAV_LINKS = [
 // The driver app, served from public/downloads until it's on Google Play.
 const DRIVER_APK = {
   href: "/downloads/fig-fleet-driver.apk",
-  details: "Android 7.0+ · 64-bit phones · 28.5 MB · version 1.0 (build 8)",
+  details: "Android 7.0+ · 64-bit phones · 26.1 MB · version 1.0 (build 12)",
 };
 
 const STATS = [
