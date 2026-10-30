@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { CSSProperties, PointerEvent, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { RiRobot3Fill } from "react-icons/ri";
 import { FiX, FiSend } from "react-icons/fi";
@@ -48,6 +48,42 @@ const PAGE_HINTS: Record<string, string> = {
 };
 const DEFAULT_HINT = "Ask about your fleet.";
 
+// The widget can be dragged anywhere so it never sits on top of what you're
+// editing. Its spot is kept as distances from the bottom-right corner (where
+// it starts) and remembered in this browser.
+const BUTTON_PX = 56;
+const EDGE_PX = 8;
+const GAP_PX = 12;
+const POSITION_KEY = "fleet:assistant-position";
+const DEFAULT_POSITION = { right: 24, bottom: 24 };
+type Position = typeof DEFAULT_POSITION;
+
+function clampToViewport(p: Position): Position {
+  const maxRight = window.innerWidth - BUTTON_PX - EDGE_PX;
+  const maxBottom = window.innerHeight - BUTTON_PX - EDGE_PX;
+  return {
+    right: Math.round(Math.min(Math.max(p.right, EDGE_PX), maxRight)),
+    bottom: Math.round(Math.min(Math.max(p.bottom, EDGE_PX), maxBottom)),
+  };
+}
+
+function readPosition(): Position {
+  try {
+    const raw = localStorage.getItem(POSITION_KEY);
+    return raw ? { ...DEFAULT_POSITION, ...JSON.parse(raw) } : DEFAULT_POSITION;
+  } catch {
+    return DEFAULT_POSITION;
+  }
+}
+
+function writePosition(p: Position) {
+  try {
+    localStorage.setItem(POSITION_KEY, JSON.stringify(p));
+  } catch {
+    // Private window — it just won't be remembered.
+  }
+}
+
 // Floating assistant — opens a small chat panel. Answers are grounded in this
 // company's own fleet data on the backend (see fleetAssistant.js), not
 // general knowledge.
@@ -62,10 +98,86 @@ export default function AgentChatWidget() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<Position>(DEFAULT_POSITION);
+  const [viewport, setViewport] = useState<{ width: number; height: number } | null>(null);
+  const drag = useRef<{ x: number; y: number; from: Position; moved: boolean } | null>(null);
+  // A drag ends with a click on the button — that click mustn't toggle the chat.
+  const justDragged = useRef(false);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, open]);
+
+  // Start where it was left, and stay on screen when the window shrinks.
+  useEffect(() => {
+    let saved: Position | null = readPosition();
+    const fit = () => {
+      setViewport({ width: window.innerWidth, height: window.innerHeight });
+      const start = saved;
+      saved = null;
+      setPosition((p) => clampToViewport(start ?? p));
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, []);
+
+  function startDrag(e: PointerEvent<HTMLElement>) {
+    // The header's close button is a button, not a handle.
+    if (e.button !== 0 || (e.target as HTMLElement).closest("button[data-no-drag]")) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    drag.current = { x: e.clientX, y: e.clientY, from: position, moved: false };
+  }
+
+  function moveDrag(e: PointerEvent<HTMLElement>) {
+    const d = drag.current;
+    if (!d) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    // A few pixels of wobble is still a click.
+    if (!d.moved && Math.hypot(dx, dy) < 5) return;
+    d.moved = true;
+    setPosition(clampToViewport({ right: d.from.right - dx, bottom: d.from.bottom - dy }));
+  }
+
+  function endDrag() {
+    const d = drag.current;
+    drag.current = null;
+    if (!d?.moved) return;
+    justDragged.current = true;
+    setPosition((p) => {
+      writePosition(p);
+      return p;
+    });
+  }
+
+  const dragHandlers = {
+    onPointerDown: startDrag,
+    onPointerMove: moveDrag,
+    onPointerUp: endDrag,
+    onPointerCancel: endDrag,
+  };
+
+  function toggleOpen() {
+    if (justDragged.current) {
+      justDragged.current = false;
+      return;
+    }
+    setOpen((o) => !o);
+  }
+
+  // Open the panel and the hint toward the side of the screen with room.
+  const onLeft = viewport ? position.right + BUTTON_PX / 2 > viewport.width / 2 : false;
+  const onTop = viewport ? position.bottom + BUTTON_PX / 2 > viewport.height / 2 : false;
+  const panelStyle: CSSProperties = viewport
+    ? {
+        ...(onLeft ? { left: viewport.width - position.right - BUTTON_PX } : { right: position.right }),
+        ...(onTop
+          ? { top: viewport.height - position.bottom + GAP_PX }
+          : { bottom: position.bottom + BUTTON_PX + GAP_PX }),
+        maxHeight: (onTop ? position.bottom : viewport.height - position.bottom - BUTTON_PX) - GAP_PX - EDGE_PX,
+      }
+    : { right: position.right, bottom: position.bottom + BUTTON_PX + GAP_PX };
 
   async function handleSend() {
     const question = input.trim();
@@ -122,13 +234,20 @@ export default function AgentChatWidget() {
   return (
     <>
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 flex h-[28rem] w-[22rem] max-w-[90vw] flex-col overflow-hidden rounded-lg bg-white shadow-2xl ring-1 ring-black/10">
-          <div className="flex items-center justify-between bg-gradient-to-br from-teal-600 via-teal-500 to-teal-500 px-4 py-3">
+        <div
+          style={panelStyle}
+          className="fixed z-50 flex h-[28rem] w-[22rem] max-w-[90vw] flex-col overflow-hidden rounded-lg bg-white shadow-2xl ring-1 ring-black/10"
+        >
+          <div
+            {...dragHandlers}
+            title="Drag to move"
+            className="flex cursor-move touch-none select-none items-center justify-between bg-gradient-to-br from-teal-600 via-teal-500 to-teal-500 px-4 py-3"
+          >
             <div className="flex items-center gap-2 text-white">
               <RiRobot3Fill size={18} />
               <p className="text-sm font-semibold">Fleet AI Assistant</p>
             </div>
-            <button onClick={() => setOpen(false)} aria-label="Close" className="text-white/80 hover:text-white">
+            <button data-no-drag onClick={() => setOpen(false)} aria-label="Close" className="text-white/80 hover:text-white">
               <FiX size={18} />
             </button>
           </div>
@@ -190,11 +309,14 @@ export default function AgentChatWidget() {
         </div>
       )}
 
-      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3">
+      <div style={{ right: position.right, bottom: position.bottom }} className="fixed z-50">
         {!open && (
+          // Beside the button, on whichever side faces into the screen.
           <div
             key={pageSegment}
-            className="animate-hint-in flex max-w-[210px] items-start gap-1.5 rounded-md bg-gradient-to-br from-violet-50 to-indigo-50 px-3 py-2 text-xs text-violet-800 shadow-lg ring-1 ring-violet-200"
+            className={`animate-hint-in absolute top-1/2 flex w-max max-w-[210px] -translate-y-1/2 items-start gap-1.5 rounded-md bg-gradient-to-br from-violet-50 to-indigo-50 px-3 py-2 text-xs text-violet-800 shadow-lg ring-1 ring-violet-200 ${
+              onLeft ? "left-full ml-3" : "right-full mr-3"
+            }`}
           >
             <BsStars className="mt-0.5 shrink-0 text-violet-500" size={13} aria-hidden="true" />
             <span>{hint}</span>
@@ -202,9 +324,11 @@ export default function AgentChatWidget() {
         )}
 
         <button
-          onClick={() => setOpen((o) => !o)}
+          {...dragHandlers}
+          onClick={toggleOpen}
           aria-label={open ? "Close fleet assistant" : "Ask the fleet assistant"}
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-600 to-teal-500 text-white shadow-lg transition-transform hover:scale-105"
+          title="Click to chat · drag to move"
+          className="flex h-14 w-14 shrink-0 cursor-grab touch-none select-none items-center justify-center rounded-full bg-gradient-to-br from-teal-600 to-teal-500 text-white shadow-lg transition-transform hover:scale-105 active:cursor-grabbing"
         >
           <RiRobot3Fill size={24} />
         </button>
