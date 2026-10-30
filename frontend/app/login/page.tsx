@@ -9,6 +9,7 @@ import AuthHeroPanel from "../components/AuthHeroPanel";
 import RobotCheckbox from "../components/RobotCheckbox";
 import BrandIcon from "../components/BrandIcon";
 import PasswordInput from "../components/PasswordInput";
+import { notifyError, notifySuccess, showError } from "../lib/notify";
 
 const STEPS = [
   { n: 1, title: "Register your company", text: "Create your account in minutes and set up your company profile." },
@@ -27,14 +28,12 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isHuman, setIsHuman] = useState(false);
   const [selectedRole, setSelectedRole] = useState<"COMPANY_OWNER" | "ADMIN">("COMPANY_OWNER");
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
     setIsSubmitting(true);
 
     try {
@@ -47,14 +46,15 @@ export default function LoginPage() {
       if (isCompanyRole && user.role !== selectedRole) {
         logout();
         const pickedLabel = ROLE_OPTIONS.find((r) => r.value === selectedRole)?.label;
-        setError(`Not authorized — this account isn't a "${pickedLabel}" account.`);
+        notifyError(`This account isn't a "${pickedLabel}" account. Pick the right role and try again.`, "Not authorized");
         setIsSubmitting(false);
         return;
       }
 
+      notifySuccess(user.fullName ? `Welcome back, ${user.fullName}.` : "Welcome back.", "Signed in");
       router.push(redirectPathForRole(user.role));
     } catch (err: any) {
-      setError(err.message || "Unable to sign in. Check your details and try again.");
+      showError(err, "Unable to sign in. Check your details and try again.");
       setIsSubmitting(false);
     }
   }
@@ -192,11 +192,6 @@ export default function LoginPage() {
 
             <RobotCheckbox checked={isHuman} onChange={setIsHuman} />
 
-            {error && (
-              <div className="text-sm px-3.5 py-2.5 rounded bg-red-50 text-red-600 border border-red-200" role="alert">
-                {error}
-              </div>
-            )}
 
             <button
               type="submit"

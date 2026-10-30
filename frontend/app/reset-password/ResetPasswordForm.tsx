@@ -4,6 +4,7 @@ import { useState, FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiRequest } from "../lib/api";
 import PasswordInput from "../components/PasswordInput";
+import { notifyError, showError } from "../lib/notify";
 
 export default function ResetPasswordForm() {
   const router = useRouter();
@@ -13,7 +14,6 @@ export default function ResetPasswordForm() {
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -21,14 +21,13 @@ export default function ResetPasswordForm() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      notifyError("Password must be at least 8 characters.");
       return;
     }
     if (password !== confirmPassword) {
-      setError("Passwords don't match.");
+      notifyError("Passwords don't match.");
       return;
     }
 
@@ -41,7 +40,7 @@ export default function ResetPasswordForm() {
       setDone(true);
       setTimeout(() => router.push("/login"), 2500);
     } catch (err: any) {
-      setError(err.message || "Unable to reset your password. Please try again.");
+      showError(err, "Unable to reset your password. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -99,11 +98,6 @@ export default function ResetPasswordForm() {
         />
       </div>
 
-      {error && (
-        <div className="text-sm px-3.5 py-2.5 rounded bg-red-50 text-red-600 border border-red-200" role="alert">
-          {error}
-        </div>
-      )}
 
       <button
         type="submit"
