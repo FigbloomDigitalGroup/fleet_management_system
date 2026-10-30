@@ -114,3 +114,50 @@ export async function getPlaceLocation(query) {
   const leg = data.routes[0].legs[0];
   return { lat: leg.start_location.lat, lng: leg.start_location.lng, address: leg.start_address };
 }
+
+// The driving line through stops in the given order ([{ lat, lng }]), with
+// its length and drive time. Directions takes at most 25 stops between the
+// two ends, so longer runs are fetched in pieces that share their end stop.
+export async function getDrivingPathThrough(stops) {
+  if (!GOOGLE_MAPS_SERVER_API_KEY) return { error: "GOOGLE_MAPS_SERVER_API_KEY is missing on the server." };
+  if (stops.length < 2) return { error: "Too few stops to route." };
+
+  const MAX_STOPS = 27;
+  const path = [];
+  let meters = 0;
+  let seconds = 0;
+  const at = (p) => `${p.lat},${p.lng}`;
+  for (let start = 0; start < stops.length - 1; start += MAX_STOPS - 1) {
+    const chunk = stops.slice(start, start + MAX_STOPS);
+    const middle = chunk.slice(1, -1).map(at).join("|");
+    const url =
+      `https://maps.googleapis.com/maps/api/directions/json?origin=${at(chunk[0])}` +
+      `&destination=${at(chunk[chunk.length - 1])}` +
+      (middle ? `&waypoints=${encodeURIComponent(middle)}` : "") +
+      `&mode=driving&key=${GOOGLE_MAPS_SERVER_API_KEY}`;
+
+    let data;
+    try {
+      const res = await fetch(url);
+      data = await res.json();
+    } catch (err) {
+      return { error: `Could not reach Google Directions: ${err.message}` };
+    }
+    if (data.status !== "OK" || !data.routes?.length) return { error: `Directions lookup failed (${data.status}).` };
+
+    const route = data.routes[0];
+    for (const leg of route.legs) {
+      meters += leg.distance?.value || 0;
+      seconds += leg.duration?.value || 0;
+    }
+    // Each step's own polyline keeps the line on the road at street level
+    // (the overview polyline is simplified).
+    for (const step of route.legs.flatMap((leg) => leg.steps)) {
+      for (const point of decodePolyline(step.polyline.points)) {
+        const last = path[path.length - 1];
+        if (!last || last.lat !== point.lat || last.lng !== point.lng) path.push(point);
+      }
+    }
+  }
+  return { path, distanceKm: meters / 1000, durationMin: seconds / 60 };
+}

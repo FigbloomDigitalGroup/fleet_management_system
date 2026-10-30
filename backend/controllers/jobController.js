@@ -3,7 +3,8 @@ import prisma from "../lib/prisma.js";
 import { toApi } from "../lib/serialize.js";
 import { tenantScope } from "../middleware/auth.js";
 import { raiseAlert } from "../lib/alerts.js";
-import { getPlaceLocation } from "../services/googleMapsService.js";
+import { getDrivingPathThrough, getPlaceLocation } from "../services/googleMapsService.js";
+import { routeThrough } from "../services/mapMatching.js";
 import { optimizeStops, driveMinutes } from "../lib/routeOptimizer.js";
 import { distanceKm } from "../lib/geo.js";
 import { ownedUploadIds, uploadUrl } from "./uploadController.js";
@@ -60,6 +61,36 @@ function present(job) {
       : null,
   };
 }
+
+// The road line through a run of stops: Google Directions when the server
+// key is set, else OSRM (free), else straight lines between the stops so
+// the order still shows.
+async function drawRun(stops) {
+  if (stops.length < 2) return { path: stops, distanceKm: 0, durationMin: 0, source: "straight" };
+  const google = await getDrivingPathThrough(stops);
+  if (!google.error && google.path.length > 1) return { ...google, source: "google" };
+  try {
+    return { ...(await routeThrough(stops)), source: "osrm" };
+  } catch (err) {
+    console.warn(`[jobs] road route unavailable, drawing straight lines: ${google.error}; ${err.message}`);
+    return { path: stops, distanceKm: null, durationMin: null, source: "straight" };
+  }
+}
+
+// A driver's saved line no longer matches once their stops for that day
+// change; it's removed until the next optimize.
+async function clearJobRoutes(...runs) {
+  const where = runs.filter((r) => r.driverId && r.scheduledDate).map(({ driverId, scheduledDate }) => ({ driverId, scheduledDate }));
+  if (where.length) await prisma.jobRoute.deleteMany({ where: { OR: where } });
+}
+
+// How fresh and how close the vehicle's last position must be to start the
+// optimized run from it.
+const START_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+const START_MAX_KM = 150;
+
+// Fields whose change moves a stop or reorders the run.
+const ROUTE_FIELDS = ["address", "latitude", "longitude", "driverId", "scheduledDate", "sequence", "status"];
 
 async function resolveDriverAndVehicle(req, driverId) {
   if (!driverId) return { driverId: null, vehicleId: null };
@@ -154,6 +185,7 @@ export async function createJob(req, res) {
         createdById: req.user.id,
       },
     });
+    await clearJobRoutes(job);
     return res.status(201).json(present(job));
   } catch (err) {
     console.error(err);
@@ -202,6 +234,7 @@ export async function updateJob(req, res) {
       data.sequence = (await lastSequenceFor(driverId, scheduledDate, job.id)) + 1;
     }
     const updated = await prisma.job.update({ where: { id: job.id }, data });
+    if (ROUTE_FIELDS.some((field) => field in data)) await clearJobRoutes(job, updated);
     return res.json(present(updated));
   } catch (err) {
     console.error(err);
@@ -211,8 +244,10 @@ export async function updateJob(req, res) {
 
 export async function deleteJob(req, res) {
   try {
-    const { count } = await prisma.job.deleteMany({ where: { id: req.params.id, ...tenantScope(req) } });
-    if (!count) return res.status(404).json({ error: "Job not found" });
+    const job = await prisma.job.findFirst({ where: { id: req.params.id, ...tenantScope(req) } });
+    if (!job) return res.status(404).json({ error: "Job not found" });
+    await prisma.job.delete({ where: { id: job.id } });
+    await clearJobRoutes(job);
     return res.status(204).send();
   } catch (err) {
     console.error(err);
@@ -233,11 +268,20 @@ export async function optimizeJobs(req, res) {
       where: { driverId: assignment.driverId, scheduledDate, status: { in: OPEN_STATUSES } },
       orderBy: { createdAt: "asc" },
     });
-    if (jobs.length === 0) return res.json({ jobs: [], distanceKm: 0, lateMinutes: 0, estimatedFinishAt: null, startedFrom: null });
+    if (jobs.length === 0) {
+      await clearJobRoutes({ driverId: assignment.driverId, scheduledDate });
+      return res.json({ jobs: [], distanceKm: 0, lateMinutes: 0, estimatedFinishAt: null, startedFrom: null, route: null });
+    }
 
-    const lastPing = assignment.vehicleId
+    const latestPing = assignment.vehicleId
       ? await prisma.locationPing.findFirst({ where: { vehicleId: assignment.vehicleId }, orderBy: { recordedAt: "desc" } })
       : null;
+    // Only start from the vehicle when that position is fresh and near the
+    // stops: an old fix (or an emulator's default location) would send the
+    // run, and its road line, off across the world.
+    const nearStops = (p) => jobs.some((j) => distanceKm(p.latitude, p.longitude, j.latitude, j.longitude) <= START_MAX_KM);
+    const lastPing =
+      latestPing && Date.now() - new Date(latestPing.recordedAt).getTime() <= START_MAX_AGE_MS && nearStops(latestPing) ? latestPing : null;
     const start = lastPing ? { lat: lastPing.latitude, lng: lastPing.longitude } : { lat: jobs[0].latitude, lng: jobs[0].longitude };
 
     // Jobs already under way stay first; only the untouched ones are reordered.
@@ -252,16 +296,67 @@ export async function optimizeJobs(req, res) {
       include: LIST_INCLUDE,
       orderBy: { sequence: "asc" },
     });
+
+    // Draw the run along the roads, from the vehicle (when it has reported)
+    // through every stop in the new order, and keep it for the dashboard
+    // and the driver app.
+    const stops = [...(lastPing ? [start] : []), ...ordered.map((j) => ({ lat: j.latitude, lng: j.longitude }))];
+    const drawn = await drawRun(stops);
+    const routeData = {
+      companyId: jobs[0].companyId,
+      path: drawn.path,
+      jobIds: ordered.map((j) => j.id),
+      startLat: lastPing ? start.lat : null,
+      startLng: lastPing ? start.lng : null,
+      distanceKm: drawn.distanceKm,
+      durationMin: drawn.durationMin,
+      source: drawn.source,
+    };
+    const route = await prisma.jobRoute.upsert({
+      where: { driverId_scheduledDate: { driverId: assignment.driverId, scheduledDate } },
+      create: { ...routeData, driverId: assignment.driverId, scheduledDate },
+      update: routeData,
+    });
+
     return res.json({
       jobs: fresh.map(present),
-      distanceKm: Math.round(result.km * 10) / 10,
+      // Road distance when the line follows the roads, else the estimate.
+      distanceKm: Math.round((drawn.distanceKm ?? result.km) * 10) / 10,
       lateMinutes: Math.round(result.lateMinutes),
       estimatedFinishAt: result.finishAt,
       startedFrom: lastPing ? "vehicle_location" : "first_stop",
+      route: toApi(route),
     });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to optimize route" });
+  }
+}
+
+// ADMIN/COMPANY_OWNER — the optimized road lines for a day (default today),
+// one per driver who has one.
+export async function listJobRoutes(req, res) {
+  try {
+    const scheduledDate = isDateKey(req.query.date) ? req.query.date : todayKey();
+    const routes = await prisma.jobRoute.findMany({ where: { ...tenantScope(req), scheduledDate } });
+    return res.json(routes.map(toApi));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to fetch job routes" });
+  }
+}
+
+// DRIVER — today's road line through their jobs, or null when dispatch
+// hasn't optimized their run (or changed it since).
+export async function getMyJobRoute(req, res) {
+  try {
+    const route = await prisma.jobRoute.findUnique({
+      where: { driverId_scheduledDate: { driverId: req.user.id, scheduledDate: todayKey() } },
+    });
+    return res.json(route ? toApi(route) : null);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to fetch your route" });
   }
 }
 

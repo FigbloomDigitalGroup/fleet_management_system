@@ -8,6 +8,7 @@ import FullPageLoading from "./FullPageLoading";
 import WheelIcon from "./WheelIcon";
 import { usePageHeader } from "./DashboardShell";
 import DriverScoreCard from "./DriverScoreCard";
+import DriverDistanceCard from "./DriverDistanceCard";
 import { DriverRecord, VehicleRecord } from "../types/auth";
 import Avatar from "./Avatar";
 import ImageUploadButton from "./ImageUploadButton";
@@ -147,6 +148,10 @@ export default function DriverDetail({ basePath }: { basePath: string }) {
 
       <div className="mt-4">
         <DriverScoreCard driverId={driver._id} />
+      </div>
+
+      <div className="mt-4">
+        <DriverDistanceCard vehicle={vehicle} basePath={basePath} />
       </div>
 
       {!hasProfile ? (
