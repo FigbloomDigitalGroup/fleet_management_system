@@ -71,7 +71,6 @@ export default function PlatformDashboard() {
         setLoadError(null);
       })
       .catch((err) => {
-        console.error(err);
         setLoadError(err.message || "Failed to load dashboard data");
       })
       .finally(() => setLoading(false));

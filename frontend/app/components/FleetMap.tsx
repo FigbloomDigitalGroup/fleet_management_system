@@ -264,8 +264,8 @@ export default function FleetMap({
       setVehicles(vehicleData);
       setGeofences(geofenceData);
       setRoutes(routeData);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      // apiRequest has already shown the failure in a popup.
     } finally {
       setLoading(false);
     }

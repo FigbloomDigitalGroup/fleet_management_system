@@ -50,7 +50,7 @@ export default function TripReplayMap({ tripId }: { tripId: string }) {
                 const restored = Number.isFinite(saved) && saved >= 0 && saved < data.length ? saved : data.length - 1;
                 setScrubIndexState(Math.max(restored, 0));
             })
-            .catch((err) => console.error(err))
+            .catch(() => {}) // apiRequest has already shown the failure in a popup.
             .finally(() => setLoading(false));
         apiRequest<TripRoad>(`/api/trips/${tripId}/road`)
             .then(setRoad)

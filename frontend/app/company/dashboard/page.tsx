@@ -61,7 +61,6 @@ export default function CompanyDashboard() {
         hasLoadedOnceRef.current = true;
         setLoadError(null);
       } catch (err: any) {
-        console.error(err);
         setLoadError(err.message || "Failed to refresh dashboard data");
       } finally {
         setLoading(false);

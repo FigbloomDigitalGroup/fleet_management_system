@@ -58,7 +58,6 @@ export default function AdminDashboard() {
         hasLoadedOnceRef.current = true;
         setLoadError(null);
       } catch (err: any) {
-        console.error(err);
         // Only treat this as a hard load failure before we've ever shown real
         // data — otherwise a single missed 10s poll would replace a working
         // dashboard with an error screen. Once loaded, just flag it quietly.
