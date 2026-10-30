@@ -19,8 +19,13 @@ import {
   FaSatelliteDish,
   FaUsersCog,
   FaArrowRight,
+  FaTasks,
+  FaDirections,
+  FaCheck,
+  FaPalette,
 } from "react-icons/fa";
 import BrandWordmark from "./components/BrandWordmark";
+import ThemeShowcase from "./components/ThemeShowcase";
 import { MotionConfig, motion } from "motion/react";
 import { enter, reveal } from "./lib/reveal";
 import { PLAN_PRICING_KES, SPECIAL_OFFER, priceForPlan, formatKes, offerLabel } from "./lib/pricing";
@@ -120,6 +125,33 @@ const RELIABILITY = [
   { icon: FaWifi, title: "Works through dead zones", text: "Offline points upload later, so trip history has no gaps." },
   { icon: FaUserShield, title: "Fake GPS detection", text: "Positions from mock-location apps are flagged." },
   { icon: FaUserLock, title: "Privacy by design", text: "Driver consent, tracking hours and automatic deletion." },
+];
+
+// What the driver app does for jobs and routing (Desktop\fleet: the jobs
+// and job tabs, lib/jobs.ts navigateTo, the assigned route card on trips).
+const DRIVER_FLOWS = [
+  {
+    icon: FaTasks,
+    title: "Jobs",
+    text: "Today's stops in the order dispatch set, with late ones flagged.",
+    steps: [
+      "Address, a contact to call and notes from dispatch",
+      "Start job, I've arrived, then complete",
+      "Photo and signature proof of delivery",
+      "Can't complete? Report why in two taps",
+    ],
+  },
+  {
+    icon: FaDirections,
+    title: "Routing",
+    text: "Every stop and the assigned route right in the app.",
+    steps: [
+      "One tap to navigate with Google Maps or Waze",
+      "The assigned route with its speed limit",
+      "Live on route or off route status",
+      "Dispatch is alerted when a driver strays",
+    ],
+  },
 ];
 
 const INDUSTRIES = [
@@ -454,6 +486,44 @@ export default function LandingPage() {
               </div>
               <img loading="lazy" decoding="async" src="/driver-app-phone.jpg" alt="The driver app on a phone" className="h-80 w-full rounded-2xl object-cover md:h-[30rem]" />
             </div>
+            {/* Jobs and routing, the two things drivers use most */}
+            <div className="grid gap-4 border-t border-white/10 px-6 pb-16 pt-12 md:grid-cols-2 md:px-12 md:pb-20">
+              {DRIVER_FLOWS.map((flow, i) => {
+                const Icon = flow.icon;
+                return (
+                  <motion.div key={flow.title} {...reveal(i * 0.1)} className="rounded-2xl bg-white/5 p-6 ring-1 ring-white/10">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-500 text-white">
+                      <Icon size={18} />
+                    </span>
+                    <h3 className="mt-4 text-lg font-semibold">{flow.title}</h3>
+                    <p className="mt-1 text-sm text-teal-50/70">{flow.text}</p>
+                    <ul className="mt-4 space-y-2">
+                      {flow.steps.map((step) => (
+                        <li key={step} className="flex items-start gap-2 text-sm text-teal-50/90">
+                          <FaCheck size={11} className="mt-1 shrink-0 text-teal-300" />
+                          {step}
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.section>
+
+          {/* CUSTOMISE — the dashboard themes, tried on a preview */}
+          <motion.section {...reveal()} className="rounded-3xl bg-white px-6 py-16 md:px-12 md:py-20">
+            <div className="mx-auto mb-10 max-w-xl text-center">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-orange-500">
+                <FaPalette size={12} /> Make it yours
+              </span>
+              <h2 className="mt-3 text-3xl font-bold leading-tight tracking-tight text-gray-950 md:text-4xl">Customise your fleet.</h2>
+              <p className="mt-3 text-sm text-gray-500">
+                Pick a theme or your own two brand colours and a comfortable text size. Your whole team sees the dashboard in your
+                look. Try one.
+              </p>
+            </div>
+            <ThemeShowcase />
           </motion.section>
 
           {/* EXPLORE */}
