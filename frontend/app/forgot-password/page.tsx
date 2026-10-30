@@ -5,17 +5,16 @@ import AuthHeroPanel from "../components/AuthHeroPanel";
 import RobotCheckbox from "../components/RobotCheckbox";
 import BrandIcon from "../components/BrandIcon";
 import { apiRequest } from "../lib/api";
+import { showError } from "../lib/notify";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isHuman, setIsHuman] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
     setIsSubmitting(true);
 
     try {
@@ -25,7 +24,7 @@ export default function ForgotPasswordPage() {
       });
       setSent(true);
     } catch (err: any) {
-      setError(err.message || "Unable to process your request. Please try again.");
+      showError(err, "Unable to process your request. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -94,11 +93,6 @@ export default function ForgotPasswordPage() {
 
               <RobotCheckbox checked={isHuman} onChange={setIsHuman} />
 
-              {error && (
-                <div className="text-sm px-3.5 py-2.5 rounded bg-red-50 text-red-600 border border-red-200" role="alert">
-                  {error}
-                </div>
-              )}
 
               <button
                 type="submit"

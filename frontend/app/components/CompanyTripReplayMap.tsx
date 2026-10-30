@@ -40,7 +40,7 @@ export default function CompanyTripReplayMap({ tripId }: { tripId: string }) {
   useEffect(() => {
     apiRequest<PathPoint[]>(`/api/trips/${tripId}/path`)
       .then(setPath)
-      .catch((err) => console.error(err))
+      .catch(() => {}) // apiRequest has already shown the failure in a popup.
       .finally(() => setLoading(false));
     apiRequest<TripRoad>(`/api/trips/${tripId}/road`)
       .then(setRoad)
