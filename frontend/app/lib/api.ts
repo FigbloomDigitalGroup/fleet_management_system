@@ -1,9 +1,13 @@
 import { emitSessionExpired } from "./sessionEvents";
+import { OFFLINE_MESSAGE, UNREACHABLE_MESSAGE, friendlyStatusMessage, isOffline, notifyError, notifySuccess } from "./notify";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 interface ApiRequestOptions extends RequestInit {
   headers?: Record<string, string>;
+  // The popup shown when a POST/PUT/PATCH/DELETE succeeds; false for none.
+  // Left out, it's the server's own `message` or one worked out from the path.
+  successMessage?: string | false;
 }
 
 // Refresh tokens are single-use and rotate on every call. Pages here fire
@@ -52,6 +56,64 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
+// Every failed request shows its message in a popup (ErrorPopups) as well as
+// throwing it, so callers no longer need to log errors to the console. The
+// session-expired case is left to SessionExpiredModal instead.
+function failed(message: string, status?: number): Error {
+  notifyError(message, popupTitle(status));
+  // Marks it as already shown, so ErrorPopups doesn't show it twice if a
+  // caller leaves it uncaught.
+  return Object.assign(new Error(message), { notified: true });
+}
+
+// Requests whose success needs no popup: signing in has its own welcome,
+// the rest happen in the background or are followed by a save that shows one.
+const QUIET_SUCCESS = ["/api/auth/login", "/api/auth/logout", "/api/auth/refresh", "/api/agent/ask", "/api/messages", "/api/uploads"];
+
+const RESOURCE_NAMES: Record<string, string> = {
+  vehicles: "Vehicle",
+  geofences: "Geofence",
+  routes: "Route",
+  jobs: "Job",
+  maintenance: "Maintenance record",
+  alerts: "Alert",
+  users: "User",
+  admins: "Admin",
+  companies: "Company",
+  settings: "Settings",
+  billing: "Plan",
+};
+
+const ACTION_MESSAGES: [RegExp, string][] = [
+  [/\/resolve$/, "Alert resolved."],
+  [/\/complete$/, "Maintenance marked as done."],
+  [/\/bulk-import$/, "Import finished."],
+  [/\/optimize$/, "Route order optimised."],
+  [/\/appearance$/, "Appearance saved."],
+  [/\/access$/, "Access updated."],
+  [/\/status$/, "Status updated."],
+  [/\/plan$/, "Plan updated."],
+  [/\/scan-now$/, "Scan started."],
+  [/\/register-company$/, "Your company account has been created."],
+];
+
+function successText(method: string, path: string): string {
+  const clean = path.split("?")[0];
+  const action = ACTION_MESSAGES.find(([pattern]) => pattern.test(clean));
+  if (action) return action[1];
+  const segment = clean.replace(/^\/api\//, "").split("/").find((part) => RESOURCE_NAMES[part]);
+  const name = segment ? RESOURCE_NAMES[segment] : null;
+  const verb = method === "POST" ? "added" : method === "DELETE" ? "deleted" : "updated";
+  if (name === "Settings") return method === "DELETE" ? "Settings reset." : "Settings saved.";
+  return name ? `${name} ${verb}.` : "Saved successfully.";
+}
+
+function popupTitle(status?: number): string {
+  if (status === undefined) return "Connection problem";
+  if (status >= 500) return "Server problem";
+  return "Couldn't complete that";
+}
+
 export async function apiRequest<T = any>(
   path: string,
   options: ApiRequestOptions = {},
@@ -61,11 +123,12 @@ export async function apiRequest<T = any>(
   // FormData bodies (file uploads) must NOT get an explicit Content-Type —
   // the browser sets its own multipart boundary only when we leave it unset.
   const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  const { successMessage, ...init } = options;
 
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {
-      ...options,
+      ...init,
       headers: {
         ...(isFormData ? {} : { "Content-Type": "application/json" }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -73,9 +136,7 @@ export async function apiRequest<T = any>(
       },
     });
   } catch {
-    throw new Error(
-      `Unable to reach the API at ${API_URL}. Start the backend and check NEXT_PUBLIC_API_URL.`
-    );
+    throw failed(isOffline() ? OFFLINE_MESSAGE : UNREACHABLE_MESSAGE);
   }
 
   // Token expired or missing — try refreshing once, then retry the request
@@ -101,7 +162,15 @@ export async function apiRequest<T = any>(
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new Error(data.error || "Something went wrong");
+    throw failed(friendlyStatusMessage(res.status, data.error), res.status);
+  }
+
+  // Changes (not plain loads, which would pop up on every page and poll)
+  // confirm themselves in a popup.
+  const method = (init.method || "GET").toUpperCase();
+  const quiet = QUIET_SUCCESS.some((p) => path.startsWith(p));
+  if (method !== "GET" && successMessage !== false && !quiet) {
+    notifySuccess(successMessage || data.message || successText(method, path));
   }
 
   return data as T;
@@ -118,7 +187,7 @@ export async function apiDownload(path: string, fallbackFilename: string, isRetr
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
   } catch {
-    throw new Error(`Unable to reach the API at ${API_URL}.`);
+    throw failed(isOffline() ? OFFLINE_MESSAGE : UNREACHABLE_MESSAGE);
   }
 
   if (res.status === 401 && !isRetry) {
@@ -135,7 +204,7 @@ export async function apiDownload(path: string, fallbackFilename: string, isRetr
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || "Download failed");
+    throw failed(friendlyStatusMessage(res.status, data.error), res.status);
   }
 
   // Prefer the server's filename (Content-Disposition) when CORS exposes it.
@@ -144,6 +213,7 @@ export async function apiDownload(path: string, fallbackFilename: string, isRetr
   const filename = match ? decodeURIComponent(match[1]) : fallbackFilename;
 
   const blob = await res.blob();
+  notifySuccess(`${filename} is downloading.`, "Download started");
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

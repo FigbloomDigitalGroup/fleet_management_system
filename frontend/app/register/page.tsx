@@ -10,6 +10,7 @@ import RobotCheckbox from "../components/RobotCheckbox";
 import BrandIcon from "../components/BrandIcon";
 import PasswordInput from "../components/PasswordInput";
 import { INDUSTRIES, INDUSTRIES_WITH_IMAGES } from "../lib/industries";
+import { notifyError, showError } from "../lib/notify";
 
 export default function RegisterPage() {
     const { register } = useAuth();
@@ -20,7 +21,6 @@ export default function RegisterPage() {
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isHuman, setIsHuman] = useState(false);
     // Set once a company is registered but still needs platform approval.
@@ -28,10 +28,9 @@ export default function RegisterPage() {
 
     async function handleSubmit(e: FormEvent) {
         e.preventDefault();
-        setError(null);
 
         if (password.length < 8) {
-            setError("Password must be at least 8 characters.");
+            notifyError("Password must be at least 8 characters.");
             return;
         }
 
@@ -44,7 +43,7 @@ export default function RegisterPage() {
             }
             router.push(redirectPathForRole(user.role));
         } catch (err: any) {
-            setError(err.message || "Unable to create your account. Please try again.");
+            showError(err, "Unable to create your account. Please try again.");
             setIsSubmitting(false);
         }
     }
@@ -228,11 +227,6 @@ export default function RegisterPage() {
 
                         <RobotCheckbox checked={isHuman} onChange={setIsHuman} />
 
-                        {error && (
-                            <div className="text-sm px-3.5 py-2.5 rounded bg-red-50 text-red-600 border border-red-200" role="alert">
-                                {error}
-                            </div>
-                        )}
 
                         <button
                             type="submit"

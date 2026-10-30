@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 //import AuthContext from "./context/AuthContext";
 import { AuthProvider } from "./context/AuthContext";
+import ErrorPopups from "./components/ErrorPopups";
 import "./globals.css";
 
 // The system font — Inter, the closest free match to Fakt Pro (the licensed
@@ -32,6 +33,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body>
         <AuthProvider>{children}</AuthProvider>
+        <ErrorPopups />
       </body>
     </html>
   );
