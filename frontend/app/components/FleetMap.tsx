@@ -39,16 +39,19 @@ interface LiveVehicle {
     | null;
 }
 
+// Active and idle follow the company's theme (its main and accent colours,
+// set as CSS variables by FleetThemeProvider); offline and maintenance keep
+// their fixed meaning.
 const statusColor: Record<string, string> = {
-  active: "#50a86a",
-  idle: "#ffa049",
+  active: "var(--color-teal-400)",
+  idle: "var(--color-orange-400)",
   offline: "#000000",
   maintenance: "#f87171",
 };
 
 const LEGEND_ITEMS = [
-  { label: "Active — currently moving", color: "#50a86a" },
-  { label: "Idle — stationary, engine on", color: "#ffa049" },
+  { label: "Active — currently moving", color: statusColor.active },
+  { label: "Idle — stationary, engine on", color: statusColor.idle },
   { label: "Offline — no recent signal", color: "#000000" },
   { label: "Maintenance — out of service", color: "#f87171" },
 ];
@@ -199,7 +202,7 @@ function VehicleMarker({
 }
 
 function StartPointMarker() {
-  const color = "#0e4f27";
+  const color = "var(--color-teal-600)";
 
   return (
     <div className="flex flex-col items-center" style={{ transform: "translate(-50%, -100%)" }}>
@@ -748,7 +751,7 @@ export default function FleetMap({
                 )}
                 {savedStartPoint && (
                   <div className="flex items-center gap-2">
-                    <span className="h-3 w-3 shrink-0 rounded-full border-2 border-white shadow" style={{ background: "#0e4f27" }} />
+                    <span className="h-3 w-3 shrink-0 rounded-full border-2 border-white shadow" style={{ background: "var(--color-teal-600)" }} />
                     <span className="text-xs text-gray-600">Driver starting point</span>
                   </div>
                 )}

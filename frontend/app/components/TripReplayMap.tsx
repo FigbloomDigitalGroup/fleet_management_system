@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { GoogleMap, Polyline, OverlayView, useJsApiLoader } from "@react-google-maps/api";
 import { apiRequest } from "../lib/api";
+import { useFleetTheme } from "../context/FleetThemeContext";
 import { FaFlagCheckered, FaCircle } from "react-icons/fa";
 
 interface PathPoint {
@@ -22,6 +23,7 @@ interface TripRoad {
 const containerStyle = { width: "100%", height: "100%" };
 
 export default function TripReplayMap({ tripId }: { tripId: string }) {
+    const { themeDef } = useFleetTheme();
     const { isLoaded } = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     });
@@ -86,7 +88,7 @@ export default function TripReplayMap({ tripId }: { tripId: string }) {
                         {/* The full path, drawn as a line */}
                         <Polyline
                             path={routeLine}
-                            options={{ strokeColor: "#50a86a", strokeWeight: 4, strokeOpacity: 0.8 }}
+                            options={{ strokeColor: themeDef.main[4], strokeWeight: 4, strokeOpacity: 0.8 }}
                         />
 
                         {/* Start marker */}
