@@ -68,3 +68,33 @@ export async function matchRoadLine(points) {
   if (line.length < 2) throw new Error("OSRM found no road for this track");
   return line;
 }
+
+// The driving line through stops in the given order ([{ lat, lng }]), from
+// OSRM's /route service, with its length and drive time. Throws if OSRM
+// can't be used.
+export async function routeThrough(stops) {
+  if (stops.length < 2) throw new Error("Too few stops to route");
+  const line = [];
+  let meters = 0;
+  let seconds = 0;
+  for (let start = 0; start < stops.length - 1; start += MAX_POINTS_PER_REQUEST - 1) {
+    if (start > 0 && PAUSE_MS) await sleep(PAUSE_MS);
+    const chunk = stops.slice(start, start + MAX_POINTS_PER_REQUEST);
+    const coords = chunk.map((p) => `${p.lng.toFixed(6)},${p.lat.toFixed(6)}`).join(";");
+    const res = await fetch(`${OSRM_URL}/route/v1/driving/${coords}?overview=full&geometries=geojson`, {
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.code !== "Ok" || !data.routes?.length) {
+      throw new Error(`OSRM route failed: ${data.code || res.status} ${data.message || ""}`.trim());
+    }
+    const route = data.routes[0];
+    meters += route.distance;
+    seconds += route.duration;
+    for (const [lng, lat] of route.geometry.coordinates) {
+      const last = line[line.length - 1];
+      if (!last || last.lat !== lat || last.lng !== lng) line.push({ lat, lng });
+    }
+  }
+  return { path: line, distanceKm: meters / 1000, durationMin: seconds / 60 };
+}

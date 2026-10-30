@@ -6,6 +6,7 @@ import { FaCircle, FaFlagCheckered } from "react-icons/fa";
 import { apiRequest, errorMessage } from "../lib/api";
 import { formatDateTime, formatMinutes, formatTime, toDateTimeLocal } from "../lib/dateKeys";
 import { HistoryStop, LocationHistory } from "../types/auth";
+import { useFleetTheme } from "../context/FleetThemeContext";
 
 const containerStyle = { width: "100%", height: "100%" };
 const MAX_DAYS = 31;
@@ -25,6 +26,7 @@ function Summary({ label, value }: { label: string; value: string }) {
 // Replay any date & time range for one vehicle (not just a single trip):
 // the path, where it stopped and for how long, and any fake-GPS points.
 export default function VehicleHistoryReplay({ vehicleId }: { vehicleId: string }) {
+  const { themeDef } = useFleetTheme();
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
   });
@@ -151,7 +153,7 @@ export default function VehicleHistoryReplay({ vehicleId }: { vehicleId: string 
         <>
           <div className="h-[420px] w-full overflow-hidden rounded ring-1 ring-black/5">
             <GoogleMap mapContainerStyle={containerStyle} center={path[0]} zoom={13} onLoad={setMap}>
-              <Polyline path={path} options={{ strokeColor: "#0e4f27", strokeWeight: 4, strokeOpacity: 0.8 }} />
+              <Polyline path={path} options={{ strokeColor: themeDef.main[6], strokeWeight: 4, strokeOpacity: 0.8 }} />
 
               {mocked.slice(0, MAX_MOCK_MARKERS).map((p) => (
                 <OverlayView key={`m-${p.recordedAt}`} position={{ lat: p.latitude, lng: p.longitude }} mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>

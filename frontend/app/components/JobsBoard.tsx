@@ -1,10 +1,10 @@
 "use client";
 
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import { FiCopy, FiEdit2, FiTrash2, FiXCircle, FiZap, FiEye } from "react-icons/fi";
+import { FiCopy, FiEdit2, FiTrash2, FiXCircle, FiZap, FiEye, FiNavigation } from "react-icons/fi";
 import { apiRequest, errorMessage } from "../lib/api";
 import { useAdminAccess } from "../lib/adminAccess";
-import { nairobiTodayKey, formatTime } from "../lib/dateKeys";
+import { nairobiTodayKey, formatMinutes, formatTime } from "../lib/dateKeys";
 import {
   JOB_STATUS_LABELS,
   JOB_STATUS_STYLES,
@@ -13,10 +13,11 @@ import {
   isoToNairobiTime,
   windowToIso,
 } from "../lib/jobStatus";
-import { DriverRecord, JobRecord, OptimizeResult } from "../types/auth";
+import { DriverRecord, JobRecord, JobRouteRecord, OptimizeResult } from "../types/auth";
 import Skeleton from "./Skeleton";
 import JobDetailModal from "./JobDetailModal";
 import JobsMap, { driverColor } from "./JobsMap";
+import { useFleetTheme } from "../context/FleetThemeContext";
 
 const inputClass =
   "w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600";
@@ -62,6 +63,7 @@ export default function JobsBoard() {
   const [selected, setSelected] = useState<JobRecord | null>(null);
   const [optimizing, setOptimizing] = useState<string | null>(null);
   const [optimizeResults, setOptimizeResults] = useState<Record<string, OptimizeResult>>({});
+  const [routes, setRoutes] = useState<JobRouteRecord[]>([]);
 
   const [form, setForm] = useState<JobForm>(() => emptyForm(nairobiTodayKey()));
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -70,8 +72,12 @@ export default function JobsBoard() {
 
   const load = useCallback(async () => {
     try {
-      const data = await apiRequest<JobRecord[]>(`/api/jobs?date=${date}`);
+      const [data, routeData] = await Promise.all([
+        apiRequest<JobRecord[]>(`/api/jobs?date=${date}`),
+        apiRequest<JobRouteRecord[]>(`/api/jobs/routes?date=${date}`).catch(() => []),
+      ]);
       setJobs(data);
+      setRoutes(routeData);
       setError(null);
     } catch (err) {
       setError(errorMessage(err, "Failed to load jobs"));
@@ -111,11 +117,12 @@ export default function JobsBoard() {
     return list.sort((a, b) => (a.key === UNASSIGNED ? 1 : b.key === UNASSIGNED ? -1 : a.name.localeCompare(b.name)));
   }, [jobs]);
 
+  const { themeDef } = useFleetTheme();
   const colorIndex = useMemo(() => new Map(groups.map((g, i) => [g.key, i])), [groups]);
   const colorFor = useCallback(
     (job: JobRecord) =>
-      (job.driverId?._id ?? UNASSIGNED) === UNASSIGNED ? "#6b7280" : driverColor(colorIndex.get(job.driverId!._id) ?? 0),
-    [colorIndex]
+      (job.driverId?._id ?? UNASSIGNED) === UNASSIGNED ? "#6b7280" : driverColor(colorIndex.get(job.driverId!._id) ?? 0, themeDef),
+    [colorIndex, themeDef]
   );
 
   function setField<K extends keyof JobForm>(key: K, value: JobForm[K]) {
@@ -227,6 +234,8 @@ export default function JobsBoard() {
         body: JSON.stringify({ driverId, date }),
       });
       setOptimizeResults((r) => ({ ...r, [driverId]: result }));
+      const route = result.route;
+      setRoutes((list) => [...list.filter((r) => r.driverId !== driverId), ...(route ? [route] : [])]);
       await load();
     } catch (err) {
       setActionError(errorMessage(err, "Failed to optimize route"));
@@ -238,6 +247,15 @@ export default function JobsBoard() {
   const openCount = jobs.filter((j) => OPEN_JOB_STATUSES.includes(j.status)).length;
   const doneCount = jobs.filter((j) => j.status === "completed").length;
   const mappable = jobs.filter((j) => j.status !== "cancelled" && Number.isFinite(j.latitude) && Number.isFinite(j.longitude));
+  // Each optimized run's road line, in its driver's colour.
+  const mapRoutes = routes
+    .filter((r) => colorIndex.has(r.driverId) && r.path.length > 1)
+    .map((r) => ({
+      key: r._id,
+      color: driverColor(colorIndex.get(r.driverId) ?? 0, themeDef),
+      path: r.path,
+      start: r.startLat != null && r.startLng != null ? { lat: r.startLat, lng: r.startLng } : null,
+    }));
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -284,13 +302,14 @@ export default function JobsBoard() {
           !error &&
           groups.map((group) => {
             const result = optimizeResults[group.key];
+            const route = routes.find((r) => r.driverId === group.key);
             const hasOpen = group.jobs.some((j) => j.status === "assigned");
             return (
               <div key={group.key} className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-black/5">
                 <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 px-5 py-3">
                   <span
                     className="h-3 w-3 shrink-0 rounded-full"
-                    style={{ background: group.key === UNASSIGNED ? "#6b7280" : driverColor(colorIndex.get(group.key) ?? 0) }}
+                    style={{ background: group.key === UNASSIGNED ? "#6b7280" : driverColor(colorIndex.get(group.key) ?? 0, themeDef) }}
                   />
                   <h3 className="text-sm font-bold text-blue-950">{group.name}</h3>
                   <span className="text-xs text-gray-500">
@@ -321,7 +340,20 @@ export default function JobsBoard() {
                     {result.lateMinutes > 0 && (
                       <span className="text-orange-600"> · {result.lateMinutes} min past time windows</span>
                     )}
-                    {result.startedFrom === "first_stop" && " · from the first stop (vehicle has no location yet)"}
+                    {result.startedFrom === "first_stop" && " · from the first stop (no recent vehicle location nearby)"}
+                  </p>
+                )}
+                {route && (
+                  <p className="flex flex-wrap items-center gap-x-1 border-b border-gray-100 px-5 py-2 text-xs text-gray-600">
+                    <FiNavigation size={12} className="text-teal-600" />
+                    {route.source === "straight" ? "Route drawn as straight lines (road data unavailable)" : "Route drawn on the map"}
+                    {route.distanceKm != null && (
+                      <>
+                        {" "}· <span className="font-semibold">{Math.round(route.distanceKm * 10) / 10} km</span>
+                      </>
+                    )}
+                    {route.durationMin != null && route.durationMin > 0 && <> · about {formatMinutes(Math.round(route.durationMin))} driving</>}
+                    {" "}· sent to the driver&apos;s app
                   </p>
                 )}
                 <ul>
@@ -488,9 +520,11 @@ export default function JobsBoard() {
 
         {mappable.length > 0 && (
           <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-black/5">
-            <p className="px-4 pt-3 text-xs text-teal-600">Stops for the day, numbered in run order</p>
-            <div className="mt-2 h-72 w-full">
-              <JobsMap jobs={mappable} colorFor={colorFor} onSelect={setSelected} />
+            <p className="px-4 pt-3 text-xs text-teal-600">
+              Stops for the day, numbered in run order{mapRoutes.length > 0 && ", with each optimized route"}
+            </p>
+            <div className="mt-2 h-80 w-full">
+              <JobsMap jobs={mappable} routes={mapRoutes} colorFor={colorFor} onSelect={setSelected} />
             </div>
           </div>
         )}

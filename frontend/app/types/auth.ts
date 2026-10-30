@@ -271,6 +271,22 @@ export interface OptimizeResult {
   lateMinutes: number;
   estimatedFinishAt?: string;
   startedFrom?: "vehicle_location" | "first_stop";
+  route?: JobRouteRecord | null;
+}
+
+// The road line through one driver's jobs for a day, saved by "Optimize
+// route" and shown on the Jobs map and in the driver app.
+export interface JobRouteRecord {
+  _id: string;
+  driverId: string;
+  scheduledDate: string;
+  path: { lat: number; lng: number }[];
+  jobIds: string[];
+  startLat: number | null;
+  startLng: number | null;
+  distanceKm: number | null;
+  durationMin: number | null;
+  source: "google" | "osrm" | "straight";
 }
 
 export interface PublicTracking {
