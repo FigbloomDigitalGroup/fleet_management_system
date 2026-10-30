@@ -19,8 +19,6 @@ import {
   FaSatelliteDish,
   FaUsersCog,
   FaArrowRight,
-  FaAndroid,
-  FaDownload,
 } from "react-icons/fa";
 import BrandIcon from "./components/BrandIcon";
 import { PLAN_PRICING_KES, SPECIAL_OFFER, priceForPlan, formatKes, offerLabel } from "./lib/pricing";
@@ -37,14 +35,6 @@ const NAV_LINKS = [
   { label: "Pricing", href: "#pricing" },
 ];
 
-// The driver app, until it's on Google Play. The APK is too big for git, so
-// it's attached to the newest GitHub release — "latest" always points at it,
-// so a new build only needs a new release (and the version here updated).
-const DRIVER_APK = {
-  href: "https://github.com/FigbloomDigitalGroup/fleet_management_system/releases/latest/download/fig-fleet-driver.apk",
-  version: "Version 1.0 · build 12",
-  details: "Android 7.0+ · 64-bit phones · 26.1 MB",
-};
 
 const STATS = [
   {
@@ -438,23 +428,12 @@ export default function LandingPage() {
                   );
                 })}
               </div>
-              {/* Direct APK download now; the Play Store listing comes later */}
+              {/* Not public yet — the Play Store listing is on its way */}
               <div className="mt-8 flex flex-wrap items-center gap-3">
-                <a
-                  href={DRIVER_APK.href}
-                  className="inline-flex items-center gap-3 rounded-lg bg-orange-500 px-5 py-3 transition-colors hover:bg-orange-600"
-                >
-                  <FaDownload size={20} />
-                  <span className="text-left">
-                    <span className="block text-[10px] uppercase tracking-wide text-orange-100">Available for download</span>
-                    <span className="block text-base font-semibold leading-tight">Download APK</span>
-                    <span className="block text-[10px] text-orange-100">{DRIVER_APK.version}</span>
-                  </span>
-                </a>
                 <span
                   aria-disabled="true"
                   title="Coming soon to Google Play"
-                  className="inline-flex cursor-default items-center gap-3 rounded-lg bg-black/60 px-5 py-3 opacity-70 ring-1 ring-white/10"
+                  className="inline-flex cursor-default items-center gap-3 rounded-lg bg-black/60 px-5 py-3 ring-1 ring-white/10"
                 >
                   <FaGooglePlay size={22} />
                   <span className="text-left">
@@ -463,9 +442,6 @@ export default function LandingPage() {
                   </span>
                 </span>
               </div>
-              <p className="mt-3 flex items-center gap-1.5 text-[11px] text-teal-50/60">
-                <FaAndroid size={12} /> {DRIVER_APK.details}. Your phone may ask you to allow installs from your browser the first time.
-              </p>
             </div>
             <img src="/driver-app-phone.jpg" alt="The driver app on a phone" className="h-80 w-full rounded-2xl object-cover md:h-[30rem]" />
           </div>
