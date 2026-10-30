@@ -472,14 +472,3 @@ main .space-y-4 > :not([hidden]) ~ :not([hidden]) {
   opacity: 1;
   transform: none;
 }
-
-/* The gear standing in for the "G" of the wordmark turns while hovered. */
-.group:hover .wordmark-gear {
-  animation: spin-slow 3s linear infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .group:hover .wordmark-gear {
-    animation: none;
-  }
-}
