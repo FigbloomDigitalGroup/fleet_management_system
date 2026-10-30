@@ -20,7 +20,8 @@ import {
   FaUsersCog,
   FaArrowRight,
 } from "react-icons/fa";
-import BrandIcon from "./components/BrandIcon";
+import BrandWordmark from "./components/BrandWordmark";
+import { useScrollReveal } from "./lib/useScrollReveal";
 import { PLAN_PRICING_KES, SPECIAL_OFFER, priceForPlan, formatKes, offerLabel } from "./lib/pricing";
 
 // Landing page, laid out after a light "stacked panels" fleet template: a
@@ -135,6 +136,8 @@ const INDUSTRIES = [
 function InlinePhoto({ src, alt }: { src: string; alt: string }) {
   return (
     <img
+      loading="lazy"
+      decoding="async"
       src={src}
       alt={alt}
       className="mx-1 inline-block h-[0.95em] w-[1.9em] rounded-full object-cover align-[-0.1em] shadow-sm ring-2 ring-white md:h-[1.05em] md:w-[2.2em]"
@@ -173,6 +176,8 @@ function SectionHeading({ title, text, id }: { title: React.ReactNode; text?: st
 }
 
 export default function LandingPage() {
+  useScrollReveal();
+
   return (
     <div className="min-h-screen bg-[#f2f3f1] text-gray-900">
       {SPECIAL_OFFER.active && (
@@ -192,10 +197,7 @@ export default function LandingPage() {
       {/* HEADER */}
       <header className="sticky top-0 z-50 border-b border-black/5 bg-white/90 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
-          <span className="flex items-center gap-2 text-lg font-bold text-teal-950">
-            <BrandIcon variant="dark" className="h-6 w-6" />
-            FIGBLOOM FLEET
-          </span>
+          <BrandWordmark />
           <div className="hidden items-center gap-7 lg:flex">
             {NAV_LINKS.map((link) => (
               <a key={link.href} href={link.href} className="text-sm font-medium text-gray-600 transition-colors hover:text-gray-950">
@@ -247,7 +249,7 @@ export default function LandingPage() {
         </section>
 
         {/* LIVE MAP — fleet on the road */}
-        <section className="rounded-3xl bg-white px-4 py-16 md:px-10 md:py-20">
+        <section data-reveal className="rounded-3xl bg-white px-4 py-16 md:px-10 md:py-20">
           <SectionHeading
             title={
               <>
@@ -259,6 +261,8 @@ export default function LandingPage() {
             text="Search any vehicle, filter by status, and click one for its speed, driver and address — the same screen your team works from."
           />
           <img
+            loading="lazy"
+            decoding="async"
             src="/schwoaze-highway-3392100_1920.jpg"
             alt="Trucks and cars on a highway"
             className="h-72 w-full rounded-2xl object-cover shadow-2xl shadow-gray-300/60 md:h-[32rem]"
@@ -266,14 +270,14 @@ export default function LandingPage() {
         </section>
 
         {/* USEFUL FOR BUSINESS — three short facts */}
-        <section className="rounded-3xl bg-white px-6 py-16 md:py-20">
+        <section data-reveal className="rounded-3xl bg-white px-6 py-16 md:py-20">
           <SectionHeading
             title="Useful for business."
             text="Built around how fleets actually run — on the road, through dead zones and across every shift."
           />
           <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-3">
-            {STATS.map((s) => (
-              <div key={s.tag} className="rounded-2xl border border-gray-200 p-5">
+            {STATS.map((s, i) => (
+              <div key={s.tag} data-reveal={i * 100} className="rounded-2xl border border-gray-200 p-5">
                 <span className="inline-block rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-medium text-gray-600">{s.tag}</span>
                 <p className="mt-6 text-4xl font-bold tracking-tight text-gray-950">{s.value}</p>
                 <p className="text-sm font-medium text-gray-800">{s.label}</p>
@@ -284,7 +288,7 @@ export default function LandingPage() {
         </section>
 
         {/* WHY — one sentence with inline photos, then the five pillars it names */}
-        <section className="rounded-3xl bg-gradient-to-b from-teal-50 via-white to-white px-6 py-16 md:py-24">
+        <section data-reveal className="rounded-3xl bg-gradient-to-b from-teal-50 via-white to-white px-6 py-16 md:py-24">
           <p className="mb-6 text-center text-xs font-semibold uppercase tracking-[0.2em] text-orange-500">Why FIGBLOOM FLEET</p>
           <p className="mx-auto max-w-3xl text-center text-2xl font-semibold leading-snug tracking-tight text-gray-500 md:text-4xl md:leading-snug">
             Our fleet platform brings together <InlinePhoto src="/live tracking.jpg" alt="" /> <Pill>live tracking</Pill> and{" "}
@@ -300,11 +304,12 @@ export default function LandingPage() {
           </p>
 
           <div className="mx-auto mt-12 grid max-w-5xl gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {PILLARS.map((p) => {
+            {PILLARS.map((p, i) => {
               const Icon = p.icon;
               return (
                 <a
                   key={p.title}
+                  data-reveal={i * 80}
                   href="#features"
                   className="group rounded-2xl border border-gray-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md"
                 >
@@ -320,7 +325,7 @@ export default function LandingPage() {
         </section>
 
         {/* FEATURES */}
-        <section className="rounded-3xl bg-white px-6 py-16 md:py-20">
+        <section data-reveal className="rounded-3xl bg-white px-6 py-16 md:py-20">
           <SectionHeading
             id="features"
             title={
@@ -333,10 +338,10 @@ export default function LandingPage() {
             text="One dashboard for owners and admins, one app for drivers."
           />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((f) => {
+            {FEATURES.map((f, i) => {
               const Icon = f.icon;
               return (
-                <div key={f.title} className="rounded-2xl border border-gray-200 p-6 transition-shadow hover:shadow-md">
+                <div key={f.title} data-reveal={(i % 3) * 100} className="rounded-2xl border border-gray-200 p-6 transition-shadow hover:shadow-md">
                   <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 ring-1 ring-teal-100">
                     <Icon size={26} />
                   </span>
@@ -349,7 +354,7 @@ export default function LandingPage() {
         </section>
 
         {/* NUMBERS CARD */}
-        <section className="rounded-3xl bg-white px-6 py-16 md:py-20">
+        <section data-reveal className="rounded-3xl bg-white px-6 py-16 md:py-20">
           <SectionHeading id="platform" title={<>Numbers that speak<br />for themselves.</>} text="Every trip is recorded, measured and ready to review." />
           <div className="mx-auto max-w-3xl rounded-2xl border border-gray-200 p-6 md:p-8">
             <p className="text-xl font-semibold leading-snug tracking-tight text-gray-950 md:text-2xl">
@@ -358,6 +363,8 @@ export default function LandingPage() {
             </p>
           </div>
           <img
+            loading="lazy"
+            decoding="async"
             src="/as_photography-digital-marketing-1725340_1920.jpg"
             alt="Reviewing charts and figures on a screen"
             className="mx-auto mt-8 block h-64 w-full max-w-5xl rounded-2xl object-cover shadow-2xl shadow-gray-300/60 md:h-[28rem]"
@@ -375,7 +382,7 @@ export default function LandingPage() {
         </section>
 
         {/* COMPATIBLE WITH YOUR BUSINESS */}
-        <section className="grid items-center gap-10 rounded-3xl bg-white px-6 py-16 md:grid-cols-2 md:px-12 md:py-20">
+        <section data-reveal className="grid items-center gap-10 rounded-3xl bg-white px-6 py-16 md:grid-cols-2 md:px-12 md:py-20">
           <div>
             <h2 className="text-3xl font-bold leading-tight tracking-tight text-gray-950 md:text-4xl">
               Compatible with
@@ -400,6 +407,8 @@ export default function LandingPage() {
             </ul>
           </div>
           <img
+            loading="lazy"
+            decoding="async"
             src="/viarami-fleet-5153286_1920.jpg"
             alt="A row of white delivery vans"
             className="h-80 w-full rounded-2xl object-cover md:h-[28rem]"
@@ -407,7 +416,7 @@ export default function LandingPage() {
         </section>
 
         {/* DRIVER APP */}
-        <section id="driver-app" className="scroll-mt-24 overflow-hidden rounded-3xl bg-teal-950 text-white">
+        <section data-reveal id="driver-app" className="scroll-mt-24 overflow-hidden rounded-3xl bg-teal-950 text-white">
           <div className="grid items-center gap-10 px-6 py-16 md:grid-cols-2 md:px-12 md:py-20">
             <div>
               <span className="text-xs font-semibold uppercase tracking-wide text-teal-300">Driver app</span>
@@ -443,18 +452,18 @@ export default function LandingPage() {
                 </span>
               </div>
             </div>
-            <img src="/driver-app-phone.jpg" alt="The driver app on a phone" className="h-80 w-full rounded-2xl object-cover md:h-[30rem]" />
+            <img loading="lazy" decoding="async" src="/driver-app-phone.jpg" alt="The driver app on a phone" className="h-80 w-full rounded-2xl object-cover md:h-[30rem]" />
           </div>
         </section>
 
         {/* EXPLORE */}
-        <section className="rounded-3xl bg-white px-6 py-16 md:py-20">
+        <section data-reveal className="rounded-3xl bg-white px-6 py-16 md:py-20">
           <SectionHeading title="Explore the platform." text="A closer look at what runs behind the map." />
           <div className="grid gap-4 md:grid-cols-3">
-            {EXPLORE.map((e) => (
-              <article key={e.title} className="group overflow-hidden rounded-2xl border border-gray-200">
+            {EXPLORE.map((e, i) => (
+              <article key={e.title} data-reveal={i * 100} className="group overflow-hidden rounded-2xl border border-gray-200">
                 <div className="h-44 overflow-hidden">
-                  <img src={e.image} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                  <img loading="lazy" decoding="async" src={e.image} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
                 </div>
                 <div className="p-5">
                   <span className="text-[11px] font-semibold uppercase tracking-wide text-orange-600">{e.tag}</span>
@@ -470,7 +479,7 @@ export default function LandingPage() {
         </section>
 
         {/* PRICING */}
-        <section className="rounded-3xl bg-white px-6 py-16 md:py-20">
+        <section data-reveal className="rounded-3xl bg-white px-6 py-16 md:py-20">
           <SectionHeading id="pricing" title="Plans that grow with your fleet." text="Start free, upgrade as you grow. No hidden fees, cancel anytime." />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
@@ -478,9 +487,10 @@ export default function LandingPage() {
               { name: "Basic", price: formatKes(PLAN_PRICING_KES.basic), sub: "per vehicle / month", items: ["Up to 15 vehicles", "Live GPS tracking", "Trip history & reports", "Speeding & idle alerts", "Geofences & zone alerts"], cta: "Get started", href: "/register" },
               { name: "Pro", price: formatKes(priceForPlan("pro")), sub: "per vehicle / month", items: ["Up to 50 vehicles", "Everything in Basic", "Route deviation alerts", "Fuel anomaly detection", "Driver behaviour alerts", "AI fleet assistant", "Priority support"], cta: "Get started", href: "/register", featured: true },
               { name: "Enterprise", price: "Custom", sub: "contact us", items: ["Unlimited vehicles", "Everything in Pro", "Dedicated account manager", "Custom integrations", "SLA-backed support"], cta: "Contact sales", href: "#" },
-            ].map((p) => (
+            ].map((p, i) => (
               <div
                 key={p.name}
+                data-reveal={i * 100}
                 className={`relative flex flex-col rounded-2xl p-6 ${p.featured ? "bg-gray-950 text-white" : "border border-gray-200"}`}
               >
                 {p.featured && (
@@ -513,7 +523,7 @@ export default function LandingPage() {
         </section>
 
         {/* CTA */}
-        <section className="rounded-3xl bg-gray-950 px-6 py-16 text-center text-white">
+        <section data-reveal className="rounded-3xl bg-gray-950 px-6 py-16 text-center text-white">
           <h2 className="text-2xl font-bold tracking-tight md:text-4xl">Ready to see your fleet in real time?</h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-gray-400">Set up your company in minutes and start tracking your first vehicle today.</p>
           <a href="/register" className="mt-8 inline-block rounded-full bg-orange-500 px-6 py-3 text-sm font-medium text-white hover:bg-orange-600">
@@ -526,10 +536,9 @@ export default function LandingPage() {
       <footer className="mx-auto max-w-6xl px-6 py-14">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <span className="mb-3 flex items-center gap-2 text-lg font-bold text-teal-950">
-              <BrandIcon variant="dark" className="h-5 w-5" />
-              FIGBLOOM FLEET
-            </span>
+            <div className="mb-3">
+              <BrandWordmark />
+            </div>
             <p className="text-sm text-gray-500">Real-time vehicle tracking and fleet analytics for growing businesses.</p>
           </div>
           <div>
@@ -562,7 +571,7 @@ export default function LandingPage() {
         <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-black/5 pt-6 sm:flex-row">
           <p className="text-xs text-gray-400">&copy; {new Date().getFullYear()} FIGBLOOM FLEET. All rights reserved.</p>
           <p className="flex items-center gap-1.5 text-xs text-gray-400">
-            <img src="/movec logo 1.png" className="h-10 w-10" alt="" />
+            <img loading="lazy" decoding="async" src="/movec logo 1.png" className="h-10 w-10" alt="" />
             Movec Systems
           </p>
         </div>
