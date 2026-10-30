@@ -5,6 +5,7 @@ import Link from "next/link";
 import { GoogleMap, Polyline, useJsApiLoader } from "@react-google-maps/api";
 import { apiRequest } from "../lib/api";
 import { TripRecord } from "../types/auth";
+import { useFleetTheme } from "../context/FleetThemeContext";
 import { estimateFuelRangeLiters } from "../lib/routeEstimate";
 
 interface PathPoint {
@@ -12,7 +13,8 @@ interface PathPoint {
   longitude: number;
 }
 
-const ROUTE_COLORS = ["#50a86a", "#ff8a12", "#6366f1", "#ec4899", "#84cc16"];
+// After the company theme's main and accent colours.
+const MORE_ROUTE_COLORS = ["#6366f1", "#ec4899", "#84cc16"];
 const MAX_ROUTES = 5;
 const containerStyle = { width: "100%", height: "100%" };
 
@@ -22,6 +24,8 @@ const containerStyle = { width: "100%", height: "100%" };
 // linked to from the list below) — this is just "where has this vehicle
 // been lately."
 export default function VehicleTripsMap({ vehicleId, basePath }: { vehicleId: string; basePath: string }) {
+  const { themeDef } = useFleetTheme();
+  const ROUTE_COLORS = [themeDef.main[4], themeDef.accent[5], ...MORE_ROUTE_COLORS];
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
   });

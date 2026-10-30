@@ -257,6 +257,7 @@ model Company {
   geofences        Geofence[]
   inspections      Inspection[]
   jobs             Job[]
+  jobRoutes        JobRoute[]
   maintenance      MaintenanceRecord[]
   messages         Message[]
   routes           Route[]
@@ -301,6 +302,7 @@ model User {
   expenses         Expense[]
   inspections      Inspection[]
   jobs             Job[]             @relation("JobDriver")
+  jobRoutes        JobRoute[]
   jobsCreated      Job[]             @relation("JobCreator")
   driverMessages   Message[]         @relation("MessageThread")
   sentMessages     Message[]         @relation("MessageSender")
@@ -597,6 +599,32 @@ model Job {
 
   @@index([companyId, scheduledDate])
   @@index([driverId, status, sequence])
+}
+
+// The road line through one driver's jobs for a day, in the order the
+// "Optimize route" button set. Drawn on the dashboard's Jobs map and the
+// driver app's Jobs screen; removed when that day's stops change, until the
+// next optimize.
+model JobRoute {
+  id            String   @id @default(cuid())
+  companyId     String
+  driverId      String
+  scheduledDate String // "YYYY-MM-DD"
+  path          Json     @default("[]") // [{ lat, lng }] along the roads
+  jobIds        String[] @default([]) // the stops, in driving order
+  startLat      Float?
+  startLng      Float?
+  distanceKm    Float?
+  durationMin   Float?
+  source        String // "google", "osrm" or "straight" (no road data)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  driver  User    @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@unique([driverId, scheduledDate])
+  @@index([companyId, scheduledDate])
 }
 
 model Message {
