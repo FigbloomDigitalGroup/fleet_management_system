@@ -1,9 +1,6 @@
 "use client";
 
 import {
-  FaTwitter,
-  FaLinkedin,
-  FaFacebook,
   FaMapMarkerAlt,
   FaBell,
   FaChartLine,
@@ -256,7 +253,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* PRODUCT SHOT — the real Live Map, in a browser frame */}
+        {/* LIVE MAP — fleet on the road */}
         <section className="rounded-3xl bg-white px-4 py-16 md:px-10 md:py-20">
           <SectionHeading
             title={
@@ -268,21 +265,11 @@ export default function LandingPage() {
             }
             text="Search any vehicle, filter by status, and click one for its speed, driver and address — the same screen your team works from."
           />
-          <div className="overflow-hidden rounded-2xl border border-gray-200 shadow-2xl shadow-gray-300/60">
-            <div className="flex items-center gap-1.5 border-b border-gray-200 bg-gray-50 px-4 py-2.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
-              <span className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
-              <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
-              <span className="ml-3 truncate rounded-md bg-white px-3 py-0.5 text-[11px] text-gray-400 ring-1 ring-gray-200">
-                FIGBLOOM FLEET · Live Map
-              </span>
-            </div>
-            <img
-              src="/live-map-screenshot.jpg"
-              alt="The FIGBLOOM FLEET Live Map: a vehicle list beside a map of Nairobi with vehicle markers"
-              className="block w-full"
-            />
-          </div>
+          <img
+            src="/schwoaze-highway-3392100_1920.jpg"
+            alt="Trucks and cars on a highway"
+            className="h-72 w-full rounded-2xl object-cover shadow-2xl shadow-gray-300/60 md:h-[32rem]"
+          />
         </section>
 
         {/* USEFUL FOR BUSINESS — three short facts */}
@@ -377,22 +364,11 @@ export default function LandingPage() {
               on the map — so you can see <Mark>where the kilometres and fuel go</Mark>.
             </p>
           </div>
-          {/* The real Reports overview, in a browser frame */}
-          <div className="mx-auto mt-8 max-w-5xl overflow-hidden rounded-2xl border border-gray-200 shadow-2xl shadow-gray-300/60">
-            <div className="flex items-center gap-1.5 border-b border-gray-200 bg-gray-50 px-4 py-2.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
-              <span className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
-              <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
-              <span className="ml-3 truncate rounded-md bg-white px-3 py-0.5 text-[11px] text-gray-400 ring-1 ring-gray-200">
-                FIGBLOOM FLEET · Reports
-              </span>
-            </div>
-            <img
-              src="/reports-screenshot.jpg"
-              alt="The FIGBLOOM FLEET reports overview: fleet status, trips per day, today's operations and agent activity"
-              className="block w-full"
-            />
-          </div>
+          <img
+            src="/as_photography-digital-marketing-1725340_1920.jpg"
+            alt="Reviewing charts and figures on a screen"
+            className="mx-auto mt-8 block h-64 w-full max-w-5xl rounded-2xl object-cover shadow-2xl shadow-gray-300/60 md:h-[28rem]"
+          />
           <div className="mx-auto mt-10 max-w-4xl">
             <p className="mb-3 text-center text-xs font-medium uppercase tracking-wide text-gray-400">Built for every kind of fleet</p>
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
@@ -575,18 +551,7 @@ export default function LandingPage() {
               <BrandIcon variant="dark" className="h-5 w-5" />
               FIGBLOOM FLEET
             </span>
-            <p className="mb-4 text-sm text-gray-500">Real-time vehicle tracking and fleet analytics for growing businesses.</p>
-            <div className="flex items-center gap-4 text-gray-400">
-              <a href="#" aria-label="Twitter" className="hover:text-gray-600">
-                <FaTwitter size={16} />
-              </a>
-              <a href="#" aria-label="LinkedIn" className="hover:text-gray-600">
-                <FaLinkedin size={16} />
-              </a>
-              <a href="#" aria-label="Facebook" className="hover:text-gray-600">
-                <FaFacebook size={16} />
-              </a>
-            </div>
+            <p className="text-sm text-gray-500">Real-time vehicle tracking and fleet analytics for growing businesses.</p>
           </div>
           <div>
             <h3 className="mb-3 text-sm font-semibold text-gray-950">Product</h3>
