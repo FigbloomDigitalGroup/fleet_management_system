@@ -1,8 +1,14 @@
+"use client";
+
 import { ReactNode } from "react";
+import { useRememberedLook } from "../context/FleetThemeContext";
 
 // The left-hand panel on the sign-in pages (login, register, forgot/reset
 // password): one fixed photo, darkened so the white text on it stays readable.
+// Every sign-in page has one, so it also gives them the company's theme.
 export default function AuthHeroPanel({ children, className = "" }: { children: ReactNode; className?: string }) {
+  useRememberedLook();
+
   return (
     <div
       className={`relative overflow-hidden bg-cover bg-center ${className}`}

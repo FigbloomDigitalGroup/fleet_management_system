@@ -91,6 +91,38 @@ function readCache(): Appearance | null {
   }
 }
 
+function applyLook(themeDef: FleetTheme, textSize: TextSize) {
+  const root = document.documentElement;
+  SHADES.forEach((shade, i) => {
+    root.style.setProperty(`--color-teal-${shade}`, themeDef.main[i]);
+    root.style.setProperty(`--color-orange-${shade}`, themeDef.accent[i]);
+  });
+  root.style.fontSize = `${textSizeById(textSize).rootPx}px`;
+}
+
+// Back to the default look (globals.css).
+function clearLook() {
+  const root = document.documentElement;
+  SHADES.forEach((shade) => {
+    root.style.removeProperty(`--color-teal-${shade}`);
+    root.style.removeProperty(`--color-orange-${shade}`);
+  });
+  root.style.fontSize = "";
+}
+
+// For the signed-out pages (login, register, password reset): nobody is
+// signed in yet, so show the look this browser last saw — a returning
+// company keeps its own colours. A browser that never signed in gets the
+// default.
+export function useRememberedLook() {
+  useIsomorphicLayoutEffect(() => {
+    const cached = readCache();
+    if (!cached) return;
+    applyLook(themeFor(cached), cached.textSize);
+    return clearLook;
+  }, []);
+}
+
 // Sits in the company and admin portal layouts, so it stays mounted while
 // moving between pages, and loads the company's saved look itself.
 export function FleetThemeProvider({ children }: { children: ReactNode }) {
@@ -135,26 +167,13 @@ export function FleetThemeProvider({ children }: { children: ReactNode }) {
   );
 
   useIsomorphicLayoutEffect(() => {
-    const root = document.documentElement;
-    SHADES.forEach((shade, i) => {
-      root.style.setProperty(`--color-teal-${shade}`, themeDef.main[i]);
-      root.style.setProperty(`--color-orange-${shade}`, themeDef.accent[i]);
-    });
-    root.style.fontSize = `${textSizeById(current.textSize).rootPx}px`;
+    applyLook(themeDef, current.textSize);
   }, [themeDef, current.textSize]);
 
   // Leaving the portal (sign out → landing page) goes back to the default.
-  useEffect(
-    () => () => {
-      const root = document.documentElement;
-      SHADES.forEach((shade) => {
-        root.style.removeProperty(`--color-teal-${shade}`);
-        root.style.removeProperty(`--color-orange-${shade}`);
-      });
-      root.style.fontSize = "";
-    },
-    []
-  );
+  // A layout effect so it clears before the login page paints its own look,
+  // not after (which would wipe it).
+  useIsomorphicLayoutEffect(() => clearLook, []);
 
   const preview = useCallback((choice: Partial<Appearance>) => setDraft((d) => ({ ...d, ...choice })), []);
   const resetPreview = useCallback(() => setDraft(null), []);
