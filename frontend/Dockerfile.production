@@ -1,0 +1,35 @@
+# Production image of the dashboard: `next build`, then `next start` on port
+# 3000 (or $PORT). Used on AWS (figbloom-platform FleetFrontend stack); the
+# plain Dockerfile stays the development one (`npm run dev`).
+#
+# NEXT_PUBLIC_* values are compiled into the browser code at build time, so
+# each environment gets its own image:
+#   docker build -f Dockerfile.production \
+#     --build-arg NEXT_PUBLIC_API_URL=https://fleet-api-staging.figbloom.org \
+#     --build-arg NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=<browser key> -t fleet-frontend .
+# The Maps key is the browser key (restricted by website address), which
+# every visitor's browser receives anyway; it is not a server secret.
+
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+    NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY \
+    NEXT_TELEMETRY_DISABLED=1
+RUN test -n "$NEXT_PUBLIC_API_URL" || (echo "Set --build-arg NEXT_PUBLIC_API_URL" >&2; exit 1)
+RUN npm run build && npm prune --omit=dev
+
+FROM node:20-alpine
+WORKDIR /app
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000
+COPY --from=build --chown=node:node /app/package.json /app/package-lock.json /app/next.config.ts ./
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/public ./public
+COPY --from=build --chown=node:node /app/.next ./.next
+USER node
+EXPOSE 3000
+CMD ["node_modules/.bin/next", "start"]

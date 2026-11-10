@@ -68,7 +68,10 @@ app.use((req, res, next) => {
   const limit = req.originalUrl.startsWith("/api/uploads") ? "4mb" : "1mb";
   express.json({ limit })(req, res, next);
 });
-app.get("/health", (req, res) => {
+// /healthz is the same check under the name AWS's load balancer polls
+// (figbloom-platform FleetBackend stack). It answers without touching the
+// database, so a slow query never marks the server unhealthy.
+app.get(["/health", "/healthz"], (req, res) => {
   res.json({ status: "ok", server: "running" })
 });
 
