@@ -60,7 +60,7 @@ export default function VehiclesList({
   canAdd?: boolean;
   canDelete?: boolean;
 }) {
-  const { isOwner, addFleetAction } = useFleetArea();
+  const { addFleetAction } = useFleetArea();
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
   const [geofences, setGeofences] = useState<GeofenceRecord[]>([]);
@@ -234,9 +234,7 @@ export default function VehiclesList({
                       text={
                         canAdd
                           ? "Vehicles are what you track. Add one, then assign a driver so their phone app sends its location."
-                          : isOwner
-                            ? "Vehicles are added by your fleet admins. Invite one to get started; it can be you, with a second email."
-                            : "Vehicles are what you track. An admin with full access can add them here."
+                          : "Vehicles are what you track. An admin with full access can add them here."
                       }
                       action={canAdd ? { label: "Add your first vehicle", href: "#add-vehicle" } : addFleetAction("vehicle")}
                     />

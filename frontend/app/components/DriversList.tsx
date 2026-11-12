@@ -40,7 +40,7 @@ function downloadDriverTemplate() {
 }
 
 export default function DriversList({ canAdd = false, canAssignVehicle = false }: { canAdd?: boolean; canAssignVehicle?: boolean }) {
-  const { isOwner, addFleetAction } = useFleetArea();
+  const { addFleetAction } = useFleetArea();
   const pathname = usePathname();
   const basePath = pathname?.startsWith("/admin") ? "/admin/vehicles" : "/company/vehicles";
   const driversBasePath = pathname?.startsWith("/admin") ? "/admin/drivers" : "/company/drivers";
@@ -189,9 +189,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                       text={
                         canAdd
                           ? "Each driver gets a login for the FIGBLOOM FLEET phone app, which tracks the vehicle you assign them."
-                          : isOwner
-                            ? "Drivers are added by your fleet admins, who give them a login for the phone app. Invite an admin to get started."
-                            : "Each driver gets a login for the phone app. An admin with full access can add them here."
+                          : "Each driver gets a login for the phone app. An admin with full access can add them here."
                       }
                       action={canAdd ? { label: "Add your first driver", href: "#add-driver" } : addFleetAction("driver")}
                     />

@@ -175,7 +175,7 @@ export default function AppearanceSettings() {
     <section className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-black/5">
       <h2 className="text-base font-semibold text-gray-900">Appearance</h2>
       <p className="mt-0.5 text-sm text-gray-500">
-        Your dashboard&apos;s colours and text size — for everyone in your company. Click to preview.
+        Your dashboard&apos;s colours and text size — for everyone in your fleet. Click to preview.
       </p>
 
       <h3 className="mb-2 mt-5 text-sm font-medium text-gray-700">Theme</h3>
@@ -257,7 +257,7 @@ export default function AppearanceSettings() {
             Cancel
           </button>
         )}
-        {savedNote && <span className="text-sm text-teal-600">Saved — everyone in your company now sees this look.</span>}
+        {savedNote && <span className="text-sm text-teal-600">Saved — everyone in your fleet now sees this look.</span>}
         {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
     </section>

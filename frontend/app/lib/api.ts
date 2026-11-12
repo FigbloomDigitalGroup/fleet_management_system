@@ -94,7 +94,7 @@ const ACTION_MESSAGES: [RegExp, string][] = [
   [/\/status$/, "Status updated."],
   [/\/plan$/, "Plan updated."],
   [/\/scan-now$/, "Scan started."],
-  [/\/register-company$/, "Your company account has been created."],
+  [/\/register-company$/, "Your fleet account has been created."],
 ];
 
 function successText(method: string, path: string): string {

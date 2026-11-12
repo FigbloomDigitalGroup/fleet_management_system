@@ -49,7 +49,7 @@ export default function CompanySettingsPage() {
     }
   }
 
-  usePageHeader("Settings", "Company profile, alerts, tracking hours and data retention");
+  usePageHeader("Settings", "Your fleet's profile, alerts, tracking hours and data retention");
 
   if (loading) return <FullPageLoading />;
   if (!company) return null;
@@ -58,7 +58,7 @@ export default function CompanySettingsPage() {
     <div className="max-w-4xl space-y-4">
       <form onSubmit={handleSave} className="max-w-xl bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-6 space-y-5">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Company logo</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Fleet logo</label>
           <div className="flex items-center gap-4">
             <Avatar src={company.logoUrl} name={company.name} size="lg" shape="square" />
             <div>
@@ -75,7 +75,7 @@ export default function CompanySettingsPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Company name</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Fleet name</label>
           <input
             type="text"
             required
@@ -83,10 +83,11 @@ export default function CompanySettingsPage() {
             onChange={(e) => setName(e.target.value)}
             className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
           />
+          <p className="text-xs text-gray-500 mt-1">Your business name, or just your own name.</p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Company URL slug</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">URL slug</label>
           <input
             type="text"
             disabled

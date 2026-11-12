@@ -8,9 +8,9 @@ import Link from "next/link";
 
 const NEXT_STEPS = [
     { title: "Sign in as Company owner", text: "You land on your Overview, with a Getting started checklist." },
-    { title: "Invite your fleet admin", text: "Admins add vehicles and drivers. It can be you, with a second email." },
-    { title: "Add vehicles and drivers", text: "Each driver signs in to the FIGBLOOM FLEET app on their phone." },
+    { title: "Add your vehicles and drivers", text: "You can do it yourself right away. Each driver signs in to the FIGBLOOM FLEET app on their phone." },
     { title: "Watch the live map", text: "Vehicles appear as soon as their driver app or tracker sends a location." },
+    { title: "Invite help if you want it", text: "Optional: give a fleet admin their own login. You can also run everything yourself." },
 ];
 
 export default function RegistrationDone({

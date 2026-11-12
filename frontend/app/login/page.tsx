@@ -12,7 +12,7 @@ import PasswordInput from "../components/PasswordInput";
 import { notifySuccess, showError } from "../lib/notify";
 
 const STEPS = [
-  { n: 1, title: "Register your company", text: "Create your account in minutes and set up your company profile." },
+  { n: 1, title: "Register your fleet", text: "Create your account in minutes, as a business or just for your own vehicles." },
   { n: 2, title: "Add vehicles & drivers", text: "Register each vehicle, assign a driver, and set up alerts or zones." },
   { n: 3, title: "Track live, get alerted", text: "Watch your fleet move in real time, and get notified the moment something needs attention." },
 ];
@@ -150,8 +150,8 @@ export default function LoginPage() {
                 ))}
               </div>
               <p className="mt-2 text-xs text-gray-500">
-                Registered your company? You&apos;re the <span className="font-medium">Company owner</span>. Added by
-                your company? You&apos;re a <span className="font-medium">Fleet admin</span>. Drivers sign in from the
+                Registered your fleet? You&apos;re the <span className="font-medium">Company owner</span>. Given a login by
+                a fleet&apos;s owner? You&apos;re a <span className="font-medium">Fleet admin</span>. Drivers sign in from the
                 mobile app.
               </p>
             </div>

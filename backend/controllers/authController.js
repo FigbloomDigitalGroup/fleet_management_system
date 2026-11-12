@@ -83,7 +83,14 @@ async function issueRefreshToken(user) {
   return token;
 }
 
-// Registers a new Vehicle Company + its first user (COMPANY_OWNER)
+// "Amina Wanjiru" -> "Amina's Fleet"; "" when there is no usable name.
+export function defaultFleetName(ownerName) {
+  const first = String(ownerName ?? "").trim().split(/\s+/)[0];
+  return first ? `${first}'s Fleet` : "";
+}
+
+// Registers a new fleet (Company) + its first user (COMPANY_OWNER). The
+// company can be a registered business or just one person's vehicles.
 const INDUSTRIES = [
   "logistics_courier",
   "public_transport",
@@ -100,11 +107,14 @@ const INDUSTRIES = [
 
 export async function registerCompany(req, res) {
   try {
-    const { companyName, ownerName, email, password, industry } = req.body;
+    const { ownerName, email, password, industry } = req.body;
     const normalizedEmail = email?.trim().toLowerCase();
+    // Individuals with a few vehicles don't need a business name: with none
+    // given, the fleet is called "<first name>'s Fleet" (editable later).
+    const companyName = String(req.body.companyName ?? "").trim() || defaultFleetName(ownerName);
 
     if (!companyName || !ownerName || !normalizedEmail || !password) {
-      return res.status(400).json({ error: "companyName, ownerName, email, and password are required" });
+      return res.status(400).json({ error: "ownerName, email, and password are required" });
     }
     if (password.length < 8) {
       return res.status(400).json({ error: "Password must be at least 8 characters" });
@@ -205,7 +215,8 @@ async function uniqueCompanySlug(companyName) {
   }
 }
 
-// Creates an Admin (or Driver) user under the requesting Company Owner's tenant
+// Creates an Admin (or Driver) user under the requester's own company (owner
+// or admin), or under body.companyId for PLATFORM_ADMIN.
 export async function createUserUnderCompany(req, res) {
   try {
     const { email, password, fullName, role } = req.body;
@@ -216,8 +227,10 @@ export async function createUserUnderCompany(req, res) {
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({ error: `role must be one of: ${allowedRoles.join(", ")}` });
     }
-    if (role === "DRIVER" && !["ADMIN", "PLATFORM_ADMIN"].includes(req.user.role)) {
-      return res.status(403).json({ error: "Only fleet admins can add drivers" });
+    // Owners add drivers themselves (a one-person fleet needs no admin);
+    // the driver always lands in the requester's own company (below).
+    if (role === "DRIVER" && !["ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Only the fleet owner or a fleet admin can add drivers" });
     }
     if (!normalizedEmail) {
       return res.status(400).json({ error: "email is required" });

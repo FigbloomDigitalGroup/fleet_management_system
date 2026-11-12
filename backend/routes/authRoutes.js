@@ -37,7 +37,7 @@ router.post(
 router.post(
   "/users/bulk-import",
   authenticate,
-  authorize("ADMIN", "PLATFORM_ADMIN"),
+  authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"),
   handleSpreadsheetUpload,
   bulkImportDrivers
 );

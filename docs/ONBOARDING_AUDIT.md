@@ -40,7 +40,7 @@ needed · **Open** = not touched here.
 
 | # | Severity | Finding | Where | Status |
 |---|---|---|---|---|
-| 1 | High | Owners can't add vehicles or drivers, and nothing says so or points to Admins. | `company/vehicles`, `company/drivers` (`canAdd={false}`); `routes/vehicleRoutes.js`, `authController.createUserUnderCompany` | **Partly**: every empty state, the checklist and Help now say "vehicles and drivers are added by a fleet admin, invite one (it can be you, with a second email)" and link to the add-admin form. Product decision still open (see below). |
+| 1 | High | Owners can't add vehicles or drivers, and nothing says so or points to Admins. | `company/vehicles`, `company/drivers` (`canAdd={false}`); `routes/vehicleRoutes.js`, `authController.createUserUnderCompany` | **Fixed** (follow-up PR, owner decision): owners can do everything a full fleet admin can in their own company. `POST /api/vehicles`, `/api/vehicles/bulk-import`, `/api/auth/users/bulk-import` and adding a `DRIVER` via `POST /api/auth/users` now allow `COMPANY_OWNER` (company always taken from the session). The `/company` pages show the same add/edit actions as `/admin`; the checklist, empty states and Help no longer send owners to invite an admin (inviting admins is optional). |
 | 2 | High | "Application received" is wrong for auto-approved companies, gives no expected time, and "Go to sign in" fails while pending. | `register/page.tsx`, `authController.registerCompany` | **Fixed**: says "usually a minute or two, up to one working day if reviewed", that we'll email, and the page quietly checks `/api/companies/me` with the registration's own token (kept in memory only) every 15 s for 10 min. When active it switches to "You're all set" with **Sign in now**, which signs straight in. |
 | 3 | High | No first-run guidance after signing in; owner lands on an empty live map. | `lib/roleRedirect.ts`, dashboards | **Fixed**: each role lands on its own dashboard; owners and full-access admins get a self-ticking Getting started checklist. |
 | 4 | High | Role picker on sign-in rejects a correct password if the wrong role is picked. | `login/page.tsx` | **Fixed**: the account's role decides where you land; picking the other tile only changes the welcome message. Tiles renamed "Company owner" / "Fleet admin" with a one-line hint (drivers use the app). |
@@ -72,12 +72,10 @@ needed · **Open** = not touched here.
 
 ## Open questions for the owner
 
-1. **Should company owners be able to add vehicles and drivers themselves?**
-   Many small fleets are one person; today they must create a second "admin"
-   login for themselves. Allowing it is a two-line API change
-   (`authorize(...)` on `POST /api/vehicles`, `/bulk-import`, and the
-   `role === "DRIVER"` check in `createUserUnderCompany`) plus `canAdd` on the
-   two company pages. Left unchanged here because it's a permissions decision.
+1. ~~Should company owners be able to add vehicles and drivers themselves?~~
+   **Decided: yes.** Owners manage their own fleet like a full admin; sign-up
+   also no longer assumes a registered business ("What should we call your
+   fleet?", pre-filled as "<First name>'s Fleet").
 2. Real Google Play URL for the driver app (finding 11).
 3. Should trackers be self-serve (finding 10)?
 
