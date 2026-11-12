@@ -263,7 +263,7 @@ export default function LandingPage() {
               </motion.p>
               <motion.div {...enter(0.2)} className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <a href="/register" className="rounded-full bg-orange-500 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-orange-600">
-                  Register your company
+                  Register your fleet
                 </a>
                 <a href="#features" className="rounded-full border border-gray-300 px-6 py-3 text-sm font-medium text-gray-800 hover:border-gray-500">
                   See what it does
@@ -595,9 +595,9 @@ export default function LandingPage() {
           {/* CTA */}
           <motion.section {...reveal()} className="rounded-3xl bg-gray-950 px-6 py-16 text-center text-white">
             <h2 className="text-2xl font-bold tracking-tight md:text-4xl">Ready to see your fleet in real time?</h2>
-            <p className="mx-auto mt-3 max-w-md text-sm text-gray-400">Set up your company in minutes and start tracking your first vehicle today.</p>
+            <p className="mx-auto mt-3 max-w-md text-sm text-gray-400">Set up your fleet in minutes and start tracking your first vehicle today.</p>
             <a href="/register" className="mt-8 inline-block rounded-full bg-orange-500 px-6 py-3 text-sm font-medium text-white hover:bg-orange-600">
-              Register your company
+              Register your fleet
             </a>
           </motion.section>
         </main>

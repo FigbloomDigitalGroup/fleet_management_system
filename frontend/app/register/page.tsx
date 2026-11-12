@@ -14,12 +14,15 @@ import { notifyError, showError } from "../lib/notify";
 import { API_URL } from "../lib/api";
 import { LoginResponse } from "../types/auth";
 import RegistrationDone from "./RegistrationDone";
+import { defaultFleetName } from "../lib/fleetName";
 
 export default function RegisterPage() {
     const { register, adoptSession } = useAuth();
     const router = useRouter();
 
     const [companyName, setCompanyName] = useState("");
+    // Once the owner edits the fleet name themselves, stop filling it in.
+    const [fleetNameEdited, setFleetNameEdited] = useState(false);
     const [industry, setIndustry] = useState("");
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
@@ -108,8 +111,8 @@ export default function RegisterPage() {
                             account.
                         </h1>
                         <p className="text-gray-200 max-w-xs">
-                            Register your vehicle company to get started. Admins and drivers
-                            are added by whoever manages their account, then sign in directly.
+                            Set up your fleet, whether it&apos;s a business or just a few vehicles of
+                            your own. You add your vehicles and drivers yourself once you&apos;re in.
                         </p>
 
                         <div className="mt-5">
@@ -148,27 +151,52 @@ export default function RegisterPage() {
                 ) : (
                 <div className="w-full max-w-sm">
                     <h2 className="text-5xl font-extrabold text-teal-950 mb-2">Create your account</h2>
-                    <p className="text-sm text-gray-500 mb-8">Register your vehicle company.</p>
+                    <p className="text-sm text-gray-500 mb-8">No registered business needed.</p>
 
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div>
+                            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1.5">
+                                Full name
+                            </label>
+                            <input
+                                id="fullName"
+                                type="text"
+                                required
+                                value={fullName}
+                                onChange={(e) => {
+                                    setFullName(e.target.value);
+                                    if (!fleetNameEdited) setCompanyName(defaultFleetName(e.target.value));
+                                }}
+                                placeholder="Your full name"
+                                className="w-full px-3.5 py-2.5 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
+                            />
+                        </div>
+
+                        <div>
                             <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1.5">
-                                Company name
+                                What should we call your fleet?
                             </label>
                             <input
                                 id="companyName"
                                 type="text"
                                 required
                                 value={companyName}
-                                onChange={(e) => setCompanyName(e.target.value)}
-                                placeholder="Your company name"
+                                onChange={(e) => {
+                                    setCompanyName(e.target.value);
+                                    setFleetNameEdited(e.target.value !== "");
+                                }}
+                                placeholder="e.g. Amina's Fleet"
+                                aria-describedby="companyName-hint"
                                 className="w-full px-3.5 py-2.5 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                             />
+                            <p id="companyName-hint" className="mt-1.5 text-xs text-gray-500">
+                                Your business name, or just your own name. You can change it later.
+                            </p>
                         </div>
 
                         <div>
                             <label htmlFor="industry" className="block text-sm font-medium text-gray-700 mb-1.5">
-                                Industry
+                                Industry <span className="font-normal text-gray-400">(optional)</span>
                             </label>
                             <select
                                 id="industry"
@@ -205,23 +233,8 @@ export default function RegisterPage() {
                         </div>
 
                         <div>
-                            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1.5">
-                                Full name
-                            </label>
-                            <input
-                                id="fullName"
-                                type="text"
-                                required
-                                value={fullName}
-                                onChange={(e) => setFullName(e.target.value)}
-                                placeholder="Your full name"
-                                className="w-full px-3.5 py-2.5 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
-                            />
-                        </div>
-
-                        <div>
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
-                                Work email
+                                Email
                             </label>
                             <input
                                 id="email"
@@ -230,7 +243,7 @@ export default function RegisterPage() {
                                 autoComplete="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                placeholder="Your work email"
+                                placeholder="you@example.com"
                                 className="w-full px-3.5 py-2.5 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                             />
                         </div>

@@ -66,8 +66,8 @@ export default function HelpPage() {
 
   const toc = [
     { id: "roles", label: "Who does what" },
-    { id: "owner", label: "Company owners" },
-    { id: "admin", label: "Fleet admins" },
+    { id: "owner", label: "Owners" },
+    { id: "admin", label: "Running the day" },
     { id: "tracking", label: "Getting vehicles on the map" },
     { id: "driver-app", label: "The driver app" },
     { id: "figbloom", label: "Figbloom staff" },
@@ -129,16 +129,17 @@ export default function HelpPage() {
         <Section id="roles" title="Who does what">
           <ul className="space-y-2">
             <li>
-              <span className="font-medium text-gray-900">Company owner</span>: whoever registered the company. Adds fleet
-              admins, chooses a plan, and sees everything the admins see. Owners don&apos;t add vehicles or drivers themselves.
+              <span className="font-medium text-gray-900">Company owner</span>: whoever registered the fleet. Can do everything a
+              fleet admin can (add vehicles and drivers, draw zones, plan jobs, handle alerts), plus choose a plan and,
+              if they want help, invite fleet admins. A one-person fleet needs nobody else.
             </li>
             <li>
-              <span className="font-medium text-gray-900">Fleet admin</span>: added by the owner. Adds vehicles and drivers,
+              <span className="font-medium text-gray-900">Fleet admin</span>: optional, added by the owner. Adds vehicles and drivers,
               draws zones, plans jobs and handles alerts. The owner gives each admin <em>Full</em>, <em>Dispatcher</em> (jobs,
               routes, messages and alerts only) or <em>Viewer</em> (read only) access.
             </li>
             <li>
-              <span className="font-medium text-gray-900">Driver</span>: added by an admin. Uses the FIGBLOOM FLEET phone
+              <span className="font-medium text-gray-900">Driver</span>: added by the owner or an admin. Uses the FIGBLOOM FLEET phone
               app only; drivers can&apos;t sign in to this website.
             </li>
             <li>
@@ -146,10 +147,10 @@ export default function HelpPage() {
               every company, not any one fleet.
             </li>
           </ul>
-          <p>Everyone signs in at the same page and lands in their own area; the header always shows your company and role.</p>
+          <p>Everyone signs in at the same page and lands in their own area; the header always shows your fleet and role.</p>
         </Section>
 
-        <Section id="owner" title="Company owners: your first steps" highlight={mine === "owner"}>
+        <Section id="owner" title="Owners: your first steps" highlight={mine === "owner"}>
           <Steps
             items={[
               <>
@@ -159,13 +160,18 @@ export default function HelpPage() {
               </>,
               <>Sign in as <span className="font-medium">Company owner</span>. Your Overview has a Getting started checklist that ticks itself off.</>,
               <>
-                Add a fleet admin under <span className="font-medium">Settings → Admins</span>. You set their email and password and
-                pass them on. If you run the fleet yourself, add yourself as an admin with a second email.
+                Add your vehicles under <span className="font-medium">Settings → Vehicles</span> and your drivers under{" "}
+                <span className="font-medium">Settings → Drivers</span>, then assign each driver their vehicle (the same steps as
+                for fleet admins, below).
               </>,
-              <>The admin adds your vehicles and drivers (see below). You can follow along on every page.</>,
               <>
                 Draw a zone around your depot under <span className="font-medium">Settings → Geofences</span>, and pick a plan under{" "}
                 <span className="font-medium">Settings → Billing</span> when you&apos;re ready.
+              </>,
+              <>
+                Optional: if someone else helps run the fleet, give them their own login under{" "}
+                <span className="font-medium">Settings → Admins</span>. You choose their access (Full, Dispatcher or Viewer) and
+                can keep doing everything yourself.
               </>,
             ]}
           />
@@ -175,10 +181,13 @@ export default function HelpPage() {
           </p>
         </Section>
 
-        <Section id="admin" title="Fleet admins: setting up and running the day" highlight={mine === "admin"}>
+        <Section id="admin" title="Setting up and running the day" highlight={mine === "admin"}>
           <Steps
             items={[
-              <>Sign in as <span className="font-medium">Fleet admin</span> with the details your company owner gave you.</>,
+              <>
+                Owners sign in as <span className="font-medium">Company owner</span>; fleet admins sign in as{" "}
+                <span className="font-medium">Fleet admin</span> with the details the owner gave them.
+              </>,
               <>
                 Add vehicles under <span className="font-medium">Settings → Vehicles</span> (one at a time, or import a
                 spreadsheet).
@@ -202,8 +211,8 @@ export default function HelpPage() {
           <p>A vehicle appears on the live map once something sends its location. There are two ways:</p>
           <ul className="list-disc space-y-2 pl-5">
             <li>
-              <span className="font-medium text-gray-900">The driver app (most fleets).</span> An admin adds the driver and
-              assigns them the vehicle. The driver installs FIGBLOOM FLEET on an Android phone, signs in, and allows location
+              <span className="font-medium text-gray-900">The driver app (most fleets).</span> The owner or an admin adds the
+              driver and assigns them the vehicle. The driver installs FIGBLOOM FLEET on an Android phone, signs in, and allows location
               access (choose &quot;Allow all the time&quot; so tracking continues with the screen off). The vehicle then
               reports while that driver is signed in.
             </li>
@@ -220,7 +229,7 @@ export default function HelpPage() {
 
         <Section id="driver-app" title="The driver app" highlight={mine === "driver-app"}>
           <p>
-            Drivers use the FIGBLOOM FLEET Android app with the email and password their admin created. In the app they share
+            Drivers use the FIGBLOOM FLEET Android app with the email and password the owner or an admin created. In the app they share
             their location, see the day&apos;s jobs and record proof of delivery, send SOS, message the office, do vehicle
             inspections, and log fuel and other expenses with a receipt photo. All of it shows up in the web dashboard.
           </p>
@@ -243,7 +252,7 @@ export default function HelpPage() {
           <dl className="space-y-3">
             <div>
               <dt className="font-medium text-gray-900">I registered but can&apos;t sign in.</dt>
-              <dd>Your company is still awaiting approval. You&apos;ll get an email as soon as it&apos;s active.</dd>
+              <dd>Your account is still awaiting approval. You&apos;ll get an email as soon as it&apos;s active.</dd>
             </div>
             <div>
               <dt className="font-medium text-gray-900">I picked the wrong role on the sign-in page.</dt>
@@ -257,8 +266,11 @@ export default function HelpPage() {
               </dd>
             </div>
             <div>
-              <dt className="font-medium text-gray-900">Why can&apos;t I add vehicles as the company owner?</dt>
-              <dd>Vehicles and drivers are added by fleet admins. Add an admin (it can be you, with a second email).</dd>
+              <dt className="font-medium text-gray-900">Do I need a fleet admin, or a registered business?</dt>
+              <dd>
+                No to both. As the owner you can add vehicles and drivers yourself straight away, and your fleet can be just
+                your own name. Invite admins only if you want help running it.
+              </dd>
             </div>
           </dl>
         </Section>

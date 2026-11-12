@@ -79,7 +79,7 @@ export default function AdminsPage() {
     }
   }
 
-  usePageHeader("Admins", "People who manage your fleet's day-to-day tracking");
+  usePageHeader("Admins", "Optional: people who help you run your fleet");
 
   return (
     <div>
@@ -105,7 +105,7 @@ export default function AdminsPage() {
                       <EmptyState
                         icon={FiUserPlus}
                         title="No admins yet"
-                        text="Fleet admins add your vehicles and drivers and handle day-to-day tracking. Add one with the form; it can be you, using a second email."
+                        text="You can run your fleet yourself, so admins are optional. Add one if someone else should help manage vehicles, drivers and the day's work."
                         action={{ label: "Add your first admin", href: "#add-admin" }}
                       />
                     </td>
@@ -158,7 +158,7 @@ export default function AdminsPage() {
         <div id="add-admin" className="scroll-mt-4 bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5 h-fit">
           <h3 className="text-sm font-medium text-gray-700">Add an admin</h3>
           <p className="text-xs text-teal-600 mt-0.5 mb-4">
-            Admins add vehicles and drivers and run the day. Give them the email and password you set here.
+            Admins can add vehicles and drivers and run the day, with the access you choose. Give them the email and password you set here.
           </p>
           <form onSubmit={handleAddAdmin} className="space-y-4">
             <div>

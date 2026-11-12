@@ -45,72 +45,25 @@ interface Step {
   action: { label: string; href: string };
 }
 
-function ownerSteps(p: Progress): Step[] {
-  const hasAdmin = p.admins > 0;
-  return [
-    {
-      key: "admin",
-      title: "Invite your fleet admin",
-      text: "Admins add vehicles and drivers and run the day. It can be you, using a second email.",
-      done: hasAdmin,
-      action: { label: "Add an admin", href: "/company/admins#add-admin" },
-    },
-    {
-      key: "vehicle",
-      title: "Add your first vehicle",
-      text: hasAdmin
-        ? "Your admin adds vehicles after signing in as Fleet admin. They appear here as soon as they're saved."
-        : "Vehicles are added by a fleet admin, so invite one first.",
-      done: p.vehicles > 0,
-      action: hasAdmin ? { label: "Open Vehicles", href: "/company/vehicles" } : { label: "Invite an admin first", href: "/company/admins#add-admin" },
-    },
-    {
-      key: "driver",
-      title: "Add a driver",
-      text: "Your admin creates each driver's login for the phone app and assigns them a vehicle.",
-      done: p.drivers > 0,
-      action: hasAdmin ? { label: "Open Drivers", href: "/company/drivers" } : { label: "Invite an admin first", href: "/company/admins#add-admin" },
-    },
-    {
-      key: "tracking",
-      title: "Connect the driver app or a tracker",
-      text: "A vehicle shows on the live map once its driver signs in to the phone app, or a GPS tracker reports in.",
-      done: p.tracked > 0,
-      action: { label: "How to connect", href: "/help#tracking" },
-    },
-    {
-      key: "geofence",
-      title: "Draw your depot geofence",
-      text: "Get an alert whenever a vehicle leaves or comes back to your yard.",
-      done: p.geofences > 0,
-      action: { label: "Draw a zone", href: "/company/geofences#add-zone" },
-    },
-    {
-      key: "billing",
-      title: "Set up billing",
-      text: "Choose a plan and pay by M-Pesa or card when you're ready.",
-      done: p.billingSet,
-      optional: true,
-      action: { label: "View plans", href: "/company/billing" },
-    },
-  ];
-}
-
-function adminSteps(p: Progress): Step[] {
+// The same first steps for a company owner and a full fleet admin: owners
+// manage their own fleet directly, so nobody has to invite an admin first.
+// Owners also get two optional extras: inviting admins (to share the work)
+// and billing.
+function fleetSteps(p: Progress, base: "/company" | "/admin"): Step[] {
   return [
     {
       key: "vehicle",
       title: "Add your first vehicle",
       text: "Enter the plate number; make, model and tracker ID are optional.",
       done: p.vehicles > 0,
-      action: { label: "Add a vehicle", href: "/admin/vehicles#add-vehicle" },
+      action: { label: "Add a vehicle", href: `${base}/vehicles#add-vehicle` },
     },
     {
       key: "driver",
       title: "Add a driver and assign a vehicle",
       text: "This creates their login for the phone app. Assign their vehicle from the Drivers or Vehicles list.",
       done: p.drivers > 0,
-      action: { label: "Add a driver", href: "/admin/drivers#add-driver" },
+      action: { label: "Add a driver", href: `${base}/drivers#add-driver` },
     },
     {
       key: "tracking",
@@ -124,9 +77,35 @@ function adminSteps(p: Progress): Step[] {
       title: "Draw your depot geofence",
       text: "Get an alert whenever a vehicle leaves or comes back to your yard.",
       done: p.geofences > 0,
-      action: { label: "Draw a zone", href: "/admin/geofences#add-zone" },
+      action: { label: "Draw a zone", href: `${base}/geofences#add-zone` },
     },
   ];
+}
+
+function ownerSteps(p: Progress): Step[] {
+  return [
+    ...fleetSteps(p, "/company"),
+    {
+      key: "admin",
+      title: "Invite a fleet admin",
+      text: "Want someone else to help run the fleet? Give them their own login. You can keep doing everything yourself.",
+      done: p.admins > 0,
+      optional: true,
+      action: { label: "Add an admin", href: "/company/admins#add-admin" },
+    },
+    {
+      key: "billing",
+      title: "Set up billing",
+      text: "Choose a plan and pay by M-Pesa or card when you're ready.",
+      done: p.billingSet,
+      optional: true,
+      action: { label: "View plans", href: "/company/billing" },
+    },
+  ];
+}
+
+function adminSteps(p: Progress): Step[] {
+  return fleetSteps(p, "/admin");
 }
 
 export default function GettingStarted() {

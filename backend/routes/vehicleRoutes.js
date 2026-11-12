@@ -18,10 +18,12 @@ router.use(authenticate);
 router.get("/mine", getMyVehicle);
 router.get("/", listVehicles);
 router.get("/:id", getVehicle);
-router.post("/", authorize("ADMIN", "PLATFORM_ADMIN"), createVehicle);
+// Company owners manage their own fleet like a full admin (always inside
+// their own company: the controllers take companyId from the session).
+router.post("/", authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"), createVehicle);
 router.post(
   "/bulk-import",
-  authorize("ADMIN", "PLATFORM_ADMIN"),
+  authorize("ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"),
   handleSpreadsheetUpload,
   bulkImportVehicles
 );
