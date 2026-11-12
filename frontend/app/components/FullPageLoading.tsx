@@ -1,6 +1,12 @@
-import { Outfit } from "next/font/google";
+import localFont from "next/font/local";
 
-const outfit = Outfit({ weight: "300", subsets: ["latin"] });
+// Self-hosted (app/fonts, SIL OFL) so the build never fetches Google Fonts.
+const outfit = localFont({
+  src: "../fonts/outfit-latin-300-normal.woff2",
+  weight: "300",
+  style: "normal",
+  display: "swap",
+});
 
 // Full-screen loading state — the Fig Fleet logo with the "Orbit" ring
 // sweeping round it in the brand green and orange (styles in globals.css,
