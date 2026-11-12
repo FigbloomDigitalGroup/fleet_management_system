@@ -1,6 +1,6 @@
 import { emitSessionExpired } from "./sessionEvents";
 import { SUPPORT_READ_ONLY_MESSAGE, inSupportView, supportViewExpired } from "./supportView";
-import { OFFLINE_MESSAGE, UNREACHABLE_MESSAGE, friendlyStatusMessage, isOffline, notifyError, notifySuccess } from "./notify";
+import { OFFLINE_MESSAGE, UNREACHABLE_MESSAGE, friendlyStatusMessage, isOffline, notify, notifyError, notifySuccess } from "./notify";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -200,6 +200,11 @@ export async function apiRequest<T = any>(
   const quiet = QUIET_SUCCESS.some((p) => path.startsWith(p));
   if (method !== "GET" && successMessage !== false && !quiet) {
     notifySuccess(successMessage || data.message || successText(method, path));
+  }
+  // Saved, but worth knowing: e.g. a job or vehicle given to a driver who is
+  // on leave that day (approved in Figbloom HR).
+  if (typeof data?.warning?.message === "string") {
+    notify({ kind: "info", title: "Heads up", message: data.warning.message });
   }
 
   return data as T;

@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FiCheck, FiChevronDown, FiChevronRight, FiX } from "react-icons/fi";
-import { API_URL, apiRequest } from "../lib/api";
+import { API_URL, apiRequest, errorMessage } from "../lib/api";
+import { useAdminAccess } from "../lib/adminAccess";
 import { formatDateTime } from "../lib/dateKeys";
 import { InspectionRecord } from "../types/auth";
 import Skeleton from "./Skeleton";
@@ -21,6 +22,30 @@ export default function InspectionsList({ vehicleId }: { vehicleId?: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  // Sign-off: supervisors, mechanics, full admins and the owner.
+  const { canReviewInspections } = useAdminAccess();
+  const [reviewNote, setReviewNote] = useState("");
+  const [reviewing, setReviewing] = useState<string | null>(null);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+
+  async function signOff(insp: InspectionRecord) {
+    setReviewError(null);
+    setReviewing(insp._id);
+    try {
+      const updated = await apiRequest<InspectionRecord>(`/api/inspections/${insp._id}/review`, {
+        method: "POST",
+        body: JSON.stringify({ note: reviewNote.trim() || undefined }),
+        successMessage: insp.passed ? "Inspection signed off." : "Inspection signed off; its alert is closed.",
+        notifyErrors: false,
+      });
+      setInspections((list) => list.map((i) => (i._id === insp._id ? { ...i, reviewedAt: updated.reviewedAt, reviewNote: updated.reviewNote } : i)));
+      setReviewNote("");
+    } catch (err) {
+      setReviewError(errorMessage(err, "Couldn't sign this inspection off."));
+    } finally {
+      setReviewing(null);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -88,6 +113,7 @@ export default function InspectionsList({ vehicleId }: { vehicleId?: string }) {
                   )}
                   <span className="text-xs text-gray-600">{insp.driverId?.fullName ?? ""}</span>
                   <span className="ml-auto flex items-center gap-2">
+                    {insp.reviewedAt && <span className="text-xs text-gray-500">Signed off</span>}
                     {!insp.passed && (
                       <span className="text-xs text-gray-500">
                         {failedItems.length} issue{failedItems.length === 1 ? "" : "s"}
@@ -130,6 +156,35 @@ export default function InspectionsList({ vehicleId }: { vehicleId?: string }) {
                         </li>
                       ))}
                     </ul>
+                    {insp.reviewedAt ? (
+                      <p className="mt-3 text-xs text-gray-600">
+                        Signed off {formatDateTime(insp.reviewedAt)}
+                        {insp.reviewNote ? `: ${insp.reviewNote}` : "."}
+                      </p>
+                    ) : (
+                      canReviewInspections && (
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <input
+                            type="text"
+                            value={reviewNote}
+                            onChange={(e) => setReviewNote(e.target.value)}
+                            maxLength={500}
+                            placeholder={insp.passed ? "Note (optional)" : "What was done (optional)"}
+                            aria-label="Sign-off note"
+                            className="min-w-0 flex-1 rounded border border-gray-300 px-2.5 py-1.5 text-xs outline-none focus:border-teal-600"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => signOff(insp)}
+                            disabled={reviewing === insp._id}
+                            className="inline-flex items-center gap-1 rounded bg-teal-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+                          >
+                            <FiCheck size={12} aria-hidden /> {reviewing === insp._id ? "Signing off…" : "Sign off"}
+                          </button>
+                          {reviewError && reviewing === null && <p className="w-full text-xs text-red-600">{reviewError}</p>}
+                        </div>
+                      )
+                    )}
                   </div>
                 )}
               </li>

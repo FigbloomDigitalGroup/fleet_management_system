@@ -46,6 +46,10 @@ const ROLE_SECTION: Record<Role, string> = {
   ADMIN: "admin",
   DRIVER: "driver-app",
   PLATFORM_ADMIN: "figbloom",
+  OPERATOR: "admin",
+  ACCOUNTANT: "roles",
+  MECHANIC: "roles",
+  SUPERVISOR: "roles",
 };
 
 export default function HelpPage() {
@@ -135,12 +139,18 @@ export default function HelpPage() {
             <li>
               <span className="font-medium text-gray-900">Company owner</span>: whoever registered the fleet. Can do everything a
               fleet admin can (add vehicles and drivers, draw zones, plan jobs, handle alerts), plus choose a plan and,
-              if they want help, invite fleet admins. A one-person fleet needs nobody else.
+              if they want help, add a team under <span className="font-medium">Team</span>. A one-person fleet needs nobody else.
             </li>
             <li>
               <span className="font-medium text-gray-900">Fleet admin</span>: optional, added by the owner. Adds vehicles and drivers,
               draws zones, plans jobs and handles alerts. The owner gives each admin <em>Full</em>, <em>Dispatcher</em> (jobs,
-              routes, messages and alerts only) or <em>Viewer</em> (read only) access.
+              routes, messages and alerts only) or <em>Viewer</em> (read only) access. Full admins can manage the team too.
+            </li>
+            <li>
+              <span className="font-medium text-gray-900">Team roles</span>: optional, added under Team. An{" "}
+              <em>Operator</em> runs the day (jobs, routes, dispatch, messages, alerts). An <em>Accountant</em> handles expenses,
+              billing, reports and HR &amp; Payroll. A <em>Mechanic</em> keeps maintenance, inspections and defects. A{" "}
+              <em>Supervisor</em> sees everything, closes alerts and signs off inspections. Each sees only their own menu.
             </li>
             <li>
               <span className="font-medium text-gray-900">Driver</span>: added by the owner or an admin. Uses the FIGBLOOM FLEET phone

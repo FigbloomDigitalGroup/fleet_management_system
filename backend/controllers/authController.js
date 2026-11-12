@@ -8,6 +8,8 @@ import { parseSpreadsheetRows } from "../lib/spreadsheet.js";
 import { getPlatformSettings } from "./settingsController.js";
 import { platformDecisionsEnabled } from "../lib/platform/settings.js";
 import { enqueueCompanySync } from "../lib/platform/store.js";
+import { enqueueStaffSyncSafely } from "../lib/platform/staffEvents.js";
+import { STAFF_ROLES, canManageTeam } from "../lib/staffRoles.js";
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const WELCOME_LINK_DAYS = 3; // "Set your password" link in the welcome email
@@ -174,6 +176,8 @@ export async function registerCompany(req, res) {
       await enqueueCompanySync(tx, company.id);
       return [company, user];
     });
+    // the owner, to Figbloom HR (only while HR_INTEGRATION_ENABLED is on)
+    await enqueueStaffSyncSafely(prisma, user.id, company.id);
 
     sendCompanyWelcomeEmail(user.email, {
       ownerName: user.fullName,
@@ -231,13 +235,15 @@ export async function uniqueCompanySlug(companyName) {
   }
 }
 
-// Creates an Admin (or Driver) user under the requester's own company (owner
-// or admin), or under body.companyId for PLATFORM_ADMIN.
+// Creates a team member (ADMIN or a staff role: OPERATOR, ACCOUNTANT,
+// MECHANIC, SUPERVISOR) or a Driver under the requester's own company, or
+// under body.companyId for PLATFORM_ADMIN. Team members are added only by the
+// owner or a full admin (Settings -> Team); drivers by any owner/admin.
 export async function createUserUnderCompany(req, res) {
   try {
     const { email, password, fullName, role } = req.body;
     const normalizedEmail = email?.trim().toLowerCase();
-    const allowedRoles = ["ADMIN", "DRIVER"];
+    const allowedRoles = ["ADMIN", ...STAFF_ROLES, "DRIVER"];
     const adminAccess = ["full", "dispatcher", "viewer"].includes(req.body.adminAccess) ? req.body.adminAccess : "full";
 
     if (!allowedRoles.includes(role)) {
@@ -247,6 +253,9 @@ export async function createUserUnderCompany(req, res) {
     // the driver always lands in the requester's own company (below).
     if (role === "DRIVER" && !["ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"].includes(req.user.role)) {
       return res.status(403).json({ error: "Only the fleet owner or a fleet admin can add drivers" });
+    }
+    if (role !== "DRIVER" && req.user.role !== "PLATFORM_ADMIN" && !canManageTeam(req.user)) {
+      return res.status(403).json({ error: "Only the fleet owner or a full admin can add team members" });
     }
     if (!normalizedEmail) {
       return res.status(400).json({ error: "email is required" });
@@ -277,6 +286,7 @@ export async function createUserUnderCompany(req, res) {
       },
     });
     sendWelcomeInBackground(user, await companyNameOf(user.companyId));
+    await enqueueStaffSyncSafely(prisma, user.id, user.companyId);
 
     return res.status(201).json({
       message: `${role} account created`,
@@ -355,6 +365,7 @@ export async function bulkImportDrivers(req, res) {
         });
         companyName ??= await companyNameOf(companyId);
         sendWelcomeInBackground(created, companyName);
+        await enqueueStaffSyncSafely(prisma, created.id, created.companyId);
         results.push({ row: rowNumber, email, status: "created", generatedPassword });
         createdCount++;
       } catch (err) {
@@ -489,6 +500,9 @@ export async function refresh(req, res) {
 
     const user = await prisma.user.findUnique({ where: { id: String(decoded.id) } });
     if (!user) return res.status(401).json({ error: "Invalid refresh token" });
+    if (user.status && user.status !== "active") {
+      return res.status(401).json({ error: "This account has been deactivated", code: "account_inactive" });
+    }
 
     await prisma.refreshToken.update({ where: { id: stored.id }, data: { revoked: true } });
 

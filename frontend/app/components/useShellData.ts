@@ -14,7 +14,7 @@ import { ToastAlert } from "./AlertToast";
 export function useShellData({ alerts, messages, zones }: { alerts: boolean; messages: boolean; zones: boolean }) {
   const pathname = usePathname();
   const { user } = useAuth();
-  const isCompanySide = user?.role === "COMPANY_OWNER" || user?.role === "ADMIN";
+  const isCompanySide = !!user?.companyId && user.role !== "DRIVER" && user.role !== "PLATFORM_ADMIN";
 
   // Company name shown on every page — fetched once here so company owners
   // and admins don't have to re-fetch it per page.

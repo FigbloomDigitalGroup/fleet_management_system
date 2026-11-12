@@ -26,6 +26,12 @@ enum Role {
   COMPANY_OWNER
   ADMIN
   DRIVER
+  // Company staff roles (FLEET_HR_CONTRACT.md section 0), each with its own
+  // menu and API permissions (lib/staffRoles.js). Web only, like ADMIN.
+  OPERATOR
+  ACCOUNTANT
+  MECHANIC
+  SUPERVISOR
 }
 
 enum AdminAccess {
@@ -685,6 +691,11 @@ model Inspection {
   notes      String?
   latitude   Float?
   longitude  Float?
+  // Signed off by a supervisor, mechanic, full admin or the owner
+  // (POST /api/inspections/:id/review); a failed one is "closed" this way.
+  reviewedAt   DateTime?
+  reviewedById String?
+  reviewNote   String?   @db.VarChar(500)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -784,8 +795,11 @@ model AgentScanLog {
 // read, so a rename that lands mid-send is sent again).
 model PlatformSyncQueue {
   id            Int       @id @default(autoincrement())
-  kind          String // "company"
-  localId       String // Company.id
+  kind          String // "company" | "staff" (a person: fleet.staff.* events)
+  localId       String // Company.id, or User.id for "staff"
+  // "staff" rows: the person's company when queued, so a removed person's
+  // fleet.staff.left still names it.
+  companyId     String?
   version       Int       @default(1)
   attempts      Int       @default(0)
   nextAttemptAt DateTime  @default(now())
@@ -860,4 +874,43 @@ model StaffAuditLog {
 
   @@index([companyId, createdAt])
   @@index([staffUserId, createdAt])
+}
+
+// ── Figbloom HR (FLEET_HR_CONTRACT.md section 3) ────────────────────────────
+
+// Every event delivery from the platform's relay (POST /api/platform/events)
+// that was applied (x-figbloom-delivery), so a repeat is acknowledged and not
+// applied twice.
+model PlatformEventDelivery {
+  deliveryId String   @id
+  eventId    String?
+  type       String
+  companyId  String?
+  personId   String?
+  outcome    String
+  receivedAt DateTime @default(now())
+}
+
+// A person away on leave approved in Figbloom HR (hr.leave.approved), one
+// row per HR application; cancelled (hr.leave.cancelled) keeps the row with
+// status "cancelled". Dispatch warns when a job or vehicle is given to a
+// driver on these dates. Dates are "YYYY-MM-DD", inclusive.
+model DriverUnavailability {
+  id            String   @id @default(cuid())
+  companyId     String
+  userId        String
+  source        String   @default("hr")
+  applicationId String
+  leaveType     String?
+  startDate     String
+  endDate       String
+  halfDay       Boolean  @default(false)
+  status        String // "approved" | "cancelled"
+  // occurred_at of the last event applied, so an older one arriving late is ignored
+  lastEventAt   DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([companyId, source, applicationId])
+  @@index([userId, status, startDate])
 }

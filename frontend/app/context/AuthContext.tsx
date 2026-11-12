@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "../lib/api";
+import { isStaffRole } from "../lib/staffRoles";
 import { User, LoginResponse, SupportView } from "../types/auth";
 import { STAFF_SESSION_KEY, SUPPORT_VIEW_ENDED_EVENT, enterSupportSession, restoreStaffSession } from "../lib/supportView";
 
@@ -67,15 +68,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (savedUser && savedToken) {
       const parsed: User = JSON.parse(savedUser);
       setUser(parsed);
-      // An owner can change an admin's access level at any time, and the
-      // stored session only knows the level from login — re-read it so the
-      // UI matches what the server will actually allow.
-      if (parsed.role === "ADMIN") {
-        apiRequest<{ adminAccess?: User["adminAccess"] }>("/api/users/me")
+      // The owner (or a full admin) can change a team member's role or an
+      // admin's access level at any time, and the stored session only knows
+      // them from login — re-read them so the UI matches what the server
+      // will actually allow.
+      if (parsed.role === "ADMIN" || isStaffRole(parsed.role)) {
+        apiRequest<{ role?: User["role"]; adminAccess?: User["adminAccess"] }>("/api/users/me")
           .then((me) => {
-            const adminAccess = me.adminAccess || "full";
-            if (adminAccess === parsed.adminAccess) return;
-            const next = { ...parsed, adminAccess };
+            const role = me.role && (me.role === "ADMIN" || isStaffRole(me.role)) ? me.role : parsed.role;
+            const adminAccess = role === "ADMIN" ? me.adminAccess || "full" : null;
+            if (role === parsed.role && adminAccess === (parsed.adminAccess ?? null)) return;
+            const next = { ...parsed, role, adminAccess };
             localStorage.setItem("user", JSON.stringify(next));
             setUser(next);
           })

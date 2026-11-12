@@ -5,8 +5,13 @@ import prisma from "../lib/prisma.js";
 import { makeDecisionWebhookHandler } from "../lib/platform/decisionWebhook.js";
 import { applyPlatformDecision } from "../lib/platform/decisions.js";
 import { companySummaries } from "../lib/platform/summaries.js";
+import { makeEventWebhookHandler } from "../lib/platform/eventWebhook.js";
+import { applyEmployeeLeft, applyLeaveEvent } from "../lib/platform/hrEvents.js";
 
 export const receiveDecision = makeDecisionWebhookHandler({ db: prisma, applyDecision: applyPlatformDecision });
+
+// Figbloom HR's events through the platform relay (FLEET_HR_CONTRACT.md section 3).
+export const receiveEvent = makeEventWebhookHandler({ db: prisma, applyEmployeeLeft, applyLeaveEvent });
 
 export async function listCompanySummaries(req, res) {
   try {

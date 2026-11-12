@@ -65,6 +65,25 @@ export class PlatformClient {
     return this.call("PUT", `/products/${PLATFORM_MODULE}/decision-webhook`, { url });
   }
 
+  // Where the platform's relay delivers events to Fleet (hr.employee.left,
+  // hr.leave.*): POST /api/platform/events. null stops them (they wait).
+  putEventWebhook(url) {
+    return this.call("PUT", `/products/${PLATFORM_MODULE}/event-webhook`, { url });
+  }
+
+  // POST /events: { type: "fleet.staff.created", id, occurred_at, tenant_local_id, data }.
+  // A repeated id is accepted and not delivered again. -> { deliveries }
+  postEvent(event) {
+    return this.call("POST", "/events", event);
+  }
+
+  // POST /handoffs: a one-time sign-in link into another product (HR).
+  // -> { url, expires_at }; 409 target_not_enabled | target_not_linked |
+  // target_no_handoff_url, 404 for a company the platform doesn't know.
+  createHandoff(body) {
+    return this.call("POST", "/handoffs", body);
+  }
+
   async accessToken() {
     if (this.token && this.now() < this.token.expiresAt - EXPIRY_MARGIN_MS) return this.token.value;
     const basic = Buffer.from(`${this.config.clientId}:${this.config.clientSecret}`).toString("base64");

@@ -129,3 +129,28 @@ export async function listInspections(req, res) {
     return res.status(500).json({ error: "Failed to fetch inspections" });
   }
 }
+
+// SUPERVISOR, MECHANIC, full ADMIN, COMPANY_OWNER: sign an inspection off
+// ("reviewed"), with an optional note. A failed one's open
+// inspection_failed alert for that vehicle is closed with it.
+// POST /api/inspections/:id/review { note? }
+export async function reviewInspection(req, res) {
+  try {
+    const inspection = await prisma.inspection.findFirst({ where: { id: req.params.id, ...tenantScope(req) } });
+    if (!inspection) return res.status(404).json({ error: "Inspection not found" });
+    if (inspection.reviewedAt) return res.status(409).json({ error: "This inspection has already been signed off", code: "already_reviewed" });
+    const note = typeof req.body?.note === "string" ? req.body.note.trim().slice(0, 500) || null : null;
+    const now = new Date();
+    const [updated] = await prisma.$transaction([
+      prisma.inspection.update({ where: { id: inspection.id }, data: { reviewedAt: now, reviewedById: req.user.id, reviewNote: note } }),
+      prisma.alert.updateMany({
+        where: { companyId: inspection.companyId, vehicleId: inspection.vehicleId, type: "inspection_failed", resolved: false, createdAt: { gte: inspection.createdAt } },
+        data: { resolved: true, resolvedAt: now },
+      }),
+    ]);
+    return res.json(present({ ...inspection, ...updated }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to sign off the inspection" });
+  }
+}

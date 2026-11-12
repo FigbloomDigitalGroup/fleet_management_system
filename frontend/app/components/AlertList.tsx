@@ -10,6 +10,7 @@ import Skeleton from "./Skeleton";
 import Switch from "./Switch";
 import { alertTypeIcon, alertTypeLabel, isCriticalAlert } from "../lib/alertTypes";
 import { useAdminAccess } from "../lib/adminAccess";
+import { MECHANIC_ALERT_TYPES } from "../lib/staffRoles";
 import { useAppShell } from "./AppShell";
 
 type StatusTab = "open" | "resolved" | "all";
@@ -42,7 +43,8 @@ export default function AlertsList() {
   const isAdminPortal = pathname?.startsWith("/admin");
   const basePath = isAdminPortal ? "/admin/vehicles" : "/company/vehicles";
   const liveMapHref = shell?.nav.mapHref ?? (isAdminPortal ? "/admin/live-map" : "/company/live-map");
-  const { canDispatch } = useAdminAccess();
+  const { canDispatch, canCloseAlerts, onlyMechanicAlerts } = useAdminAccess();
+  const canClose = (a: AlertRecord) => canCloseAlerts && (!onlyMechanicAlerts || MECHANIC_ALERT_TYPES.includes(a.type));
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -321,7 +323,7 @@ export default function AlertsList() {
                               <FiMapPin size={12} /> Map
                             </button>
                           )}
-                          {!a.resolved && canDispatch && (
+                          {!a.resolved && canClose(a) && (
                             <button
                               onClick={() => handleResolve(a._id)}
                               disabled={resolvingId === a._id}

@@ -25,8 +25,9 @@ router.get("/overview", authorize("PLATFORM_ADMIN"), getBillingOverview);
 router.patch("/companies/:id/plan", authorize("PLATFORM_ADMIN"), updateCompanyPlan);
 router.get("/transactions", authorize("PLATFORM_ADMIN"), listAllTransactions);
 
-router.post("/checkout", authorize("COMPANY_OWNER"), initializeCheckout);
-router.get("/verify/:reference", authorize("COMPANY_OWNER"), verifyCheckout);
-router.get("/transactions/mine", authorize("COMPANY_OWNER"), listMyTransactions);
+// The company's accountant pays the plan too (lib/staffRoles.js).
+router.post("/checkout", authorize("COMPANY_OWNER", "ACCOUNTANT"), initializeCheckout);
+router.get("/verify/:reference", authorize("COMPANY_OWNER", "ACCOUNTANT"), verifyCheckout);
+router.get("/transactions/mine", authorize("COMPANY_OWNER", "ACCOUNTANT"), listMyTransactions);
 
 export default router;

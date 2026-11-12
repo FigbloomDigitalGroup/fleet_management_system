@@ -63,14 +63,21 @@ function isOutage(err) {
  *   decisionsEnabled  boolean
  *   adoptStatus  optional (company, organizationAnswer) -> outcome: with decisions on, the platform's answer is its
  *                decision (a new company is pending there, or active with auto-approve), applied like a webhook
+ *   sendStaff    optional (row) -> { sent }: a "staff" row as a fleet.staff.* event (lib/platform/staffEvents.js)
  */
-export async function processQueue({ queue, client, loadCompany, recordLink, decisionsEnabled = false, adoptStatus, limit = 50, log = console }) {
+export async function processQueue({ queue, client, loadCompany, recordLink, decisionsEnabled = false, adoptStatus, sendStaff, limit = 50, log = console }) {
   const rows = await queue.claim(limit);
   const report = { claimed: rows.length, sent: 0, failed: [], deferred: 0, adopted: 0 };
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     try {
+      if (row.kind === "staff" && sendStaff) {
+        const result = await sendStaff(row);
+        await queue.done(row.id, row.version);
+        if (result?.sent) report.sent++;
+        continue;
+      }
       if (row.kind !== QUEUE_KIND) {
         await queue.failed(row.id, `unknown kind ${row.kind}`, 3600);
         report.failed.push({ localId: row.localId, error: "unknown_kind" });
@@ -93,7 +100,7 @@ export async function processQueue({ queue, client, loadCompany, recordLink, dec
       }
     } catch (err) {
       const message = err?.message || String(err);
-      log.error(`[platform] company ${row.localId} not sent (attempt ${row.attempts}): ${message}`);
+      log.error(`[platform] ${row.kind === "staff" ? "person" : "company"} ${row.localId} not sent (attempt ${row.attempts}): ${message}`);
       await queue.failed(row.id, message, backoffSeconds(row.attempts));
       report.failed.push({ localId: row.localId, error: message });
       if (isOutage(err)) {

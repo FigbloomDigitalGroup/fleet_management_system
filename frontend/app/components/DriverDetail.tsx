@@ -13,6 +13,8 @@ import { DriverRecord, VehicleRecord } from "../types/auth";
 import Avatar from "./Avatar";
 import ImageUploadButton from "./ImageUploadButton";
 import { useAdminAccess } from "../lib/adminAccess";
+import { canManageTeam } from "../lib/staffRoles";
+import { useAuth } from "../context/AuthContext";
 import CallButton from "./CallButton";
 
 type ProfileField = { key: keyof DriverRecord; label: string };
@@ -57,7 +59,30 @@ function ProfileCard({ title, fields, driver }: { title: string; fields: Profile
 export default function DriverDetail({ basePath }: { basePath: string }) {
   const { id } = useParams<{ id: string }>();
   const { canManageFleet } = useAdminAccess();
+  const { user } = useAuth();
+  const canSwitchOff = canManageTeam(user);
+  const [switching, setSwitching] = useState(false);
   const router = useRouter();
+
+  // Switching a driver off signs them out of the app straight away (and, with
+  // Figbloom HR on, tells HR they left); switching on lets them back in.
+  async function setActive(active: boolean) {
+    if (!driver) return;
+    if (!active && !window.confirm(`Switch off ${driver.fullName}'s account? They are signed out of the app straight away.`)) return;
+    setSwitching(true);
+    try {
+      await apiRequest(`/api/users/${driver._id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: active ? "active" : "inactive" }),
+        successMessage: active ? "Driver switched on." : "Driver switched off.",
+      });
+      setDriver({ ...driver, status: active ? "active" : "inactive" });
+    } catch {
+      /* shown as a popup */
+    } finally {
+      setSwitching(false);
+    }
+  }
 
   const [driver, setDriver] = useState<DriverRecord | null>(null);
   const [vehicle, setVehicle] = useState<VehicleRecord | null>(null);
@@ -115,6 +140,27 @@ export default function DriverDetail({ basePath }: { basePath: string }) {
             )}
           </div>
         </div>
+        {(driver.status !== "active" || canSwitchOff) && (
+          <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+            <span
+              className={`rounded-full border px-2 py-0.5 ${
+                driver.status === "active" ? "border-teal-200 bg-teal-50 text-teal-600" : "border-gray-200 bg-gray-50 text-gray-500"
+              }`}
+            >
+              {driver.status === "active" ? "Account active" : "Account switched off"}
+            </span>
+            {canSwitchOff && (
+              <button
+                type="button"
+                onClick={() => setActive(driver.status !== "active")}
+                disabled={switching}
+                className="font-medium text-gray-600 underline-offset-2 hover:underline disabled:opacity-50"
+              >
+                {driver.status === "active" ? "Switch off" : "Switch on"}
+              </button>
+            )}
+          </div>
+        )}
         <h3 className="text-sm font-medium text-gray-700">Driver details</h3>
         <p className="text-xs text-teal-600 mt-0.5 mb-3">Account info and vehicle assignment</p>
         <dl className="grid grid-cols-2 gap-3 text-sm">

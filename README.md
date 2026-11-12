@@ -37,6 +37,14 @@ Driver (mobile app — Phase 2)
 | **Site Owner** | A vehicle company (client) | Owns the company account, creates/manages Admin users, views company-level analytics and billing |
 | **Admin** | Company staff / fleet manager | Live tracking, vehicle management, geofencing, alerts, driver management, reports |
 | **Driver** *(Phase 2)* | Vehicle operator | Mobile app: shares location, views assigned trips, sends SOS alerts |
+| **Operator** | Company staff | Runs the day: jobs, routes, dispatch, messages, alerts. Sees vehicles and drivers, can't change them |
+| **Accountant** | Company staff | Expenses, billing, reports, HR & Payroll; the rest read-only |
+| **Mechanic** | Company staff | Maintenance, inspections and defects (maintenance and failed-inspection alerts); the rest read-only |
+| **Supervisor** | Company staff | Reads everything in the fleet, closes alerts and signs off inspections; no settings, team or billing |
+
+The owner and full admins add these in **Team**. Each role's API permissions are a whitelist in
+`backend/lib/staffRoles.js`, checked for every request; the web menu (`frontend/app/lib/staffRoles.ts`) only shows
+what the role can use. Drivers stay app-only.
 
 ### Full Feature Set (Vision)
 
@@ -249,6 +257,27 @@ company is one platform **organization** and one **tenant** under it, both with 
 
 Without the first four, nothing is sent and companies wait in the queue.
 
+### Figbloom HR (`FLEET_HR_CONTRACT.md` section 3)
+
+| Setting | What |
+|---|---|
+| `HR_INTEGRATION_ENABLED` | `true` to connect Figbloom HR; off when unset. Off: no `fleet.staff.*` events are queued, HR's events are answered 503 (the platform keeps them), and HR & Payroll and My HR are hidden |
+| `HR_MY_HR_URL` | HR's My HR API, e.g. `https://hr.figbloom.org/api/integrations/my-hr` (https) |
+| `PLATFORM_EVENT_WEBHOOK_URL` | Optional: the default address for `platformRegisterWebhook.js --events` |
+
+- **Out:** every active person (owner, team, drivers) goes to the platform as `fleet.staff.created|updated|left`
+  through the same outbox. Switching someone off in Team, or a role change, is sent; switching off is `left`.
+- **In:** `POST /api/platform/events`, signed like decisions. `hr.employee.left` deactivates that person (signed out at
+  their next request; the owner is never deactivated this way). `hr.leave.approved|cancelled` marks a driver away on
+  those dates: a job or vehicle given to them then comes back with a `warning`. Events about people or companies
+  Fleet doesn't know (Schools people, other products' tenants) are answered 200 and ignored.
+- **HR & Payroll** (owner, full admins, accountants): one click into HR through the platform's `POST /handoffs`.
+- **My HR** (everyone in a company): payslips, leave (apply, cancel), attendance and KPIs from HR, through `/api/hr/my/*`;
+  the person comes from the session only.
+
+Switch-on: run the migration, set the settings, `node scripts/platformRegisterWebhook.js --events <url>/api/platform/events`,
+then `node scripts/hrStaffBackfill.js <companyId> --apply` for each company with HR (or `--all`).
+
 ### One-off scripts (in `backend/`)
 
 ```bash
@@ -263,7 +292,7 @@ On the AWS server: `docker exec app-app-1 node scripts/platformRegisterWebhook.j
 ### Tests
 
 `cd backend && npm test` (Node's built-in test runner; no database needed): webhook signatures, outbox retry and
-backoff, applying decisions once, and the console secret.
+backoff, applying decisions once, the console secret, staff role permissions, and HR events, staff sync and My HR.
 
 ---
 

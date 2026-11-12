@@ -4,6 +4,8 @@ import { tenantScope } from "../middleware/auth.js";
 import { computeDriverScores } from "../lib/driverScore.js";
 import { TRACKING_CONSENT_VERSION } from "./trackingController.js";
 import { setImageField } from "./uploadController.js";
+import { TEAM_ROLES, canManageTeam } from "../lib/staffRoles.js";
+import { enqueueStaffSyncSafely } from "../lib/platform/staffEvents.js";
 
 // Self-editable profile fields — deliberately excludes identity/account
 // fields (email, fullName, role, companyId, status) which aren't meant to
@@ -84,6 +86,8 @@ export async function updateMyProfile(req, res) {
       if (field in req.body) data[field] = req.body[field] == null ? null : String(req.body[field]);
     }
     const user = await prisma.user.update({ where: { id: req.user.id }, data });
+    // a new phone number goes to Figbloom HR
+    if ("phone" in data && user.companyId) await enqueueStaffSyncSafely(prisma, user.id, user.companyId);
     return res.json(toApi(user));
   } catch (err) {
     if (err?.code === "P2025") return res.status(404).json({ error: "User not found" });
@@ -215,5 +219,79 @@ export async function updateDriverAvatar(req, res) {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update profile picture" });
+  }
+}
+
+// ---- Settings -> Team (FLEET_HR_CONTRACT.md section 0): the owner and full
+// admins manage the company's team (full/dispatcher/viewer admins and the
+// staff roles) and switch people, drivers included, off and on again.
+
+const TEAM_FIELDS = { id: true, email: true, fullName: true, role: true, adminAccess: true, status: true, phone: true, avatarUploadId: true, createdAt: true };
+
+function teamManager(req, res) {
+  if (req.user.role === "PLATFORM_ADMIN" || canManageTeam(req.user)) return true;
+  res.status(403).json({ error: "Only the fleet owner or a full admin can manage the team", code: "role_forbidden" });
+  return false;
+}
+
+// GET /api/users/team: everyone on the team (not drivers), active or not.
+export async function listTeam(req, res) {
+  try {
+    // Figbloom staff in a support view (as the owner) see it read-only.
+    if (!(req.user.role === "COMPANY_OWNER" && req.user.support) && !teamManager(req, res)) return;
+    const team = await prisma.user.findMany({
+      where: { role: { in: TEAM_ROLES }, ...tenantScope(req) },
+      select: TEAM_FIELDS,
+      orderBy: { createdAt: "desc" },
+    });
+    return res.json(toApi(team));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to fetch the team" });
+  }
+}
+
+// PATCH /api/users/team/:id { role, adminAccess? }: change a team member's
+// role (ADMIN with an access level, or a staff role). Never the owner or a driver.
+export async function updateTeamMember(req, res) {
+  try {
+    if (!teamManager(req, res)) return;
+    const { role } = req.body;
+    if (!TEAM_ROLES.includes(role)) return res.status(400).json({ error: `role must be one of: ${TEAM_ROLES.join(", ")}` });
+    const adminAccess = role === "ADMIN" ? (["full", "dispatcher", "viewer"].includes(req.body.adminAccess) ? req.body.adminAccess : "full") : null;
+    const member = await prisma.user.findFirst({ where: { id: req.params.id, role: { in: TEAM_ROLES }, ...tenantScope(req) }, select: { id: true, companyId: true, role: true } });
+    if (!member) return res.status(404).json({ error: "Team member not found" });
+    if (member.id === req.user.id) return res.status(400).json({ error: "You can't change your own role" });
+    const updated = await prisma.user.update({ where: { id: member.id }, data: { role, adminAccess }, select: TEAM_FIELDS });
+    if (member.role !== role) await enqueueStaffSyncSafely(prisma, member.id, member.companyId);
+    return res.json(toApi(updated));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to update the team member" });
+  }
+}
+
+// PATCH /api/users/:id/status { status: "active" | "inactive" }: switch a
+// team member or driver off (signed out at their next request, told to
+// Figbloom HR as fleet.staff.left) or back on. Never the owner or yourself.
+export async function setPersonStatus(req, res) {
+  try {
+    if (!teamManager(req, res)) return;
+    const { status } = req.body;
+    if (!["active", "inactive"].includes(status)) return res.status(400).json({ error: "status must be active or inactive" });
+    const person = await prisma.user.findFirst({
+      where: { id: req.params.id, role: { in: [...TEAM_ROLES, "DRIVER"] }, ...tenantScope(req) },
+      select: { id: true, companyId: true, status: true },
+    });
+    if (!person) return res.status(404).json({ error: "Person not found" });
+    if (person.id === req.user.id) return res.status(400).json({ error: "You can't switch off your own account" });
+    if (person.status === status) return res.json({ id: person.id, status });
+    await prisma.user.update({ where: { id: person.id }, data: { status } });
+    if (status === "inactive") await prisma.refreshToken.updateMany({ where: { userId: person.id, revoked: false }, data: { revoked: true } });
+    await enqueueStaffSyncSafely(prisma, person.id, person.companyId);
+    return res.json({ id: person.id, status });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to update the account" });
   }
 }

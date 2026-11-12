@@ -4,6 +4,7 @@ import { toApi, isUniqueViolation } from "../lib/serialize.js";
 import { tenantScope } from "../middleware/auth.js";
 import { parseSpreadsheetRows } from "../lib/spreadsheet.js";
 import { getPlatformSettings } from "./settingsController.js";
+import { leaveWarning } from "../lib/platform/hrEvents.js";
 
 const MAX_IMPORT_ROWS = 500;
 
@@ -314,7 +315,13 @@ export async function updateVehicle(req, res) {
     }
 
     const vehicle = await prisma.vehicle.update({ where: { id: existing.id }, data: update, include: VEHICLE_INCLUDE });
-    return res.json(toApi(vehicle));
+    // given to a driver on leave today (Figbloom HR): saved, with a warning
+    let warning = null;
+    if (update.driverId && update.driverId !== existing.driverId) {
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Nairobi" });
+      warning = await leaveWarning(prisma, { companyId: existing.companyId, userId: update.driverId, date: today }).catch(() => null);
+    }
+    return res.json(warning ? { ...toApi(vehicle), warning } : toApi(vehicle));
   } catch (err) {
     if (isUniqueViolation(err)) {
       return res.status(409).json({ error: "A vehicle with this plate number or device ID already exists" });

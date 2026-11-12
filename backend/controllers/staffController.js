@@ -10,6 +10,7 @@ import { sharedPlatformClient } from "../lib/platform/client.js";
 import { registerDecidedCompany } from "../lib/platform/backfill.js";
 import { platformDecisionsEnabled } from "../lib/platform/settings.js";
 import { getPlatformSettings } from "./settingsController.js";
+import { enqueueStaffSyncSafely } from "../lib/platform/staffEvents.js";
 import { INDUSTRIES, uniqueCompanySlug, sendWelcomeInBackground } from "./authController.js";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -138,6 +139,7 @@ export async function createFleet(req, res) {
       });
       return [company, owner];
     });
+    await enqueueStaffSyncSafely(prisma, owner.id, company.id);
 
     // The owner sets their own password from the email (as for admins and drivers).
     sendWelcomeInBackground(owner, company.name);

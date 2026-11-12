@@ -37,7 +37,7 @@ const STATUS_OPTIONS = [
 export default function VehicleDetail({ basePath }: { basePath: "/admin" | "/company" }) {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { canManageFleet } = useAdminAccess();
+  const { canManageFleet, canMaintain } = useAdminAccess();
 
   const [vehicle, setVehicle] = useState<VehicleRecord | null>(null);
   const [geofences, setGeofences] = useState<GeofenceRecord[]>([]);
@@ -303,7 +303,7 @@ export default function VehicleDetail({ basePath }: { basePath: "/admin" | "/com
         </div>
       </div>
 
-      <VehicleExtras vehicleId={vehicle._id} canEdit={canManageFleet} />
+      <VehicleExtras vehicleId={vehicle._id} canEdit={canMaintain} />
     </div>
   );
 }

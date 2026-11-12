@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma.js";
 import { SUPPORT_TOKEN_TYPE, resolveSupportSession, supportModeDenial } from "../lib/supportSession.js";
+import { isStaffRole, staffAccessDenial } from "../lib/staffRoles.js";
 
 // Verifies the JWT and attaches current user info to req.user
 export async function authenticate(req, res, next) {
@@ -25,10 +26,15 @@ export async function authenticate(req, res, next) {
     } else {
       const user = await prisma.user.findUnique({
         where: { id: String(decoded.id) },
-        select: { id: true, role: true, companyId: true, adminAccess: true },
+        select: { id: true, role: true, companyId: true, adminAccess: true, status: true },
       });
       if (!user) {
         return res.status(401).json({ error: "User account no longer exists" });
+      }
+      // Deactivated by the owner, or by an exit completed in Figbloom HR
+      // (hr.employee.left): signed out at the next request, not at token expiry.
+      if (user.status && user.status !== "active") {
+        return res.status(401).json({ error: "This account has been deactivated", code: "account_inactive" });
       }
 
       req.user = {
@@ -48,8 +54,8 @@ export async function authenticate(req, res, next) {
     return next();
   }
 
-  const denied = adminAccessDenial(req);
-  if (denied) return res.status(403).json({ error: denied });
+  const denied = adminAccessDenial(req) ?? staffAccessDenial(req);
+  if (denied) return res.status(403).json({ error: denied, code: "role_forbidden" });
   next();
 }
 
@@ -59,7 +65,8 @@ export async function authenticate(req, res, next) {
 // - dispatcher: may change jobs, routes, messages and alerts, but not
 //   vehicles, drivers, zones, billing or company settings
 const READ_METHODS = ["GET", "HEAD", "OPTIONS"];
-const ALWAYS_WRITABLE = ["/api/users/me"];
+// Their own profile, and their own leave in My HR (Figbloom HR).
+const ALWAYS_WRITABLE = ["/api/users/me", "/api/hr/my"];
 const DISPATCHER_WRITABLE = ["/api/jobs", "/api/routes", "/api/messages", "/api/alerts", "/api/agent"];
 
 function adminAccessDenial(req) {
@@ -99,10 +106,15 @@ export async function authenticateTracking(req, res, next) {
   });
 }
 
-// Restricts a route to specific roles
+// Restricts a route to specific roles. The staff roles (OPERATOR,
+// ACCOUNTANT, MECHANIC, SUPERVISOR) count as ADMIN here: authenticate has
+// already narrowed them to their own whitelist (lib/staffRoles.js), so a
+// route open to admins is open to them only where that list allows.
 export function authorize(...allowedRoles) {
   return (req, res, next) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
+    const role = req.user?.role;
+    const allowed = allowedRoles.includes(role) || (isStaffRole(role) && allowedRoles.includes("ADMIN"));
+    if (!req.user || !allowed) {
       return res.status(403).json({ error: "You do not have permission to perform this action" });
     }
     next();
