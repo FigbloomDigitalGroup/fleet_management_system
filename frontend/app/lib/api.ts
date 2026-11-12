@@ -1,5 +1,5 @@
 import { emitSessionExpired } from "./sessionEvents";
-import { SUPPORT_READ_ONLY_MESSAGE, inSupportView, supportViewExpired } from "./supportView";
+import { STAFF_SESSION_KEY, SUPPORT_READ_ONLY_MESSAGE, inSupportView, supportViewExpired } from "./supportView";
 import { OFFLINE_MESSAGE, UNREACHABLE_MESSAGE, friendlyStatusMessage, isOffline, notify, notifyError, notifySuccess } from "./notify";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -144,7 +144,8 @@ export async function apiRequest<T = any>(
 
   // A Figbloom staff support view is read-only; the API refuses changes too,
   // this just says so without a round trip.
-  if (inSupportView() && !["GET", "HEAD", "OPTIONS"].includes(method)) {
+  // Signing in, registering and password resets are never blocked.
+  if (!path.startsWith("/api/auth/") && inSupportView() && !["GET", "HEAD", "OPTIONS"].includes(method)) {
     throw failed(SUPPORT_READ_ONLY_MESSAGE, 403);
   }
 
@@ -183,6 +184,7 @@ export async function apiRequest<T = any>(
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
+      localStorage.removeItem(STAFF_SESSION_KEY);
       emitSessionExpired();
       throw new Error("Session expired. Please sign in again.");
     }
@@ -235,6 +237,7 @@ export async function apiDownload(path: string, fallbackFilename: string, isRetr
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
+      localStorage.removeItem(STAFF_SESSION_KEY);
       emitSessionExpired();
       throw new Error("Session expired. Please sign in again.");
     }

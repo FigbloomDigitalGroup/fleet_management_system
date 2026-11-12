@@ -17,10 +17,18 @@ interface StoredStaffSession {
   user: User;
 }
 
+// A support view is on only while the stored staff session AND a support
+// user are both there. A staff session left behind on its own (the support
+// view ended by a session timeout, a cleared user, another tab) is stale: it
+// is dropped here, so it can't turn a later normal sign-in read-only.
 export function inSupportView(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    return !!localStorage.getItem(STAFF_SESSION_KEY);
+    if (!localStorage.getItem(STAFF_SESSION_KEY)) return false;
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    if (user?.support && localStorage.getItem("accessToken")) return true;
+    localStorage.removeItem(STAFF_SESSION_KEY);
+    return false;
   } catch {
     return false;
   }
