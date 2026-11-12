@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import { FiCopy, FiEdit2, FiTrash2, FiXCircle, FiZap, FiEye, FiNavigation } from "react-icons/fi";
+import EmptyState from "./EmptyState";
+import { FiCopy, FiEdit2, FiTrash2, FiXCircle, FiZap, FiEye, FiNavigation, FiPackage } from "react-icons/fi";
 import { apiRequest, errorMessage } from "../lib/api";
 import { useAdminAccess } from "../lib/adminAccess";
 import { nairobiTodayKey, formatMinutes, formatTime } from "../lib/dateKeys";
@@ -293,8 +294,13 @@ export default function JobsBoard() {
         {error && <p className="rounded-lg bg-white p-5 text-sm text-red-600 shadow-sm ring-1 ring-black/5">{error}</p>}
 
         {!loading && !error && groups.length === 0 && (
-          <div className="rounded-lg bg-white p-8 text-center text-sm text-gray-400 shadow-sm ring-1 ring-black/5">
-            No jobs scheduled for this day yet.
+          <div className="rounded-lg bg-white shadow-sm ring-1 ring-black/5">
+            <EmptyState
+              icon={FiPackage}
+              title="No jobs for this day"
+              text="Jobs are deliveries or visits you give a driver. They see them in the phone app, and your customer gets a live ETA link."
+              action={canDispatch ? { label: "Add a job", href: "#new-job" } : null}
+            />
           </div>
         )}
 
@@ -428,7 +434,7 @@ export default function JobsBoard() {
 
       <div className="space-y-4">
         {canDispatch && (
-          <div className="h-fit rounded-lg bg-white p-5 shadow-sm ring-1 ring-black/5">
+          <div id="new-job" className="scroll-mt-4 h-fit rounded-lg bg-white p-5 shadow-sm ring-1 ring-black/5">
             <h3 className="text-sm font-medium text-gray-700">{editingId ? "Edit job" : "New job"}</h3>
             <p className="mb-4 mt-0.5 text-xs text-teal-600">
               We find the address on the map for you. Times are Nairobi time.

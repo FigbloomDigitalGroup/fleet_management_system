@@ -1,0 +1,257 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { FiCheck, FiX } from "react-icons/fi";
+import { apiRequest } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
+import { useAdminAccess } from "../lib/adminAccess";
+import { AdminRecord, CompanyRecord, DriverRecord, GeofenceRecord, LiveVehicleRecord, VehicleRecord } from "../types/auth";
+
+// The first-run "Getting started" checklist on the company owner's and fleet
+// admin's Overview. Every tick comes from real data (nothing is ticked by
+// hand), so it stays right however the step was done. Dismissing it is
+// remembered per person in this browser; the Help page can bring it back.
+
+const REFRESH_MS = 30000;
+
+export function gettingStartedStorageKey(userId: string) {
+  return `fleet:getting-started-dismissed:${userId}`;
+}
+
+function readDismissed(key: string) {
+  try {
+    return localStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
+}
+
+interface Progress {
+  vehicles: number;
+  drivers: number;
+  admins: number;
+  tracked: number;
+  geofences: number;
+  billingSet: boolean;
+}
+
+interface Step {
+  key: string;
+  title: string;
+  text: string;
+  done: boolean;
+  optional?: boolean;
+  action: { label: string; href: string };
+}
+
+function ownerSteps(p: Progress): Step[] {
+  const hasAdmin = p.admins > 0;
+  return [
+    {
+      key: "admin",
+      title: "Invite your fleet admin",
+      text: "Admins add vehicles and drivers and run the day. It can be you, using a second email.",
+      done: hasAdmin,
+      action: { label: "Add an admin", href: "/company/admins#add-admin" },
+    },
+    {
+      key: "vehicle",
+      title: "Add your first vehicle",
+      text: hasAdmin
+        ? "Your admin adds vehicles after signing in as Fleet admin. They appear here as soon as they're saved."
+        : "Vehicles are added by a fleet admin, so invite one first.",
+      done: p.vehicles > 0,
+      action: hasAdmin ? { label: "Open Vehicles", href: "/company/vehicles" } : { label: "Invite an admin first", href: "/company/admins#add-admin" },
+    },
+    {
+      key: "driver",
+      title: "Add a driver",
+      text: "Your admin creates each driver's login for the phone app and assigns them a vehicle.",
+      done: p.drivers > 0,
+      action: hasAdmin ? { label: "Open Drivers", href: "/company/drivers" } : { label: "Invite an admin first", href: "/company/admins#add-admin" },
+    },
+    {
+      key: "tracking",
+      title: "Connect the driver app or a tracker",
+      text: "A vehicle shows on the live map once its driver signs in to the phone app, or a GPS tracker reports in.",
+      done: p.tracked > 0,
+      action: { label: "How to connect", href: "/help#tracking" },
+    },
+    {
+      key: "geofence",
+      title: "Draw your depot geofence",
+      text: "Get an alert whenever a vehicle leaves or comes back to your yard.",
+      done: p.geofences > 0,
+      action: { label: "Draw a zone", href: "/company/geofences#add-zone" },
+    },
+    {
+      key: "billing",
+      title: "Set up billing",
+      text: "Choose a plan and pay by M-Pesa or card when you're ready.",
+      done: p.billingSet,
+      optional: true,
+      action: { label: "View plans", href: "/company/billing" },
+    },
+  ];
+}
+
+function adminSteps(p: Progress): Step[] {
+  return [
+    {
+      key: "vehicle",
+      title: "Add your first vehicle",
+      text: "Enter the plate number; make, model and tracker ID are optional.",
+      done: p.vehicles > 0,
+      action: { label: "Add a vehicle", href: "/admin/vehicles#add-vehicle" },
+    },
+    {
+      key: "driver",
+      title: "Add a driver and assign a vehicle",
+      text: "This creates their login for the phone app. Assign their vehicle from the Drivers or Vehicles list.",
+      done: p.drivers > 0,
+      action: { label: "Add a driver", href: "/admin/drivers#add-driver" },
+    },
+    {
+      key: "tracking",
+      title: "Connect the driver app or a tracker",
+      text: "The driver signs in to the FIGBLOOM FLEET app and allows location. Their vehicle then shows on the live map.",
+      done: p.tracked > 0,
+      action: { label: "How to connect", href: "/help#tracking" },
+    },
+    {
+      key: "geofence",
+      title: "Draw your depot geofence",
+      text: "Get an alert whenever a vehicle leaves or comes back to your yard.",
+      done: p.geofences > 0,
+      action: { label: "Draw a zone", href: "/admin/geofences#add-zone" },
+    },
+  ];
+}
+
+export default function GettingStarted() {
+  const { user } = useAuth();
+  const { canManageFleet } = useAdminAccess();
+  const isOwner = user?.role === "COMPANY_OWNER";
+  // Restricted admins can't do these steps, so they don't get the list.
+  const eligible = !!user && (isOwner || (user.role === "ADMIN" && canManageFleet));
+  const storageKey = user ? gettingStartedStorageKey(user.id) : null;
+
+  // Only rendered inside a signed-in area (ProtectedRoute waits for the
+  // session), so the key is known on the first client render.
+  const [dismissed, setDismissed] = useState(() => (storageKey ? readDismissed(storageKey) : true));
+  const [progress, setProgress] = useState<Progress | null>(null);
+
+  useEffect(() => {
+    if (!eligible || dismissed) return;
+    let cancelled = false;
+    async function load() {
+      // Each count is independent: one failing (e.g. offline for a moment)
+      // shouldn't hide the others, so it just counts as not done yet.
+      const count = <T,>(path: string, fn: (data: T) => number) =>
+        apiRequest<T>(path)
+          .then(fn)
+          .catch(() => 0);
+      const [vehicles, drivers, admins, tracked, geofences, billing] = await Promise.all([
+        count<VehicleRecord[]>("/api/vehicles", (d) => d.length),
+        count<DriverRecord[]>("/api/users/drivers", (d) => d.length),
+        isOwner ? count<AdminRecord[]>("/api/users/admins", (d) => d.length) : Promise.resolve(0),
+        count<LiveVehicleRecord[]>("/api/tracking/live", (d) => d.filter((v) => v.lastLocation).length),
+        count<GeofenceRecord[]>("/api/geofences", (d) => d.length),
+        isOwner
+          ? count<CompanyRecord>("/api/companies/me", (c) => (c.subscriptionPlan !== "trial" || !!c.paymentMethod ? 1 : 0))
+          : Promise.resolve(0),
+      ]);
+      if (!cancelled) setProgress({ vehicles, drivers, admins, tracked, geofences, billingSet: billing > 0 });
+    }
+    load();
+    const interval = setInterval(load, REFRESH_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [eligible, dismissed, isOwner]);
+
+  if (!eligible || dismissed || !progress) return null;
+
+  const steps = isOwner ? ownerSteps(progress) : adminSteps(progress);
+  const required = steps.filter((s) => !s.optional);
+  const doneCount = required.filter((s) => s.done).length;
+  const allDone = doneCount === required.length;
+  const nextKey = steps.find((s) => !s.done)?.key;
+
+  function dismiss() {
+    if (storageKey) {
+      try {
+        localStorage.setItem(storageKey, "1");
+      } catch {
+        // storage blocked: hidden for this visit only
+      }
+    }
+    setDismissed(true);
+  }
+
+  return (
+    <section className="mb-4 rounded-lg bg-white p-5 shadow-sm ring-1 ring-black/5" aria-labelledby="getting-started-title">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 id="getting-started-title" className="text-base font-semibold text-gray-900">
+            {allDone ? "You're set up" : "Getting started"}
+          </h2>
+          <p className="mt-0.5 text-xs text-teal-600">
+            {allDone
+              ? "Everything's in place. Your vehicles will appear on the live map as they report in."
+              : `${doneCount} of ${required.length} done. Each step ticks itself off once it's done.`}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={dismiss}
+          className="inline-flex shrink-0 items-center gap-1 rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+        >
+          <FiX size={14} />
+          {allDone ? "Close" : "Hide"}
+        </button>
+      </div>
+
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
+        <div className="h-full rounded-full bg-teal-600 transition-all" style={{ width: `${(doneCount / required.length) * 100}%` }} />
+      </div>
+
+      <ol className="mt-4 divide-y divide-gray-100">
+        {steps.map((step) => (
+          <li key={step.key} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:gap-4">
+            <span
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
+                step.done ? "border-teal-600 bg-teal-600 text-white" : "border-gray-300 text-transparent"
+              }`}
+              aria-hidden="true"
+            >
+              <FiCheck size={14} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className={`text-sm font-medium ${step.done ? "text-gray-400 line-through" : "text-gray-900"}`}>
+                {step.title}
+                {step.optional && <span className="ml-2 text-[11px] font-normal text-gray-400 no-underline">(optional)</span>}
+                <span className="sr-only">{step.done ? " (done)" : " (to do)"}</span>
+              </p>
+              {!step.done && <p className="text-xs text-gray-500">{step.text}</p>}
+            </div>
+            {!step.done && (
+              <Link
+                href={step.action.href}
+                className={`shrink-0 rounded px-3 py-1.5 text-center text-xs font-medium transition-colors ${
+                  step.key === nextKey
+                    ? "bg-orange-500 text-white hover:bg-orange-600"
+                    : "border border-gray-300 text-gray-700 hover:border-teal-400 hover:text-teal-700"
+                }`}
+              >
+                {step.action.label}
+              </Link>
+            )}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}

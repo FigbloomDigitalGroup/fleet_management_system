@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useEffect, useRef, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { redirectPathForRole } from "../lib/roleRedirect";
@@ -11,9 +11,12 @@ import BrandIcon from "../components/BrandIcon";
 import PasswordInput from "../components/PasswordInput";
 import { INDUSTRIES, INDUSTRIES_WITH_IMAGES } from "../lib/industries";
 import { notifyError, showError } from "../lib/notify";
+import { API_URL } from "../lib/api";
+import { LoginResponse } from "../types/auth";
+import RegistrationDone from "./RegistrationDone";
 
 export default function RegisterPage() {
-    const { register } = useAuth();
+    const { register, adoptSession } = useAuth();
     const router = useRouter();
 
     const [companyName, setCompanyName] = useState("");
@@ -23,8 +26,50 @@ export default function RegisterPage() {
     const [password, setPassword] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isHuman, setIsHuman] = useState(false);
-    // Set once a company is registered but still needs platform approval.
-    const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+    // Set once the company is registered: "active" when it can be used right
+    // away, "pending" while it waits for approval in the Figbloom console.
+    const [done, setDone] = useState<{ email: string; status: "active" | "pending" } | null>(null);
+    // A pending registration's tokens, kept in memory only (never stored), so
+    // the page can notice the company being switched on and sign straight in.
+    const pendingSession = useRef<LoginResponse | null>(null);
+
+    // Most Fleet companies are approved automatically a minute or so after
+    // registering (the platform sync runs every minute). While the owner is
+    // still on this page, check quietly every 15s for up to 10 minutes and
+    // flip to "you're in" when it happens. The approval email covers the rest.
+    useEffect(() => {
+        if (done?.status !== "pending" || !pendingSession.current) return;
+        const token = pendingSession.current.accessToken;
+        const startedAt = Date.now();
+        let cancelled = false;
+        const timer = setInterval(async () => {
+            if (Date.now() - startedAt > 10 * 60 * 1000) {
+                clearInterval(timer);
+                return;
+            }
+            try {
+                const res = await fetch(`${API_URL}/api/companies/me`, { headers: { Authorization: `Bearer ${token}` } });
+                if (!res.ok) return;
+                const company = (await res.json()) as { status?: string };
+                if (!cancelled && company.status === "active") {
+                    clearInterval(timer);
+                    setDone((d) => (d ? { ...d, status: "active" } : d));
+                }
+            } catch {
+                // offline for a moment: try again on the next tick
+            }
+        }, 15000);
+        return () => {
+            cancelled = true;
+            clearInterval(timer);
+        };
+    }, [done?.status]);
+
+    function openDashboard() {
+        // Approved while waiting: start the session from the tokens in hand.
+        if (pendingSession.current) adoptSession(pendingSession.current);
+        router.push(redirectPathForRole("COMPANY_OWNER"));
+    }
 
     async function handleSubmit(e: FormEvent) {
         e.preventDefault();
@@ -36,12 +81,9 @@ export default function RegisterPage() {
 
         setIsSubmitting(true);
         try {
-            const { user, pending } = await register({ companyName, industry: industry || undefined, ownerName: fullName, email, password });
-            if (pending) {
-                setPendingEmail(user.email);
-                return;
-            }
-            router.push(redirectPathForRole(user.role));
+            const { user, pending, session } = await register({ companyName, industry: industry || undefined, ownerName: fullName, email, password });
+            pendingSession.current = pending ? session ?? null : null;
+            setDone({ email: user.email, status: pending ? "pending" : "active" });
         } catch (err: any) {
             showError(err, "Unable to create your account. Please try again.");
             setIsSubmitting(false);
@@ -96,30 +138,13 @@ export default function RegisterPage() {
 
             {/* RIGHT — Form panel */}
             <div className="lg:w-1/2 flex items-center justify-center p-8">
-                {pendingEmail ? (
-                <div className="w-full max-w-sm text-center" role="status">
-                    <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-teal-50">
-                        <svg viewBox="0 0 24 24" className="h-8 w-8 text-teal-600" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M20 6 9 17l-5-5" />
-                        </svg>
-                    </div>
-                    <h2 className="text-3xl font-extrabold text-teal-950 mb-3">Application received</h2>
-                    <p className="text-sm text-gray-600 leading-relaxed">
-                        Thanks for registering <span className="font-semibold text-gray-800">{companyName}</span>. Our team
-                        reviews every new company before it goes live — we&apos;ll email{" "}
-                        <span className="font-semibold text-gray-800">{pendingEmail}</span> as soon as your account is
-                        approved, and you can sign in then.
-                    </p>
-                    <a
-                        href="/login"
-                        className="mt-8 inline-block w-full py-2.5 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600"
-                    >
-                        Go to sign in
-                    </a>
-                    <a href="/" className="mt-4 inline-block text-sm text-gray-500 hover:text-teal-700">
-                        Back to home
-                    </a>
-                </div>
+                {done ? (
+                <RegistrationDone
+                    companyName={companyName}
+                    email={done.email}
+                    status={done.status}
+                    onOpenDashboard={openDashboard}
+                />
                 ) : (
                 <div className="w-full max-w-sm">
                     <h2 className="text-5xl font-extrabold text-teal-950 mb-2">Create your account</h2>

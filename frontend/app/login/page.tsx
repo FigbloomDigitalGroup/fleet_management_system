@@ -3,13 +3,13 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
-import { redirectPathForRole } from "../lib/roleRedirect";
+import { redirectPathForRole, roleLabel } from "../lib/roleRedirect";
 import { FaGooglePlay } from "react-icons/fa";
 import AuthHeroPanel from "../components/AuthHeroPanel";
 import RobotCheckbox from "../components/RobotCheckbox";
 import BrandIcon from "../components/BrandIcon";
 import PasswordInput from "../components/PasswordInput";
-import { notifyError, notifySuccess, showError } from "../lib/notify";
+import { notifySuccess, showError } from "../lib/notify";
 
 const STEPS = [
   { n: 1, title: "Register your company", text: "Create your account in minutes and set up your company profile." },
@@ -18,12 +18,12 @@ const STEPS = [
 ];
 
 const ROLE_OPTIONS: { value: "COMPANY_OWNER" | "ADMIN"; label: string; icon: string }[] = [
-  { value: "COMPANY_OWNER", label: "Company", icon: "/company-role-icon.svg" },
-  { value: "ADMIN", label: "Company Admin", icon: "/admin-role-icon.svg" },
+  { value: "COMPANY_OWNER", label: "Company owner", icon: "/company-role-icon.svg" },
+  { value: "ADMIN", label: "Fleet admin", icon: "/admin-role-icon.svg" },
 ];
 
 export default function LoginPage() {
-  const { login, logout } = useAuth();
+  const { login } = useAuth();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -39,19 +39,16 @@ export default function LoginPage() {
     try {
       const user = await login(email, password);
 
-      // Purely a client-side sanity check — nothing here is sent to the
-      // backend or stored. Only enforced for the two company-side roles the
-      // picker offers; platform admins and drivers sign in unaffected by it.
+      // The account's role decides where it lands, not the picker: a wrong
+      // pick used to sign the person straight back out, which read as a
+      // failed sign-in. Now they go to their own area and are told which.
       const isCompanyRole = user.role === "COMPANY_OWNER" || user.role === "ADMIN";
-      if (isCompanyRole && user.role !== selectedRole) {
-        logout();
-        const pickedLabel = ROLE_OPTIONS.find((r) => r.value === selectedRole)?.label;
-        notifyError(`This account isn't a "${pickedLabel}" account. Pick the right role and try again.`, "Not authorized");
-        setIsSubmitting(false);
-        return;
-      }
-
-      notifySuccess(user.fullName ? `Welcome back, ${user.fullName}.` : "Welcome back.", "Signed in");
+      const signedInAs = roleLabel(user.role, user.adminAccess);
+      const welcome = user.fullName ? `Welcome back, ${user.fullName}.` : "Welcome back.";
+      notifySuccess(
+        isCompanyRole && user.role !== selectedRole ? `${welcome} This is a ${signedInAs} account, so you're in the ${signedInAs} area.` : welcome,
+        `Signed in as ${signedInAs}`
+      );
       router.push(redirectPathForRole(user.role));
     } catch (err: any) {
       showError(err, "Unable to sign in. Check your details and try again.");
@@ -152,6 +149,11 @@ export default function LoginPage() {
                   </button>
                 ))}
               </div>
+              <p className="mt-2 text-xs text-gray-500">
+                Registered your company? You&apos;re the <span className="font-medium">Company owner</span>. Added by
+                your company? You&apos;re a <span className="font-medium">Fleet admin</span>. Drivers sign in from the
+                mobile app.
+              </p>
             </div>
 
             <div>
@@ -206,6 +208,12 @@ export default function LoginPage() {
             Registering a new company?{" "}
             <a href="/register" className="text-teal-500 font-medium hover:underline">
               Set up your account
+            </a>
+          </p>
+          <p className="text-sm text-gray-500 mt-2">
+            Not sure where to start?{" "}
+            <a href="/help" className="text-teal-500 font-medium hover:underline">
+              How FIGBLOOM FLEET works
             </a>
           </p>
         </div>

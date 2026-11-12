@@ -8,6 +8,8 @@ import Skeleton from "../../components/Skeleton";
 import PasswordInput from "../../components/PasswordInput";
 import { usePageHeader } from "../../components/DashboardShell";
 import Avatar from "../../components/Avatar";
+import EmptyState from "../../components/EmptyState";
+import { FiUserPlus } from "react-icons/fi";
 
 export default function AdminsPage() {
   const [admins, setAdmins] = useState<AdminRecord[]>([]);
@@ -99,8 +101,13 @@ export default function AdminsPage() {
               <tbody>
                 {admins.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-5 py-8 text-center text-gray-400">
-                      No admins added yet.
+                    <td colSpan={4}>
+                      <EmptyState
+                        icon={FiUserPlus}
+                        title="No admins yet"
+                        text="Fleet admins add your vehicles and drivers and handle day-to-day tracking. Add one with the form; it can be you, using a second email."
+                        action={{ label: "Add your first admin", href: "#add-admin" }}
+                      />
                     </td>
                   </tr>
                 ) : (
@@ -148,8 +155,11 @@ export default function AdminsPage() {
         </div>
 
         {/* Add admin form */}
-        <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5 h-fit">
-          <h3 className="text-sm font-medium text-gray-700 mb-4">Add an admin</h3>
+        <div id="add-admin" className="scroll-mt-4 bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5 h-fit">
+          <h3 className="text-sm font-medium text-gray-700">Add an admin</h3>
+          <p className="text-xs text-teal-600 mt-0.5 mb-4">
+            Admins add vehicles and drivers and run the day. Give them the email and password you set here.
+          </p>
           <form onSubmit={handleAddAdmin} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Full name</label>

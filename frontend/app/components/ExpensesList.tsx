@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FiDollarSign } from "react-icons/fi";
+import EmptyState from "./EmptyState";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { API_URL, apiRequest } from "../lib/api";
@@ -78,8 +80,13 @@ export default function ExpensesList() {
               <tbody>
                 {expenses.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-8 text-center text-gray-400">
-                      No expenses logged yet.
+                    <td colSpan={7}>
+                      <EmptyState
+                        icon={FiDollarSign}
+                        title="No expenses yet"
+                        text="Drivers log fuel, tolls, parking and repairs from the phone app, with a photo of the receipt. They show up here."
+                        action={{ label: "About the driver app", href: "/help#driver-app" }}
+                      />
                     </td>
                   </tr>
                 ) : (

@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
+import { FiUsers } from "react-icons/fi";
+import EmptyState from "./EmptyState";
+import { useFleetArea } from "../lib/fleetArea";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { apiRequest } from "../lib/api";
@@ -37,6 +40,7 @@ function downloadDriverTemplate() {
 }
 
 export default function DriversList({ canAdd = false, canAssignVehicle = false }: { canAdd?: boolean; canAssignVehicle?: boolean }) {
+  const { isOwner, addFleetAction } = useFleetArea();
   const pathname = usePathname();
   const basePath = pathname?.startsWith("/admin") ? "/admin/vehicles" : "/company/vehicles";
   const driversBasePath = pathname?.startsWith("/admin") ? "/admin/drivers" : "/company/drivers";
@@ -178,8 +182,19 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
             <tbody>
               {drivers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-gray-400">
-                    No drivers added yet.
+                  <td colSpan={5}>
+                    <EmptyState
+                      icon={FiUsers}
+                      title="No drivers yet"
+                      text={
+                        canAdd
+                          ? "Each driver gets a login for the FIGBLOOM FLEET phone app, which tracks the vehicle you assign them."
+                          : isOwner
+                            ? "Drivers are added by your fleet admins, who give them a login for the phone app. Invite an admin to get started."
+                            : "Each driver gets a login for the phone app. An admin with full access can add them here."
+                      }
+                      action={canAdd ? { label: "Add your first driver", href: "#add-driver" } : addFleetAction("driver")}
+                    />
                   </td>
                 </tr>
               ) : (
@@ -252,7 +267,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
       </div>
 
       {canAdd && (
-        <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5 h-fit">
+        <div id="add-driver" className="scroll-mt-4 bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5 h-fit">
           <h3 className="text-sm font-medium text-gray-700">Add a driver</h3>
           <p className="text-xs text-teal-600 mt-0.5 mb-4">Creates a driver login they can use on their phone.</p>
           <form onSubmit={handleAddDriver} className="space-y-4">

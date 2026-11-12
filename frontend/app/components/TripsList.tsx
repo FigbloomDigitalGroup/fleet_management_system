@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FiNavigation } from "react-icons/fi";
+import EmptyState from "./EmptyState";
 import Link from "next/link";
 import { FaRoute } from "react-icons/fa";
 import { apiRequest, errorMessage } from "../lib/api";
@@ -239,8 +241,13 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
               <tbody>
                 {trips.length === 0 ? (
                   <tr>
-                    <td colSpan={columns.length + 2} className="px-5 py-8 text-center text-gray-400">
-                      No trips in this period.
+                    <td colSpan={columns.length + 2}>
+                      <EmptyState
+                        icon={FiNavigation}
+                        title="No trips in this period"
+                        text="Trips are recorded automatically whenever a tracked vehicle drives. Try a wider date range, or check that a driver app or tracker is connected."
+                        action={{ label: "How tracking works", href: "/help#tracking" }}
+                      />
                     </td>
                   </tr>
                 ) : (

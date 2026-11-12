@@ -247,11 +247,21 @@ export default function AlertsList() {
               <p className="text-sm font-medium text-gray-900">
                 {tab === "open" && !criticalOnly && !filterVehicleId && !query ? "All clear" : "No alerts match"}
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="max-w-sm text-xs text-gray-500">
                 {tab === "open" && !criticalOnly && !filterVehicleId && !query
-                  ? "Nothing needs attention right now."
+                  ? alerts.length === 0
+                    ? "Nothing needs attention right now. Alerts appear here when a vehicle speeds, leaves a zone, goes offline, or a driver presses SOS."
+                    : "Nothing needs attention right now."
                   : "Try another tab or clear the filters."}
               </p>
+              {alerts.length === 0 && (
+                <Link
+                  href={`${isAdminPortal ? "/admin" : "/company"}/geofences`}
+                  className="mt-2 rounded bg-orange-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-orange-600"
+                >
+                  Set up zones to watch
+                </Link>
+              )}
             </div>
           )}
 

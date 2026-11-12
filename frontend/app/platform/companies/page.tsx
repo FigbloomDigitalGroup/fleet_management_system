@@ -8,6 +8,7 @@ import Skeleton from "../../components/Skeleton";
 import { usePageHeader } from "../../components/DashboardShell";
 import { industryLabel } from "../../lib/industries";
 import Avatar from "../../components/Avatar";
+import NoCompaniesYet from "../../components/NoCompaniesYet";
 
 const statusStyles: Record<string, string> = {
   active: "bg-teal-50 text-teal-600 border-teal-200",
@@ -63,8 +64,8 @@ export default function CompaniesPage() {
             <tbody>
               {companies.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-gray-400">
-                    No companies registered yet.
+                  <td colSpan={6}>
+                    <NoCompaniesYet />
                   </td>
                 </tr>
               ) : (

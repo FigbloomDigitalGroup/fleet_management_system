@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { Role } from "../types/auth";
 import FullPageLoading from "./FullPageLoading";
+import { redirectPathForRole } from "../lib/roleRedirect";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -23,8 +24,10 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
       return;
     }
 
+    // Someone signed in to a different role's area (an old bookmark, a
+    // shared link) goes to their own dashboard rather than a dead end.
     if (!allowedRoles.includes(user.role)) {
-      router.push("/unauthorized");
+      router.replace(redirectPathForRole(user.role));
     }
   }, [user, loading, allowedRoles, router]);
 

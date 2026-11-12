@@ -18,12 +18,19 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
   register: (payload: RegisterPayload) => Promise<RegisterResult>;
+  // Starts a session from tokens already in hand (a pending registration
+  // that was switched on while its owner waited on the "received" screen).
+  adoptSession: (data: LoginResponse) => void;
   logout: () => void;
 }
 
 interface RegisterResult {
   user: User;
   pending: boolean;
+  // Only for a pending company: the tokens the API issued, kept in memory by
+  // the caller (never stored) so it can check whether the company has been
+  // switched on and sign the owner in without retyping their password.
+  session?: LoginResponse;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -81,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: "POST",
       body: JSON.stringify(payload),
     });
-    if (data.company?.status === "pending") return { user: data.user, pending: true };
+    if (data.company?.status === "pending") return { user: data.user, pending: true, session: data };
     persistSession(data);
     return { user: data.user, pending: false };
   }
@@ -104,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, adoptSession: persistSession, logout }}>
       {children}
     </AuthContext.Provider>
   );
