@@ -8,14 +8,13 @@ import { GoogleMap, OverlayView, Circle, Polyline, TrafficLayer, useJsApiLoader 
 import { IoCarSportSharp } from "react-icons/io5";
 import { ImLocation2 } from "react-icons/im";
 import { FaSearch } from "react-icons/fa";
-import { FiPlus, FiMinus, FiCrosshair, FiLayers, FiX, FiBell, FiCircle, FiNavigation, FiHelpCircle } from "react-icons/fi";
+import { FiPlus, FiMinus, FiCrosshair, FiLayers, FiX, FiCircle, FiNavigation } from "react-icons/fi";
 import { FaLocationPinLock } from "react-icons/fa6";
 import { apiRequest } from "../lib/api";
 import { usePulseColor } from "../lib/usePulseColor";
 import { isOutsideGeofences } from "../lib/geofence";
 import { VEHICLE_TYPE_ICONS } from "../lib/vehicleIcons";
-import { BottomMenu, SignedInAs, useAppShell } from "./AppShell";
-import BrandIcon from "./BrandIcon";
+import { useAppShell } from "./AppShell";
 import FullPageLoading from "./FullPageLoading";
 import { GeofenceRecord, RouteRecord } from "../types/auth";
 import Switch from "./Switch";
@@ -341,11 +340,11 @@ export default function FleetMap({
   const [layersOpen, setLayersOpen] = useState(false);
   // A spot clicked on the map, with its "create here" menu open.
   const [mapMenu, setMapMenu] = useState<LatLng | null>(null);
-  const navHref = (label: string) =>
-    shell?.nav.sections.flatMap((sec) => sec.items).find((i) => i.label === label)?.href ?? null;
-  const geofencesHref = canManageFleet ? navHref("Geofences") : null;
+  // "/company" or "/admin", from where this map lives.
+  const areaBase = shell?.nav.mapHref?.replace(/\/live-map$/, "") ?? null;
+  const geofencesHref = canManageFleet && areaBase ? `${areaBase}/geofences` : null;
   const { address: menuAddress, loading: menuAddressLoading } = useAddress(mapMenu?.lat, mapMenu?.lng);
-  const routesHref = canDispatch ? navHref("Routes") : null;
+  const routesHref = canDispatch && areaBase ? `${areaBase}/routes` : null;
 
   // Hands the spot to the Geofences / Routes page through the same
   // sessionStorage draft the AI assistant uses (see GeofencesManager and
@@ -619,34 +618,6 @@ export default function FleetMap({
           the bottom on phones, a column on the left from md up. */}
       <div className="absolute inset-x-2 bottom-2 z-10 flex max-h-[55vh] flex-col overflow-hidden rounded-lg bg-white shadow-xl ring-1 ring-black/5 md:inset-x-auto md:bottom-3 md:left-3 md:top-3 md:max-h-none md:w-[360px]">
         <div className="border-b border-gray-100 px-3 pt-3 pb-2">
-          <div className="mb-2 flex items-center gap-2">
-            <BrandIcon className="h-4 w-4 shrink-0" />
-            <span className="min-w-0 flex-1 truncate text-xs font-bold text-blue-950">FIGBLOOM FLEET</span>
-            {shell && <SignedInAs companyName={shell.companyName} roleName={shell.roleName} compact />}
-            <Link
-              href="/help"
-              aria-label="Help"
-              title="Help & getting started"
-              className="rounded-full p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-            >
-              <FiHelpCircle size={17} />
-            </Link>
-            {shell?.nav.alertsHref && (
-              <Link
-                href={shell.nav.alertsHref}
-                aria-label="Alerts"
-                className="relative rounded-full p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-              >
-                <FiBell size={17} />
-                {shell.alertCount > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-medium text-white">
-                    {shell.alertCount > 99 ? "99+" : shell.alertCount}
-                  </span>
-                )}
-              </Link>
-            )}
-          </div>
-
           <form
             onSubmit={handleSearch}
             className="flex items-center gap-2 rounded border border-gray-200 px-3 py-2 focus-within:border-teal-500"
@@ -710,14 +681,31 @@ export default function FleetMap({
               <EmptyState
                 compact
                 title="No vehicles on the map yet"
-                text="The live map shows where each vehicle is right now, once its driver app or tracker sends a location. Start by adding a vehicle."
-                action={{ label: "Go to Vehicles", href: basePath }}
+                text={
+                  canManageFleet
+                    ? "A vehicle shows here once a GPS tracker or its driver's phone sends a location. Add a vehicle, then open it and use Connect tracking."
+                    : "A vehicle shows here once a GPS tracker or its driver's phone sends a location. Nothing has been added yet."
+                }
+                action={canManageFleet ? { label: "Add a vehicle", href: `${basePath}#add-vehicle` } : undefined}
               />
             ) : (
               <p className="px-4 py-6 text-center text-xs text-gray-400">No vehicles match.</p>
             )
           ) : (
-            listedVehicles.map((v) => (
+            <>
+            {canManageFleet && vehicles.length > 0 && withLocation.length === 0 && (
+              <div className="border-b border-orange-100 bg-orange-50 px-3 py-2.5 text-xs text-orange-900">
+                <p className="font-medium">None of your vehicles is reporting yet.</p>
+                <p className="mt-0.5">
+                  Open a vehicle and use <span className="font-medium">Connect tracking</span> to link a GPS tracker or the
+                  driver&apos;s phone.{" "}
+                  <Link href={`${basePath}/${vehicles[0].vehicleId}#connect-tracking`} className="font-semibold underline">
+                    Connect {vehicles[0].plateNumber}
+                  </Link>
+                </p>
+              </div>
+            )}
+            {listedVehicles.map((v) => (
               <VehicleRow
                 key={v.vehicleId}
                 vehicle={v}
@@ -725,11 +713,10 @@ export default function FleetMap({
                 selected={v.vehicleId === selectedId}
                 onClick={() => selectVehicle(v)}
               />
-            ))
+            ))}
+            </>
           )}
         </div>
-
-        <BottomMenu />
       </div>
 
       {/* MAP CONTROLS — layers, recenter, zoom */}
@@ -961,6 +948,14 @@ function StatusCard({
           </dd>
         </div>
       </dl>
+      {!loc && (
+        <div className="border-t border-gray-100 bg-orange-50 px-4 py-2.5 text-xs text-orange-900">
+          Nothing has reported for this vehicle yet.{" "}
+          <Link href={`${detailsHref}#connect-tracking`} className="font-semibold underline">
+            Connect tracking
+          </Link>
+        </div>
+      )}
       <div className="flex items-center gap-2 border-t border-gray-100 px-4 py-2.5">
         {vehicle.driverId && <CallButton phone={vehicle.driverId.phone} name={vehicle.driverId.fullName} size="xs" label="Call driver" />}
         <Link href={detailsHref} className="ml-auto text-xs font-semibold text-teal-700 hover:underline">

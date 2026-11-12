@@ -248,7 +248,7 @@ export default function DashboardShell({
               </Link>
             )}
             <button
-              onClick={logout}
+              onClick={() => logout()}
               className="rounded bg-orange-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-600"
             >
               Sign out

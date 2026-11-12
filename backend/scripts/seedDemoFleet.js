@@ -116,6 +116,8 @@ const VEHICLES = [
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 // The same shape of data on every run (only the times move with "now").
+const SUPPORT_EMAIL = "support@figbloom.org";
+
 function mulberry32(seed) {
   let a = seed >>> 0;
   return () => {
@@ -635,6 +637,15 @@ async function run() {
     return usage(`${ownerEmail} already has an account elsewhere (${existingOwner.role}). Use another address (for example a +demo alias). Nothing changed.`);
   }
 
+  // A fresh database gets the platform settings row with the Figbloom
+  // support address (an older row still on the previous brand's default is
+  // corrected; one staff changed themselves is left alone).
+  const platformSettings = await prisma.platformSettings.findFirst({ orderBy: { createdAt: "asc" } });
+  if (!platformSettings) await prisma.platformSettings.create({ data: { supportEmail: SUPPORT_EMAIL } });
+  else if (platformSettings.supportEmail === "support@getour.com") {
+    await prisma.platformSettings.update({ where: { id: platformSettings.id }, data: { supportEmail: SUPPORT_EMAIL } });
+  }
+
   const now = Date.now();
   let companyId = found?.company.id;
   let action;
@@ -699,7 +710,7 @@ async function run() {
   console.log(`  users        ${admins} admin, ${drivers} drivers (@${DEMO_DOMAIN}, random passwords: nobody can sign in as them)`);
   console.log(`  vehicles     ${vehicleIds.length}; ${pings} GPS pings, ${trips} trips, ${drivingEvents} driving events`);
   console.log(`  geofences    ${geofences}, ${geofenceEvents} entry/exit events`);
-  console.log(`  alerts       ${alerts} (${openAlerts} open; resolved ones are cleared 30 minutes after resolving, as for any company)`);
+  console.log(`  alerts       ${alerts} (${openAlerts} open; resolved ones are kept as history for at least 90 days, as for any company)`);
   console.log(`  dispatch     ${jobs} jobs, ${routes} routes`);
   console.log(`  records      ${expenses} expenses, ${inspections} inspections, ${maintenance} maintenance items, ${messages} messages`);
   if (!platform.configured) {

@@ -12,6 +12,9 @@ interface Settings {
   trialDays: number;
   vehicleLimits: { trial: number; basic: number; pro: number; enterprise: number };
   supportEmail: string;
+  // Read-only: Figbloom-console decisions are switched on for this server
+  // (PLATFORM_DECISIONS_ENABLED), so the console decides, not the toggle.
+  consoleDecisions?: boolean;
 }
 
 export default function PlatformSettingsPage() {
@@ -40,7 +43,7 @@ export default function PlatformSettingsPage() {
         method: "PATCH",
         body: JSON.stringify(settings),
       });
-      setSettings(updated);
+      setSettings({ ...updated, consoleDecisions: settings.consoleDecisions });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err: any) {
@@ -50,7 +53,7 @@ export default function PlatformSettingsPage() {
     }
   }
 
-  usePageHeader("Platform Settings", "Policies applied to every company on the platform");
+  usePageHeader("Settings", "Policies applied to every company on the platform");
 
   if (loading) return <FullPageLoading />;
   if (!settings) return null;
@@ -58,12 +61,33 @@ export default function PlatformSettingsPage() {
   return (
     <div className="max-w-2xl">
       <form onSubmit={handleSave} className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-6 space-y-6">
-        <Toggle
-          checked={settings.requireManualApproval}
-          onChange={(value) => setSettings({ ...settings, requireManualApproval: value })}
-          label="Require manual approval"
-          description='New companies stay "pending" until you approve them'
-        />
+        <div>
+          <Toggle
+            checked={settings.requireManualApproval}
+            onChange={(value) => setSettings({ ...settings, requireManualApproval: value })}
+            label="Require manual approval"
+            description={
+              settings.requireManualApproval
+                ? 'On (the default): every new fleet stays "pending" until Figbloom staff approve it under Customer fleets. Owners who sign in meanwhile see a "waiting for approval" page, and the sign-up screen tells them a person reviews new fleets within about one working day.'
+                : "Off: new fleets are switched on as soon as they register, and the owner can sign in straight away."
+            }
+          />
+          {settings.consoleDecisions ? (
+            <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              <span className="font-semibold">Not in effect on this server:</span> Figbloom-console decisions are switched on, so
+              every new fleet waits for the{" "}
+              <a href="https://console.figbloom.org" target="_blank" rel="noopener noreferrer" className="font-medium underline">
+                Figbloom console
+              </a>
+              . The console&apos;s per-product auto-approve setting decides whether it&apos;s switched on automatically (usually
+              within a minute) or waits for a person there. This toggle is ignored until console decisions are turned off.
+            </p>
+          ) : (
+            <p className="mt-3 text-xs text-gray-500">
+              Figbloom-console decisions are off on this server, so this toggle decides.
+            </p>
+          )}
+        </div>
 
         <hr className="border-gray-100" />
 
@@ -125,6 +149,9 @@ export default function PlatformSettingsPage() {
         {/* Support email */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Support contact email</label>
+          <p className="-mt-1 mb-1.5 text-xs text-gray-500">
+            Shown to customers on the sign-in status pages (waiting for approval, paused, trial ended).
+          </p>
           <input
             type="email"
             value={settings.supportEmail}

@@ -337,7 +337,7 @@ model PlatformSettings {
   trialDays             Int      @default(14)
   // { trial, basic, pro, enterprise } — max vehicles per plan.
   vehicleLimits         Json     @default("{\"trial\":3,\"basic\":15,\"pro\":50,\"enterprise\":999}")
-  supportEmail          String   @default("support@getour.com")
+  supportEmail          String   @default("support@figbloom.org")
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }
@@ -461,7 +461,7 @@ model Alert {
   message           String
   resolved          Boolean   @default(false)
   hiddenForDriverAt DateTime?
-  resolvedAt        DateTime? // rows resolved over 30 min ago are deleted by cron
+  resolvedAt        DateTime? // kept as history; deleted after max(90 days, company retention) by lib/cleanup.js
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 

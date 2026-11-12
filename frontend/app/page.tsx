@@ -621,20 +621,16 @@ export default function LandingPage() {
               </ul>
             </div>
             <div>
-              <h3 className="mb-3 text-sm font-semibold text-gray-950">Company</h3>
+              <h3 className="mb-3 text-sm font-semibold text-gray-950">Help</h3>
               <ul className="space-y-2 text-sm text-gray-500">
-                <li><a href="#" className="hover:text-gray-800">About</a></li>
-                <li><a href="#" className="hover:text-gray-800">Careers</a></li>
-                <li><a href="#" className="hover:text-gray-800">Contact</a></li>
-                <li><a href="#" className="hover:text-gray-800">Support</a></li>
+                <li><a href="/help" className="hover:text-gray-800">Help &amp; getting started</a></li>
+                <li><a href="/login" className="hover:text-gray-800">Sign in</a></li>
               </ul>
             </div>
             <div>
-              <h3 className="mb-3 text-sm font-semibold text-gray-950">Legal</h3>
+              <h3 className="mb-3 text-sm font-semibold text-gray-950">Contact</h3>
               <ul className="space-y-2 text-sm text-gray-500">
-                <li><a href="#" className="hover:text-gray-800">Privacy policy</a></li>
-                <li><a href="#" className="hover:text-gray-800">Terms of service</a></li>
-                <li><a href="#" className="hover:text-gray-800">Cookie policy</a></li>
+                <li><a href="mailto:support@figbloom.org" className="hover:text-gray-800">support@figbloom.org</a></li>
               </ul>
             </div>
           </div>

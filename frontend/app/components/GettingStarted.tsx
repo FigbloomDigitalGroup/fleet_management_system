@@ -34,6 +34,8 @@ interface Progress {
   tracked: number;
   geofences: number;
   billingSet: boolean;
+  // The first vehicle that isn't reporting yet, for "Connect tracking".
+  unconnected: { id: string; plate: string } | null;
 }
 
 interface Step {
@@ -67,10 +69,12 @@ function fleetSteps(p: Progress, base: "/company" | "/admin"): Step[] {
     },
     {
       key: "tracking",
-      title: "Connect the driver app or a tracker",
-      text: "The driver signs in to the FIGBLOOM FLEET app and allows location. Their vehicle then shows on the live map.",
+      title: "Connect tracking",
+      text: "Connect a GPS tracker (or, once the driver app is out, the driver's phone) on the vehicle's page. It then shows on the live map.",
       done: p.tracked > 0,
-      action: { label: "How to connect", href: "/help#tracking" },
+      action: p.unconnected
+        ? { label: `Connect ${p.unconnected.plate}`, href: `${base}/vehicles/${p.unconnected.id}#connect-tracking` }
+        : { label: "How it works", href: "/help#tracking" },
     },
     {
       key: "geofence",
@@ -132,17 +136,22 @@ export default function GettingStarted() {
         apiRequest<T>(path)
           .then(fn)
           .catch(() => 0);
+      let unconnected: Progress["unconnected"] = null;
       const [vehicles, drivers, admins, tracked, geofences, billing] = await Promise.all([
         count<VehicleRecord[]>("/api/vehicles", (d) => d.length),
         count<DriverRecord[]>("/api/users/drivers", (d) => d.length),
         isOwner ? count<AdminRecord[]>("/api/users/admins", (d) => d.length) : Promise.resolve(0),
-        count<LiveVehicleRecord[]>("/api/tracking/live", (d) => d.filter((v) => v.lastLocation).length),
+        count<LiveVehicleRecord[]>("/api/tracking/live", (d) => {
+          const first = d.find((v) => !v.lastLocation);
+          unconnected = first ? { id: first.vehicleId, plate: first.plateNumber } : null;
+          return d.filter((v) => v.lastLocation).length;
+        }),
         count<GeofenceRecord[]>("/api/geofences", (d) => d.length),
         isOwner
           ? count<CompanyRecord>("/api/companies/me", (c) => (c.subscriptionPlan !== "trial" || !!c.paymentMethod ? 1 : 0))
           : Promise.resolve(0),
       ]);
-      if (!cancelled) setProgress({ vehicles, drivers, admins, tracked, geofences, billingSet: billing > 0 });
+      if (!cancelled) setProgress({ vehicles, drivers, admins, tracked, geofences, billingSet: billing > 0, unconnected });
     }
     load();
     const interval = setInterval(load, REFRESH_MS);

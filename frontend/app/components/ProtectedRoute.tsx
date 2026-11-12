@@ -13,14 +13,16 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
+  const { user, loading, signedOut } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return; // wait until we've checked localStorage
 
     if (!user) {
-      router.push("/login");
+      // Signing out navigates by itself. Otherwise (an old bookmark, a link
+      // opened while signed out) come back here after signing in.
+      if (!signedOut) router.push(`/login?next=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`);
       return;
     }
 
@@ -29,7 +31,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     if (!allowedRoles.includes(user.role)) {
       router.replace(redirectPathForRole(user.role));
     }
-  }, [user, loading, allowedRoles, router]);
+  }, [user, loading, signedOut, allowedRoles, router]);
 
   // While checking auth state, or redirecting, show the loader rather than
   // any protected content — the same one pages show while their data loads,

@@ -77,7 +77,7 @@ export default function AgentOverviewPage() {
     [totalScans, anomaliesLast7Days, lastScan, aiStatus]
   );
 
-  usePageHeader("AI Agent", "Operational history for the anomaly-detection agent", statsNode);
+  usePageHeader("AI checks", "Operational history for the anomaly-detection agent", statsNode);
 
   if (loading) return <FullPageLoading label="Loading agent history" />;
 

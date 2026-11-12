@@ -1,5 +1,6 @@
 import prisma from "../lib/prisma.js";
 import { toApi } from "../lib/serialize.js";
+import { platformDecisionsEnabled } from "../lib/platform/settings.js";
 
 const VEHICLE_LIMIT_DEFAULTS = { trial: 3, basic: 15, pro: 50, enterprise: 999 };
 
@@ -18,7 +19,10 @@ export async function getPlatformSettings() {
 export async function getSettings(req, res) {
   try {
     const settings = await getPlatformSettings();
-    return res.json(toApi(settings));
+    // With Figbloom-console decisions on, requireManualApproval isn't used:
+    // the console's per-product auto-approve decides. The settings page
+    // says so.
+    return res.json({ ...toApi(settings), consoleDecisions: platformDecisionsEnabled() });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch settings" });

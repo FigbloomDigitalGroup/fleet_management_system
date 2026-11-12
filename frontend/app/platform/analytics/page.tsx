@@ -63,7 +63,7 @@ export default function AnalyticsPage() {
         );
     }, [data]);
 
-    usePageHeader("Analytics", "Platform-wide usage across all companies", statsNode);
+    usePageHeader("Fleet reports", "Usage across every customer fleet", statsNode);
 
     if (loading) return <FullPageLoading />;
     if (error) return <p className="text-sm text-red-600">{error}</p>;

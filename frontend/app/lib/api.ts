@@ -9,6 +9,19 @@ interface ApiRequestOptions extends RequestInit {
   // The popup shown when a POST/PUT/PATCH/DELETE succeeds; false for none.
   // Left out, it's the server's own `message` or one worked out from the path.
   successMessage?: string | false;
+  // false: a refused request (4xx) doesn't pop up; the caller shows it
+  // itself, next to the form (sign-in, sign-up). Connection and server
+  // problems still pop up.
+  notifyErrors?: boolean;
+}
+
+// What a failed request throws: the message a person should read, plus the
+// HTTP status and the server's JSON body (e.g. a `code`) for callers that
+// show something more specific than a popup.
+export interface ApiError extends Error {
+  notified?: boolean;
+  status?: number;
+  data?: Record<string, unknown>;
 }
 
 // Refresh tokens are single-use and rotate on every call. Pages here fire
@@ -60,11 +73,11 @@ async function refreshAccessToken(): Promise<string | null> {
 // Every failed request shows its message in a popup (ErrorPopups) as well as
 // throwing it, so callers no longer need to log errors to the console. The
 // session-expired case is left to SessionExpiredModal instead.
-function failed(message: string, status?: number): Error {
-  notifyError(message, popupTitle(status));
+function failed(message: string, status?: number, data?: Record<string, unknown>, notify = true): ApiError {
+  if (notify) notifyError(message, popupTitle(status));
   // Marks it as already shown, so ErrorPopups doesn't show it twice if a
   // caller leaves it uncaught.
-  return Object.assign(new Error(message), { notified: true });
+  return Object.assign(new Error(message), { notified: notify, status, data });
 }
 
 // Requests whose success needs no popup: signing in has its own welcome,
@@ -112,6 +125,8 @@ function successText(method: string, path: string): string {
 function popupTitle(status?: number): string {
   if (status === undefined) return "Connection problem";
   if (status >= 500) return "Server problem";
+  if (status === 400 || status === 409 || status === 422) return "Please check the details";
+  if (status === 403) return "Not allowed";
   return "Couldn't complete that";
 }
 
@@ -124,7 +139,7 @@ export async function apiRequest<T = any>(
   // FormData bodies (file uploads) must NOT get an explicit Content-Type —
   // the browser sets its own multipart boundary only when we leave it unset.
   const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
-  const { successMessage, ...init } = options;
+  const { successMessage, notifyErrors = true, ...init } = options;
   const method = (init.method || "GET").toUpperCase();
 
   // A Figbloom staff support view is read-only; the API refuses changes too,
@@ -176,7 +191,8 @@ export async function apiRequest<T = any>(
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw failed(friendlyStatusMessage(res.status, data.error), res.status);
+    const quiet = !notifyErrors && res.status < 500;
+    throw failed(friendlyStatusMessage(res.status, data.error), res.status, data, !quiet);
   }
 
   // Changes (not plain loads, which would pop up on every page and poll)

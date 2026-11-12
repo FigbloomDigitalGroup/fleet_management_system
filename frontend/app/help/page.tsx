@@ -160,28 +160,28 @@ export default function HelpPage() {
               <>
                 Register at <Link href="/register" className="text-teal-700 hover:underline">/register</Link>. Most accounts
                 are switched on within a few minutes; if yours needs a review we email you once it&apos;s approved (usually
-                within one working day).
+                within one working day). Until then, signing in shows your fleet&apos;s status.
               </>,
-              <>Sign in as <span className="font-medium">Company owner</span>. Your Overview has a Getting started checklist that ticks itself off.</>,
+              <>Sign in. Your Overview has a Getting started checklist that ticks itself off.</>,
               <>
-                Add your vehicles under <span className="font-medium">Settings → Vehicles</span> and your drivers under{" "}
-                <span className="font-medium">Settings → Drivers</span>, then assign each driver their vehicle (the same steps as
-                for fleet admins, below).
+                Add your vehicles under <span className="font-medium">Vehicles</span> and your drivers under{" "}
+                <span className="font-medium">Drivers</span> in the menu, then assign each driver their vehicle. On each
+                vehicle&apos;s page, <span className="font-medium">Connect tracking</span> gets it onto the live map.
               </>,
               <>
-                Draw a zone around your depot under <span className="font-medium">Settings → Geofences</span>, and pick a plan under{" "}
-                <span className="font-medium">Settings → Billing</span> when you&apos;re ready.
+                Draw a zone around your depot under <span className="font-medium">Geofences</span>, and pick a plan under{" "}
+                <span className="font-medium">Billing</span> when you&apos;re ready.
               </>,
               <>
                 Optional: if someone else helps run the fleet, give them their own login under{" "}
-                <span className="font-medium">Settings → Admins</span>. You choose their access (Full, Dispatcher or Viewer) and
+                <span className="font-medium">Admins</span>. You choose their access (Full, Dispatcher or Viewer) and
                 can keep doing everything yourself.
               </>,
             ]}
           />
           <p>
             Alert limits (speed, idle time, offline time) and tracking hours are under{" "}
-            <span className="font-medium">Settings → Company</span>.
+            <span className="font-medium">Settings</span>.
           </p>
         </Section>
 
@@ -189,51 +189,55 @@ export default function HelpPage() {
           <Steps
             items={[
               <>
-                Owners sign in as <span className="font-medium">Company owner</span>; fleet admins sign in as{" "}
-                <span className="font-medium">Fleet admin</span> with the details the owner gave them.
+                Owners and fleet admins sign in on the same page; fleet admins use the details the owner gave them.
               </>,
               <>
-                Add vehicles under <span className="font-medium">Settings → Vehicles</span> (one at a time, or import a
-                spreadsheet).
+                Add vehicles under <span className="font-medium">Vehicles</span> (one at a time, or import a spreadsheet).
               </>,
               <>
-                Add drivers under <span className="font-medium">Settings → Drivers</span>. Each gets an email and password for the
-                phone app. Assign each driver their vehicle.
+                Add drivers under <span className="font-medium">Drivers</span>. Each gets an email and password for the phone
+                app. Assign each driver their vehicle.
               </>,
-              <>Ask each driver to install the app and sign in (see the next section).</>,
-              <>Draw zones under <span className="font-medium">Settings → Geofences</span> to get alerts when vehicles leave or enter them.</>,
+              <>Open each vehicle and use <span className="font-medium">Connect tracking</span> (see the next section).</>,
+              <>Draw zones under <span className="font-medium">Geofences</span> to get alerts when vehicles leave or enter them.</>,
             ]}
           />
           <p>
-            Day to day: the <span className="font-medium">Map</span> is your home screen;{" "}
-            <span className="font-medium">Dispatch</span> holds Jobs, Routes and Messages; <span className="font-medium">Reports</span>{" "}
-            holds Trips, Alerts, Summary, Expenses and Inspections.
+            Day to day, everything is in the menu on the left (on a phone, the menu button at the top or bottom):
+            Overview, Live map, Vehicles, Drivers, Trips, Jobs &amp; routes, Geofences, Alerts, Expenses, Inspections &amp;
+            maintenance, Reports and Messages.
           </p>
         </Section>
 
         <Section id="tracking" title="Getting vehicles on the map">
-          <p>A vehicle appears on the live map once something sends its location. There are two ways:</p>
+          <p>
+            A vehicle appears on the live map once something sends its location. Open the vehicle (Vehicles, then the
+            vehicle) and use <span className="font-medium">Connect tracking</span>. There are two ways:
+          </p>
           <ul className="list-disc space-y-2 pl-5">
             <li>
-              <span className="font-medium text-gray-900">The driver app (most fleets).</span> The owner or an admin adds the
-              driver and assigns them the vehicle. The driver installs FIGBLOOM FLEET on an Android phone, signs in, and allows location
-              access (choose &quot;Allow all the time&quot; so tracking continues with the screen off). The vehicle then
-              reports while that driver is signed in.
+              <span className="font-medium text-gray-900">A GPS tracker.</span> Press <em>Create tracker token</em>, copy the
+              token and the server address, and put both in the tracker&apos;s settings (or give them to whoever installs it).
+              The page lists the exact steps. Not sure your tracker can do it? Email support@figbloom.org with its make and
+              model.
             </li>
             <li>
-              <span className="font-medium text-gray-900">A GPS tracker.</span> A hardware tracker can report into the same
-              map and trips with its own secure per-vehicle token. Contact Figbloom support to set one up.
+              <span className="font-medium text-gray-900">The driver&apos;s phone (coming soon).</span> The FIGBLOOM FLEET driver
+              app isn&apos;t on Google Play yet. Once it is, the driver signs in with the email and password you created for
+              them and allows location &quot;All the time&quot;; their assigned vehicle then reports while they&apos;re signed
+              in.
             </li>
           </ul>
           <p>
-            &quot;No GPS yet&quot; next to a vehicle means nothing has reported for it so far: check that a driver is assigned
-            and signed in to the app. Trips are recorded automatically from those locations.
+            &quot;No GPS yet&quot; next to a vehicle means nothing has reported for it so far. Trips are recorded
+            automatically from those locations.
           </p>
         </Section>
 
         <Section id="driver-app" title="The driver app" highlight={mine === "driver-app"}>
           <p>
-            Drivers use the FIGBLOOM FLEET Android app with the email and password the owner or an admin created. In the app they share
+            The driver app is <strong>coming soon to Google Play</strong>; it isn&apos;t available to download yet. Drivers will
+            use it with the email and password the owner or an admin created. In the app they share
             their location, see the day&apos;s jobs and record proof of delivery, send SOS, message the office, do vehicle
             inspections, and log fuel and other expenses with a receipt photo. All of it shows up in the web dashboard.
           </p>
@@ -279,11 +283,14 @@ export default function HelpPage() {
           <dl className="space-y-3">
             <div>
               <dt className="font-medium text-gray-900">I registered but can&apos;t sign in.</dt>
-              <dd>Your account is still awaiting approval. You&apos;ll get an email as soon as it&apos;s active.</dd>
+              <dd>
+                Your fleet hasn&apos;t been switched on yet. Signing in shows its status and what happens next; you&apos;ll get
+                an email as soon as it&apos;s active.
+              </dd>
             </div>
             <div>
-              <dt className="font-medium text-gray-900">I picked the wrong role on the sign-in page.</dt>
-              <dd>No problem: you&apos;re always taken to the area that matches your account.</dd>
+              <dt className="font-medium text-gray-900">Which area will I land in?</dt>
+              <dd>The one that matches your account (owner, fleet admin or Figbloom staff). There&apos;s nothing to pick.</dd>
             </div>
             <div>
               <dt className="font-medium text-gray-900">I forgot my password.</dt>

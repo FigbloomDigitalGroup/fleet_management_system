@@ -50,29 +50,58 @@ const DEFAULT_HINT = "Ask about your fleet.";
 
 // The widget can be dragged anywhere so it never sits on top of what you're
 // editing. Its spot is kept as distances from the bottom-right corner (where
-// it starts) and remembered in this browser.
-const BUTTON_PX = 56;
+// it starts) and remembered in this browser. On phones it always stays above
+// the tab bar along the bottom of the screen, so it can't cover navigation.
+const BUTTON_PX = 48;
 const EDGE_PX = 8;
 const GAP_PX = 12;
+// Phone tab bar (AppShell) height plus a little air.
+const PHONE_BREAKPOINT = 768;
+const PHONE_MIN_BOTTOM = 68;
 const POSITION_KEY = "fleet:assistant-position";
+const HINT_SEEN_KEY = "fleet:assistant-hint-seen";
 const DEFAULT_POSITION = { right: 24, bottom: 24 };
 type Position = typeof DEFAULT_POSITION;
 
+function isPhone() {
+  return window.innerWidth < PHONE_BREAKPOINT;
+}
+
 function clampToViewport(p: Position): Position {
+  const minBottom = isPhone() ? PHONE_MIN_BOTTOM : EDGE_PX;
   const maxRight = window.innerWidth - BUTTON_PX - EDGE_PX;
   const maxBottom = window.innerHeight - BUTTON_PX - EDGE_PX;
   return {
     right: Math.round(Math.min(Math.max(p.right, EDGE_PX), maxRight)),
-    bottom: Math.round(Math.min(Math.max(p.bottom, EDGE_PX), maxBottom)),
+    bottom: Math.round(Math.min(Math.max(p.bottom, minBottom), maxBottom)),
   };
 }
 
 function readPosition(): Position {
+  const fallback = isPhone() ? { right: 12, bottom: PHONE_MIN_BOTTOM } : DEFAULT_POSITION;
   try {
     const raw = localStorage.getItem(POSITION_KEY);
-    return raw ? { ...DEFAULT_POSITION, ...JSON.parse(raw) } : DEFAULT_POSITION;
+    return raw ? { ...fallback, ...JSON.parse(raw) } : fallback;
   } catch {
-    return DEFAULT_POSITION;
+    return fallback;
+  }
+}
+
+// The "what you can ask" hint is shown once per browser, on screens wide
+// enough that it doesn't cover anything, and can be closed.
+function hintAlreadySeen() {
+  try {
+    return localStorage.getItem(HINT_SEEN_KEY) === "1";
+  } catch {
+    return true;
+  }
+}
+
+function markHintSeen() {
+  try {
+    localStorage.setItem(HINT_SEEN_KEY, "1");
+  } catch {
+    // storage blocked: it just shows again next visit
   }
 }
 
@@ -87,7 +116,7 @@ function writePosition(p: Position) {
 // Floating assistant — opens a small chat panel. Answers are grounded in this
 // company's own fleet data on the backend (see fleetAssistant.js), not
 // general knowledge.
-export default function AgentChatWidget() {
+export default function AgentChatWidget({ hidden = false, hideOnPhone = false }: { hidden?: boolean; hideOnPhone?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -103,6 +132,26 @@ export default function AgentChatWidget() {
   const drag = useRef<{ x: number; y: number; from: Position; moved: boolean } | null>(null);
   // A drag ends with a click on the button — that click mustn't toggle the chat.
   const justDragged = useRef(false);
+  // The page the tip was shown on: it never follows you to the next page,
+  // where it could sit on top of that page's controls.
+  const [hintPath, setHintPath] = useState<string | null>(null);
+  const showHint = hintPath !== null && hintPath === pathname;
+  const setShowHint = (show: boolean) => setHintPath(show ? pathname : null);
+
+  // Once, on wide screens only, a moment after the page settles, and gone
+  // again by itself after a few seconds.
+  useEffect(() => {
+    if (isPhone() || hintAlreadySeen()) return;
+    const show = setTimeout(() => {
+      setHintPath(window.location.pathname);
+      markHintSeen();
+    }, 1500);
+    const hide = setTimeout(() => setHintPath(null), 9500);
+    return () => {
+      clearTimeout(show);
+      clearTimeout(hide);
+    };
+  }, []);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
@@ -163,6 +212,7 @@ export default function AgentChatWidget() {
       justDragged.current = false;
       return;
     }
+    setShowHint(false);
     setOpen((o) => !o);
   }
 
@@ -195,8 +245,8 @@ export default function AgentChatWidget() {
         geofenceDraft?: GeofenceDraft;
       }>("/api/agent/ask", { method: "POST", body: JSON.stringify({ question }) });
       setMessages((m) => [...m, { role: "agent", text: answer, routeDraft, geofenceDraft }]);
-    } catch (err: any) {
-      setError(err.message || "Failed to get an answer");
+    } catch (err) {
+      setError((err as Error).message || "Failed to get an answer");
     } finally {
       setSending(false);
     }
@@ -231,8 +281,10 @@ export default function AgentChatWidget() {
   const pageSegment = pathname?.split("/").filter(Boolean)[1] || "dashboard";
   const hint = PAGE_HINTS[pageSegment] || DEFAULT_HINT;
 
+  if (hidden) return null;
+
   return (
-    <>
+    <div className={hideOnPhone ? "hidden md:block" : undefined}>
       {open && (
         <div
           style={panelStyle}
@@ -310,16 +362,24 @@ export default function AgentChatWidget() {
       )}
 
       <div style={{ right: position.right, bottom: position.bottom }} className="fixed z-50">
-        {!open && (
+        {!open && showHint && (
           // Beside the button, on whichever side faces into the screen.
           <div
-            key={pageSegment}
-            className={`animate-hint-in absolute top-1/2 flex w-max max-w-[210px] -translate-y-1/2 items-start gap-1.5 rounded-md bg-gradient-to-br from-violet-50 to-indigo-50 px-3 py-2 text-xs text-violet-800 shadow-lg ring-1 ring-violet-200 ${
+            role="status"
+            className={`animate-hint-in absolute top-1/2 flex w-max max-w-[220px] -translate-y-1/2 items-start gap-1.5 rounded-md bg-gradient-to-br from-violet-50 to-indigo-50 py-2 pl-3 pr-1.5 text-xs text-violet-800 shadow-lg ring-1 ring-violet-200 ${
               onLeft ? "left-full ml-3" : "right-full mr-3"
             }`}
           >
             <BsStars className="mt-0.5 shrink-0 text-violet-500" size={13} aria-hidden="true" />
             <span>{hint}</span>
+            <button
+              type="button"
+              onClick={() => setShowHint(false)}
+              aria-label="Close tip"
+              className="-mt-0.5 shrink-0 rounded p-0.5 text-violet-400 hover:bg-violet-100 hover:text-violet-700"
+            >
+              <FiX size={12} />
+            </button>
           </div>
         )}
 
@@ -328,11 +388,11 @@ export default function AgentChatWidget() {
           onClick={toggleOpen}
           aria-label={open ? "Close fleet assistant" : "Ask the fleet assistant"}
           title="Click to chat · drag to move"
-          className="flex h-14 w-14 shrink-0 cursor-grab touch-none select-none items-center justify-center rounded-full bg-gradient-to-br from-teal-600 to-teal-500 text-white shadow-lg transition-transform hover:scale-105 active:cursor-grabbing"
+          className="flex h-12 w-12 shrink-0 cursor-grab touch-none select-none items-center justify-center rounded-full bg-gradient-to-br from-teal-600 to-teal-500 text-white shadow-lg transition-transform hover:scale-105 active:cursor-grabbing"
         >
-          <RiRobot3Fill size={24} />
+          <RiRobot3Fill size={22} />
         </button>
       </div>
-    </>
+    </div>
   );
 }

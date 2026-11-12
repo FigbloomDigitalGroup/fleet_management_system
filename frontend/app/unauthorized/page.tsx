@@ -13,7 +13,7 @@ export default function UnauthorizedPage() {
       <div className="max-w-sm text-center">
         <h1 className="text-2xl font-bold text-gray-900 mb-3">Not your workspace</h1>
         <p className="text-sm text-gray-500 mb-8">
-          This page isn't available for your account. Head back to your own dashboard instead.
+          This page isn&apos;t available for your account. Head back to your own dashboard instead.
         </p>
         <div className="flex items-center justify-center gap-3">
           <button
@@ -23,7 +23,7 @@ export default function UnauthorizedPage() {
             Go to my dashboard
           </button>
           <button
-            onClick={logout}
+            onClick={() => logout()}
             className="px-5 py-2.5 rounded text-sm border border-gray-300 text-gray-600 hover:border-gray-400"
           >
             Sign out

@@ -175,9 +175,9 @@ connectDatabase().then(() => {
       .catch((err) => console.error("[maintenance] reminder sweep crashed:", err));
   });
 
-  // Resolved alerts (30 min after resolving) and expired sign-in tokens —
-  // MongoDB's TTL indexes did this before PostgreSQL.
-  cron.schedule("* * * * *", () => {
+  // Old resolved alerts (kept at least 90 days, see lib/cleanup.js) and
+  // expired sign-in tokens. Hourly is plenty for both.
+  cron.schedule("17 * * * *", () => {
     purgeExpiredRecords().catch((err) => console.error("[cleanup] purge crashed:", err));
   });
 

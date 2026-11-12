@@ -27,17 +27,22 @@ export default function BarChartCard({
   const { colors } = useFleetTheme();
   const color = colorProp ?? colors.accentDark;
   const seriesLabel = dataKey.charAt(0).toUpperCase() + dataKey.slice(1);
+  const empty = data.length === 0 || data.every((d) => !Number(d[dataKey]));
 
   return (
-    // A column so the chart grows into any extra height when the card is
-    // stretched beside a taller one; 200px tall otherwise.
-    <div className="flex flex-col rounded-lg bg-white p-5 shadow-sm ring-1 ring-black/5">
+    // The chart gets a fixed pixel height: ResponsiveContainer with
+    // height="100%" inside a box whose height comes only from min-height
+    // measures 0px and draws nothing but the legend.
+    <div className="flex h-full flex-col rounded-lg bg-white p-5 shadow-sm ring-1 ring-black/5">
       <div className="mb-4">
         <h3 className={`${titleSizes[size]} font-semibold text-gray-900`}>{title}</h3>
         {description && <p className="text-xs text-teal-600 mt-0.5">{description}</p>}
       </div>
-      <div className="min-h-[200px] flex-1">
-      <ResponsiveContainer width="100%" height="100%">
+      <div className="flex flex-1 flex-col justify-center">
+      {empty ? (
+        <p className="py-16 text-center text-sm text-gray-400">No data yet.</p>
+      ) : (
+      <ResponsiveContainer width="100%" height={220}>
         <BarChart data={data} barCategoryGap="35%">
           <CartesianGrid stroke="#f1f3f5" vertical={false} />
           <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
@@ -57,6 +62,7 @@ export default function BarChartCard({
           />
         </BarChart>
       </ResponsiveContainer>
+      )}
       </div>
       <div className="mt-2 flex justify-center">
         <span className="flex items-center gap-1.5 text-xs text-gray-500">

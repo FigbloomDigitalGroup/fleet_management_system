@@ -167,7 +167,8 @@ export default function CompanyBillingPage() {
         </div>
       </div>
 
-      {SPECIAL_OFFER.active && (
+      {/* Only to fleets not already on the offered plan (or above it). */}
+      {SPECIAL_OFFER.active && !["pro", "enterprise"].includes(company.subscriptionPlan) && (
         <div className="relative overflow-hidden rounded-lg bg-teal-950 shadow-sm">
           <div className="relative flex items-center gap-3 px-5 py-4">
             <span className="animate-shake inline-block shrink-0 rounded-full bg-orange-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">

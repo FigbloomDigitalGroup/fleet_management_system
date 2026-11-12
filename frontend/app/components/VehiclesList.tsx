@@ -79,6 +79,8 @@ export default function VehiclesList({
   const [mileage, setMileage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  // The vehicle just added, so the form can point to its next step.
+  const [justAdded, setJustAdded] = useState<{ id: string; plate: string } | null>(null);
 
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -111,9 +113,10 @@ export default function VehiclesList({
   async function handleAddVehicle(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
+    setJustAdded(null);
     setIsSubmitting(true);
     try {
-      await apiRequest("/api/vehicles", {
+      const created = await apiRequest<VehicleRecord>("/api/vehicles", {
         method: "POST",
         body: JSON.stringify({
           plateNumber,
@@ -124,6 +127,7 @@ export default function VehiclesList({
           avgConsumptionLPer100Km: mileage ? parseFloat(mileage) : undefined,
         }),
       });
+      setJustAdded({ id: created._id, plate: created.plateNumber });
       setPlateNumber("");
       setMake("");
       setModel("");
@@ -370,16 +374,21 @@ export default function VehiclesList({
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Device ID <span className="text-gray-400">(optional)</span>
+            <label htmlFor="vehicle-device-id" className="block text-xs font-medium text-gray-600 mb-1">
+              Tracker ID <span className="text-gray-400">(optional)</span>
             </label>
             <input
+              id="vehicle-device-id"
               type="text"
               value={deviceId}
               onChange={(e) => setDeviceId(e.target.value)}
-              placeholder="TRK-001"
+              placeholder="e.g. the tracker's IMEI"
               className="w-full px-3 py-2 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
             />
+            <p className="text-xs text-gray-400 mt-1">
+              Just a label so you can tell trackers apart. You connect the tracker (or the driver&apos;s phone) on the
+              vehicle&apos;s page after adding it.
+            </p>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -398,6 +407,14 @@ export default function VehiclesList({
           </div>
 
           {formError && <p className="text-xs text-red-600">{formError}</p>}
+          {justAdded && (
+            <div className="rounded border border-teal-200 bg-teal-50 px-3 py-2 text-xs text-teal-900" role="status">
+              <span className="font-medium">{justAdded.plate} added.</span> Next, get it on the map:{" "}
+              <Link href={`${basePath}/${justAdded.id}#connect-tracking`} className="font-semibold underline">
+                Connect tracking
+              </Link>
+            </div>
+          )}
 
           <button
             type="submit"
