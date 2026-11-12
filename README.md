@@ -267,6 +267,45 @@ backoff, applying decisions once, and the console secret.
 
 ---
 
+## Demo Fleet (sample data for demos)
+
+`backend/scripts/seedDemoFleet.js` creates **Figbloom Demo Fleet** (slug `figbloom-demo-fleet`), a company with a week
+of made-up activity around Nairobi, so a fresh environment has something to show prospects:
+
+```bash
+cd backend
+npm run seed:demo -- owner@example.com            # creates it (a second run changes nothing)
+npm run seed:demo -- owner@example.com --reset    # wipes the demo company's data and seeds it again, up to now
+```
+
+On the AWS server: `docker exec app-app-1 node scripts/seedDemoFleet.js <owner-email> [--reset]`.
+
+- **The company:** active, plan `pro` (no trial to expire), industry logistics. The email given becomes its
+  **company owner** with a random password nobody sees: open *Forgot password* on the sign-in page, enter that email
+  and set a password from the emailed link (as for `createPlatformAdmin.js`). The email can't already belong to
+  another company or be a platform admin; use an alias such as `you+demo@...` if it is.
+- **People:** one admin and four drivers named "Demo ..." at `@demo.invalid` (a domain that never receives mail),
+  each with a random password, so nobody can sign in as them.
+- **Data:** 6 vehicles (Kenyan plates; active, idle, offline, in maintenance), about 3,000 GPS pings on Mombasa
+  Road, Uhuru Highway, Thika Road and Ngong Road over the last 7 days, about 90 trips, speeding and harsh-braking
+  events (driver scores from Excellent to Fair), 2 geofences (depot in Industrial Area, a client site at Athi River
+  EPZ) with their entry/exit events, open and resolved alerts, jobs (yesterday, today and tomorrow) with their
+  optimized lines, 2 recurring routes, fuel and other expenses, daily pre-trip inspections (one failed), service
+  records and reminders, and a few messages. Every page of the company dashboard and the Reports tabs show data.
+- **It's a snapshot.** Times are relative to when it ran, so the "last 7 days" empty out as days pass, and resolved
+  alerts are deleted 30 minutes after resolving like any other. Run it with `--reset` shortly before a demo.
+- **Figbloom platform:** it is registered the way the backfill does it (`PUT` organization with `status: active`,
+  `backfill: true`, then the tenant), then queued in `PlatformSyncQueue` like a normal registration. So it appears in
+  the console as active, and with `PLATFORM_DECISIONS_ENABLED` on the platform's answer can't turn it back to pending.
+  If the console has already decided otherwise (e.g. suspended it), that decision stands (and, with decisions on, is
+  applied here too). If the platform can't be reached while decisions are on, it isn't queued (it would arrive
+  pending): run the script again.
+- **Safety:** it only touches the company with that slug, and refuses one it didn't create. `--reset` keeps the
+  company row (same id, so the same platform record) and the given owner (and their password); everything else in
+  the demo company is deleted and recreated. It prints the company id and counts, never a password.
+
+---
+
 ## Security Notes (for later phases)
 
 - Passwords must be hashed (bcrypt/argon2) — never stored in plain text
