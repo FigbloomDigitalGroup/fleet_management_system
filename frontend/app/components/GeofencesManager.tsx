@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
+import { FiMap } from "react-icons/fi";
+import EmptyState from "./EmptyState";
 import { GoogleMap, Circle, useJsApiLoader } from "@react-google-maps/api";
 import { apiRequest } from "../lib/api";
 import { usePulseColor } from "../lib/usePulseColor";
@@ -210,7 +212,7 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
       {/* Sidebar: list + create form */}
       <div className="space-y-4">
         {canManage && (
-          <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
+          <div id="add-zone" className="scroll-mt-4 bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
             <h3 className="text-sm font-medium text-gray-700 mb-4">Add a zone</h3>
             <form onSubmit={handleCreate} className="space-y-3">
               <div>
@@ -262,7 +264,13 @@ export default function GeofencesManager({ canManage = false }: { canManage?: bo
             </div>
           )}
           {geofences.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No zones created yet.</p>
+            <EmptyState
+              icon={FiMap}
+              compact
+              title="No zones yet"
+              text="Draw a zone around your depot or a customer site and you'll get an alert whenever a vehicle enters or leaves it."
+              action={canManage ? { label: "Draw your first zone", href: "#add-zone" } : null}
+            />
           ) : (
             <ul className="divide-y divide-gray-100 mt-2">
               {geofences.map((g) => (

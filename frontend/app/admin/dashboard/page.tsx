@@ -11,6 +11,7 @@ import LineChartCard from "../../components/LineChartCard";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import { usePageHeader } from "../../components/DashboardShell";
 import OverviewMetrics from "../../components/reports/OverviewMetrics";
+import GettingStarted from "../../components/GettingStarted";
 import { VehicleRecord, DriverRecord, TripRecord, AgentSummary, DailyStatPoint, RouteRecord } from "../../types/auth";
 import MapMetricsCard from "../../components/MapMetricsCard";
 import WheelIcon from "../../components/WheelIcon";
@@ -125,6 +126,8 @@ export default function AdminDashboard() {
           Couldn't refresh dashboard data — showing the last loaded values. ({loadError})
         </div>
       )}
+
+      <GettingStarted />
 
       <OverviewMetrics basePath="/admin" />
 

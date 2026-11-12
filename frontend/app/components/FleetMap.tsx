@@ -1,19 +1,20 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import EmptyState from "./EmptyState";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GoogleMap, OverlayView, Circle, Polyline, TrafficLayer, useJsApiLoader } from "@react-google-maps/api";
 import { IoCarSportSharp } from "react-icons/io5";
 import { ImLocation2 } from "react-icons/im";
 import { FaSearch } from "react-icons/fa";
-import { FiPlus, FiMinus, FiCrosshair, FiLayers, FiX, FiBell, FiCircle, FiNavigation } from "react-icons/fi";
+import { FiPlus, FiMinus, FiCrosshair, FiLayers, FiX, FiBell, FiCircle, FiNavigation, FiHelpCircle } from "react-icons/fi";
 import { FaLocationPinLock } from "react-icons/fa6";
 import { apiRequest } from "../lib/api";
 import { usePulseColor } from "../lib/usePulseColor";
 import { isOutsideGeofences } from "../lib/geofence";
 import { VEHICLE_TYPE_ICONS } from "../lib/vehicleIcons";
-import { BottomMenu, useAppShell } from "./AppShell";
+import { BottomMenu, SignedInAs, useAppShell } from "./AppShell";
 import BrandIcon from "./BrandIcon";
 import FullPageLoading from "./FullPageLoading";
 import { GeofenceRecord, RouteRecord } from "../types/auth";
@@ -620,10 +621,16 @@ export default function FleetMap({
         <div className="border-b border-gray-100 px-3 pt-3 pb-2">
           <div className="mb-2 flex items-center gap-2">
             <BrandIcon className="h-4 w-4 shrink-0" />
-            <span className="flex-1 truncate text-xs font-bold text-blue-950">
-              FIGBLOOM FLEET
-              {shell?.companyName && <span className="font-medium text-gray-400"> · {shell.companyName}</span>}
-            </span>
+            <span className="min-w-0 flex-1 truncate text-xs font-bold text-blue-950">FIGBLOOM FLEET</span>
+            {shell && <SignedInAs companyName={shell.companyName} roleName={shell.roleName} compact />}
+            <Link
+              href="/help"
+              aria-label="Help"
+              title="Help & getting started"
+              className="rounded-full p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+            >
+              <FiHelpCircle size={17} />
+            </Link>
             {shell?.nav.alertsHref && (
               <Link
                 href={shell.nav.alertsHref}
@@ -699,9 +706,16 @@ export default function FleetMap({
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {listedVehicles.length === 0 ? (
-            <p className="px-4 py-6 text-center text-xs text-gray-400">
-              {vehicles.length === 0 ? "No vehicles registered yet." : "No vehicles match."}
-            </p>
+            vehicles.length === 0 ? (
+              <EmptyState
+                compact
+                title="No vehicles on the map yet"
+                text="The live map shows where each vehicle is right now, once its driver app or tracker sends a location. Start by adding a vehicle."
+                action={{ label: "Go to Vehicles", href: basePath }}
+              />
+            ) : (
+              <p className="px-4 py-6 text-center text-xs text-gray-400">No vehicles match.</p>
+            )
           ) : (
             listedVehicles.map((v) => (
               <VehicleRow

@@ -3,7 +3,7 @@
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FiArrowLeft, FiBell, FiChevronLeft, FiLogOut, FiMapPin, FiMenu } from "react-icons/fi";
+import { FiArrowLeft, FiBell, FiChevronLeft, FiHelpCircle, FiLogOut, FiMapPin, FiMenu } from "react-icons/fi";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import { FaLocationPinLock } from "react-icons/fa6";
 import { useAuth } from "../context/AuthContext";
@@ -15,6 +15,7 @@ import ImageUploadButton from "./ImageUploadButton";
 import { industryLabel } from "../lib/industries";
 import { PageHeaderContext, PageHeaderValue } from "./PageHeader";
 import { useShellData } from "./useShellData";
+import { roleLabel } from "../lib/roleRedirect";
 import AlertToastStack from "./AlertToast";
 import AgentChatWidget from "./AgentChatWidget";
 import SessionExpiredModal from "./SessionExpiredModal";
@@ -35,6 +36,23 @@ interface ShellContextValue {
   alertCount: number;
   unreadMessages: number;
   companyName: string | null;
+  // "Company owner", "Fleet admin · view only", "Figbloom staff"…
+  roleName: string;
+}
+
+// Who is signed in, where: the company (or the Figbloom platform) and the
+// role, shown in every page's header and on the live map's card so nobody
+// has to guess which area they're in.
+export function SignedInAs({ companyName, roleName, compact = false }: { companyName: string | null; roleName: string; compact?: boolean }) {
+  if (!roleName) return null;
+  return (
+    <span className={`inline-flex min-w-0 items-center gap-1.5 ${compact ? "text-[10px]" : "text-xs"}`}>
+      {companyName && <span className="max-w-[10rem] truncate font-medium text-gray-700 sm:max-w-[14rem]">{companyName}</span>}
+      <span className="shrink-0 whitespace-nowrap rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 font-medium text-teal-700">
+        {roleName}
+      </span>
+    </span>
+  );
 }
 
 const ShellContext = createContext<ShellContextValue | null>(null);
@@ -136,9 +154,11 @@ export default function AppShell({ children, portal }: { children: ReactNode; po
 
   const [header, setHeader] = useState<PageHeaderValue | null>(null);
   const headerContextValue = useMemo(() => ({ header, setHeader }), [header]);
+  const roleName = roleLabel(user?.role, user?.adminAccess);
+  const headerCompany = isPlatform ? "Figbloom platform" : companyName;
   const shellValue = useMemo(
-    () => ({ nav, alertCount, unreadMessages, companyName }),
-    [nav, alertCount, unreadMessages, companyName]
+    () => ({ nav, alertCount, unreadMessages, companyName, roleName }),
+    [nav, alertCount, unreadMessages, companyName, roleName]
   );
 
   // Desktop: the section menu can be collapsed for more room. Mobile: it's
@@ -264,6 +284,15 @@ export default function AppShell({ children, portal }: { children: ReactNode; po
           </nav>
 
           <div className="space-y-3 px-3 pb-3">
+            <Link
+              href="/help"
+              className={`flex items-center gap-3 rounded px-3 py-2 text-xs font-medium transition-colors ${
+                pathname === "/help" ? "bg-teal-900 text-white" : "text-teal-50 hover:bg-teal-900"
+              }`}
+            >
+              <FiHelpCircle size={16} className="shrink-0" />
+              <span className="flex-1">Help &amp; getting started</span>
+            </Link>
             {companyName && (
               <div className="flex items-center gap-2">
                 <Avatar src={companyLogoUrl} name={companyName} size="sm" shape="square" />
@@ -322,6 +351,7 @@ export default function AppShell({ children, portal }: { children: ReactNode; po
               <h1 className="truncate text-base font-semibold text-blue-950">{title}</h1>
               {header?.subtitle && <p className="truncate text-xs text-gray-500">{header.subtitle}</p>}
             </div>
+            <SignedInAs companyName={headerCompany} roleName={roleName} />
             {zoneCounts && (
               <div className="hidden items-center gap-2 lg:flex">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-medium text-teal-600">

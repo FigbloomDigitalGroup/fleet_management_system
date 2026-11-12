@@ -13,6 +13,7 @@ import MapMetricsCard from "../../components/MapMetricsCard";
 import WheelIcon from "../../components/WheelIcon";
 import { usePageHeader } from "../../components/DashboardShell";
 import OverviewMetrics from "../../components/reports/OverviewMetrics";
+import GettingStarted from "../../components/GettingStarted";
 import { routeDistanceKm, estimateFuelRangeLiters } from "../../lib/routeEstimate";
 import { routeStatusBadge } from "../../lib/routeStatus";
 import {
@@ -127,6 +128,8 @@ export default function CompanyDashboard() {
           Couldn't refresh dashboard data — showing the last loaded values. ({loadError})
         </div>
       )}
+
+      <GettingStarted />
 
       <OverviewMetrics basePath="/company" />
 

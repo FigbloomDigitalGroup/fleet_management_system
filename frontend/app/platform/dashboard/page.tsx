@@ -9,6 +9,7 @@ import BarChartCard from "../../components/BarChartCard";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import { usePageHeader } from "../../components/DashboardShell";
 import { CompanyRecord } from "../../types/auth";
+import NoCompaniesYet from "../../components/NoCompaniesYet";
 
 interface AnalyticsData {
   totals: {
@@ -123,7 +124,7 @@ export default function PlatformDashboard() {
         <p className="text-xs text-teal-600 mb-3">The 5 most recently signed-up companies</p>
         <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
           {recentCompanies.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-6">No companies registered yet.</p>
+            <NoCompaniesYet />
           ) : (
             <table className="w-full text-sm">
               <tbody>

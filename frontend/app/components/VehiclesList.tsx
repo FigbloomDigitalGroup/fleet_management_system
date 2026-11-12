@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
+import { IoCarSportSharp } from "react-icons/io5";
+import EmptyState from "./EmptyState";
+import { useFleetArea } from "../lib/fleetArea";
 import Link from "next/link";
 import { apiRequest } from "../lib/api";
 import { VehicleRecord, DriverRecord, GeofenceRecord } from "../types/auth";
@@ -57,6 +60,7 @@ export default function VehiclesList({
   canAdd?: boolean;
   canDelete?: boolean;
 }) {
+  const { isOwner, addFleetAction } = useFleetArea();
   const [vehicles, setVehicles] = useState<VehicleRecord[]>([]);
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
   const [geofences, setGeofences] = useState<GeofenceRecord[]>([]);
@@ -223,8 +227,19 @@ export default function VehiclesList({
             <tbody>
               {vehicles.length === 0 ? (
                 <tr>
-                  <td colSpan={canDelete ? 6 : 5} className="px-5 py-8 text-center text-gray-400">
-                    No vehicles added yet.
+                  <td colSpan={canDelete ? 6 : 5}>
+                    <EmptyState
+                      icon={IoCarSportSharp}
+                      title="No vehicles yet"
+                      text={
+                        canAdd
+                          ? "Vehicles are what you track. Add one, then assign a driver so their phone app sends its location."
+                          : isOwner
+                            ? "Vehicles are added by your fleet admins. Invite one to get started; it can be you, with a second email."
+                            : "Vehicles are what you track. An admin with full access can add them here."
+                      }
+                      action={canAdd ? { label: "Add your first vehicle", href: "#add-vehicle" } : addFleetAction("vehicle")}
+                    />
                   </td>
                 </tr>
               ) : (
@@ -307,7 +322,7 @@ export default function VehiclesList({
       </div>
 
       {canAdd && (
-      <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5 h-fit">
+      <div id="add-vehicle" className="scroll-mt-4 bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5 h-fit">
         <h3 className="text-sm font-medium text-gray-700">Add a vehicle</h3>
         <p className="text-xs text-teal-600 mt-0.5 mb-4">Register a vehicle to start tracking it.</p>
         <form onSubmit={handleAddVehicle} className="space-y-4">

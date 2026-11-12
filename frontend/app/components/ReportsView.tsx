@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { FiDownload, FiPrinter } from "react-icons/fi";
+import EmptyState from "./EmptyState";
+import { FiBarChart2, FiDownload, FiPrinter } from "react-icons/fi";
 import { apiDownload, apiRequest, errorMessage } from "../lib/api";
 import { formatKes } from "../lib/pricing";
 import { toDateInput } from "../lib/dateKeys";
@@ -242,8 +243,13 @@ export default function ReportsView() {
               <tbody>
                 {report.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={columns.length + 1} className="px-5 py-8 text-center text-gray-400">
-                      Nothing to report for this range.
+                    <td colSpan={columns.length + 1}>
+                      <EmptyState
+                        icon={FiBarChart2}
+                        title="Nothing to report for this range"
+                        text="Reports total up distance, trips, idle time, jobs and expenses per vehicle or driver once your vehicles are being tracked."
+                        action={{ label: "How tracking works", href: "/help#tracking" }}
+                      />
                     </td>
                   </tr>
                 ) : (

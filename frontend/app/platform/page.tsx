@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Skeleton from "../components/Skeleton";
 import { usePageHeader } from "../components/DashboardShell";
 import Avatar from "../components/Avatar";
+import NoCompaniesYet from "../components/NoCompaniesYet";
 import { apiRequest } from "../lib/api";
 
 type CompanyRecord = {
@@ -68,8 +69,8 @@ export default function CompaniesPage() {
             <tbody>
               {companies.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-gray-400">
-                    No companies registered yet.
+                  <td colSpan={5}>
+                    <NoCompaniesYet />
                   </td>
                 </tr>
               ) : (
