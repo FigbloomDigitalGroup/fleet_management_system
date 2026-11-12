@@ -23,11 +23,13 @@ import messageRoutes from "./routes/messageRoutes.js";
 import maintenanceRoutes from "./routes/maintenanceRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import publicRoutes from "./routes/publicRoutes.js";
+import platformRoutes from "./routes/platformRoutes.js";
 import { runAiAnomalyScan } from "./services/aiAnomalyDetector.js";
 import { closeStaleTrips, sweepOfflineDevices } from "./controllers/trackingController.js";
 import { sweepMaintenanceReminders } from "./controllers/maintenanceController.js";
 import { purgeExpiredLocationData } from "./controllers/settingsCompanyController.js";
 import { purgeExpiredRecords } from "./lib/cleanup.js";
+import { runPlatformSync } from "./lib/platform/sync.js";
 
 
 import cors from "cors";
@@ -57,12 +59,14 @@ app.use(
 );
 
 
-// The Paystack webhook needs its own raw-body parser (see billingRoutes.js)
-// for HMAC signature verification — express.json() would consume the
-// request stream first and leave nothing for it to read, so this skips
-// that one path and lets express.json() handle every other route as before.
+// The Paystack webhook and the Figbloom platform's decision webhook need
+// their own raw-body parsers (billingRoutes.js, platformRoutes.js) for HMAC
+// signature verification — express.json() would consume the request stream
+// first and leave nothing for them to read, so this skips those paths and
+// lets express.json() handle every other route as before.
+const RAW_BODY_PATHS = new Set(["/api/billing/webhook", "/api/platform/decisions"]);
 app.use((req, res, next) => {
-  if (req.originalUrl === "/api/billing/webhook") return next();
+  if (RAW_BODY_PATHS.has(req.originalUrl.split("?")[0])) return next();
   // Photos (base64) and batches of offline-buffered GPS points need more
   // than express's 100kb default.
   const limit = req.originalUrl.startsWith("/api/uploads") ? "4mb" : "1mb";
@@ -96,6 +100,7 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/maintenance", maintenanceRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/public", publicRoutes);
+app.use("/api/platform", platformRoutes);
 
 
 
@@ -172,6 +177,15 @@ connectDatabase().then(() => {
   // MongoDB's TTL indexes did this before PostgreSQL.
   cron.schedule("* * * * *", () => {
     purgeExpiredRecords().catch((err) => console.error("[cleanup] purge crashed:", err));
+  });
+
+  // Figbloom platform: sends companies created, renamed or changed to the
+  // platform (the PlatformSyncQueue outbox; lib/platform/sync.js). Does
+  // nothing until the PLATFORM_* settings are set.
+  cron.schedule("* * * * *", () => {
+    runPlatformSync()
+      .then((r) => r && (r.sent || r.failed.length) && console.log(`[platform] sent ${r.sent}, failed ${r.failed.length}, deferred ${r.deferred}, adopted ${r.adopted}`))
+      .catch((err) => console.error("[platform] sync crashed:", err));
   });
 
   // Data retention — nightly at 02:30 Nairobi time.

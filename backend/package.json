@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "nodemon Index.js",
     "start": "prisma migrate deploy && node Index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate deploy",
-    "create-admin": "node scripts/createPlatformAdmin.js"
+    "create-admin": "node scripts/createPlatformAdmin.js",
+    "platform:backfill": "node scripts/platformBackfill.js",
+    "platform:register-webhook": "node scripts/platformRegisterWebhook.js"
   },
   "keywords": [],
   "author": "",

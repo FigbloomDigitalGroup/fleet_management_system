@@ -6,7 +6,7 @@ import { apiRequest } from "../../../lib/api";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import { usePageHeader } from "@/app/components/DashboardShell";
 import IndustryBanner from "@/app/components/IndustryBanner";
-import { CompanyRecord, AdminRecord, CompanyStats } from "../../../types/auth";
+import { CompanyRecord, AdminRecord, CompanyStats, PlatformDecisions } from "../../../types/auth";
 import { industryLabel } from "../../../lib/industries";
 import { vehicleTypeLabel } from "../../../lib/vehicleTypes";
 import { formatKes } from "../../../lib/pricing";
@@ -15,6 +15,7 @@ const statusStyles: Record<string, string> = {
   active: "bg-teal-50 text-teal-600 border-teal-200",
   pending: "bg-orange-50 text-orange-600 border-orange-200",
   suspended: "bg-gray-100 text-gray-500 border-gray-200",
+  rejected: "bg-red-50 text-red-600 border-red-200",
 };
 
 export default function CompanyDetailPage() {
@@ -27,14 +28,17 @@ export default function CompanyDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  // While on, approval and suspension are decided in the Figbloom console.
+  const [platformDecisions, setPlatformDecisions] = useState<PlatformDecisions | null>(null);
 
   async function load() {
     try {
-      const data = await apiRequest<{ company: CompanyRecord; users: AdminRecord[] }>(
+      const data = await apiRequest<{ company: CompanyRecord; users: AdminRecord[]; platformDecisions?: PlatformDecisions }>(
         `/api/companies/${id}`
       );
       setCompany(data.company);
       setUsers(data.users);
+      setPlatformDecisions(data.platformDecisions ?? null);
     } catch (err: any) {
       setError(err.message || "Failed to load company");
     } finally {
@@ -198,22 +202,39 @@ export default function CompanyDetailPage() {
         <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5 h-fit">
           <h3 className="text-sm font-medium text-gray-700">Manage status</h3>
           <p className="text-xs text-teal-600 mt-0.5 mb-4">Controls whether this company can access the platform</p>
-          <div className="space-y-2">
-            <button
-              onClick={() => updateStatus("active")}
-              disabled={updating || company.status === "active"}
-              className="w-full py-2 rounded text-sm font-medium text-white bg-teal-500 hover:bg-teal-600 disabled:opacity-40"
-            >
-              Approve / Activate
-            </button>
-            <button
-              onClick={() => updateStatus("suspended")}
-              disabled={updating || company.status === "suspended"}
-              className="w-full py-2 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-40"
-            >
-              Suspend
-            </button>
-          </div>
+          {platformDecisions?.enabled ? (
+            <div className="rounded border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+              <p>
+                Approving, rejecting, suspending and reactivating companies is decided in the Figbloom console. Its
+                decisions reach this page by themselves.
+              </p>
+              <a
+                href={platformDecisions.consoleUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-block rounded bg-blue-950 px-3 py-1.5 text-sm font-medium text-white"
+              >
+                Open the Figbloom console
+              </a>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <button
+                onClick={() => updateStatus("active")}
+                disabled={updating || company.status === "active"}
+                className="w-full py-2 rounded text-sm font-medium text-white bg-teal-500 hover:bg-teal-600 disabled:opacity-40"
+              >
+                Approve / Activate
+              </button>
+              <button
+                onClick={() => updateStatus("suspended")}
+                disabled={updating || company.status === "suspended"}
+                className="w-full py-2 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-40"
+              >
+                Suspend
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

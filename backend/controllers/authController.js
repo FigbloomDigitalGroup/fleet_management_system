@@ -6,6 +6,8 @@ import { toApi, isUniqueViolation } from "../lib/serialize.js";
 import { sendPasswordResetEmail, sendCompanyWelcomeEmail, sendUserWelcomeEmail, frontendUrl } from "../lib/mailer.js";
 import { parseSpreadsheetRows } from "../lib/spreadsheet.js";
 import { getPlatformSettings } from "./settingsController.js";
+import { platformDecisionsEnabled } from "../lib/platform/settings.js";
+import { enqueueCompanySync } from "../lib/platform/store.js";
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const WELCOME_LINK_DAYS = 3; // "Set your password" link in the welcome email
@@ -130,6 +132,11 @@ export async function registerCompany(req, res) {
     const trialEndsAt =
       subscriptionPlan === "trial" ? new Date(Date.now() + settings.trialDays * 24 * 60 * 60 * 1000) : null;
 
+    // Once the Figbloom console decides, every new company starts pending
+    // here; the platform's answer (pending, or active with its auto-approve)
+    // is then applied by the sync (lib/platform/sync.js).
+    const startsPending = settings.requireManualApproval || platformDecisionsEnabled();
+
     const passwordHash = await bcrypt.hash(password, 10);
     // Company and owner together, so a failure can't leave an ownerless company.
     const [company, user] = await prisma.$transaction(async (tx) => {
@@ -137,7 +144,7 @@ export async function registerCompany(req, res) {
         data: {
           name: companyName,
           slug,
-          status: settings.requireManualApproval ? "pending" : "active",
+          status: startsPending ? "pending" : "active",
           industry: industry || "other",
           subscriptionPlan,
           trialEndsAt,
@@ -152,6 +159,8 @@ export async function registerCompany(req, res) {
           companyId: company.id,
         },
       });
+      // registered with the Figbloom platform by the every-minute sync
+      await enqueueCompanySync(tx, company.id);
       return [company, user];
     });
 
@@ -381,6 +390,11 @@ export async function login(req, res) {
       if (company && company.status === "suspended") {
         return res.status(403).json({
           error: "Your company's account has been suspended. Please contact support.",
+        });
+      }
+      if (company && company.status === "rejected") {
+        return res.status(403).json({
+          error: "Your company's registration was not approved. Please contact support.",
         });
       }
       if (company && company.status === "pending") {

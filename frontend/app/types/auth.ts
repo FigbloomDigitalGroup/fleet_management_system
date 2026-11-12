@@ -19,11 +19,18 @@ export interface LoginResponse {
   refreshToken: string;
 }
 
+// GET /api/companies/:id: whether the Figbloom console decides approval and
+// suspension (PLATFORM_DECISIONS_ENABLED on the API), and where it is.
+export interface PlatformDecisions {
+  enabled: boolean;
+  consoleUrl: string;
+}
+
 export interface CompanyRecord {
   _id: string;
   name: string;
   slug: string;
-  status: "active" | "suspended" | "pending";
+  status: "active" | "suspended" | "pending" | "rejected";
   subscriptionPlan: string;
   paymentMethod?: "mpesa" | "paystack" | null;
   totalRevenue?: number;
