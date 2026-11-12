@@ -3,7 +3,9 @@ import { toApi } from "../lib/serialize.js";
 import { isInsideGeofence } from "../lib/geo.js";
 import { PLAN_PRICING_KES } from "../config/pricing.js";
 import { setImageField } from "./uploadController.js";
-import { sendCompanyApprovedEmail } from "../lib/mailer.js";
+import { setCompanyStatus, notifyCompanyStatusChange } from "../lib/companyStatus.js";
+import { platformDecisionsEnabled, platformConsoleUrl, decidedInConsoleBody } from "../lib/platform/settings.js";
+import { enqueueCompanySyncSafely } from "../lib/platform/store.js";
 
 // Updates one company; null when it doesn't exist (Mongo's findByIdAndUpdate).
 async function updateCompany(id, data) {
@@ -34,36 +36,35 @@ export async function getCompany(req, res) {
     if (!company) return res.status(404).json({ error: "Company not found" });
 
     const { users, ...rest } = company;
-    return res.json({ company: toApi(rest), users: toApi(users) });
+    // Once on, approval and suspension are decided in the Figbloom console
+    // (the page shows a note and a link there instead of its buttons).
+    const platformDecisions = { enabled: platformDecisionsEnabled(), consoleUrl: platformConsoleUrl() };
+    return res.json({ company: toApi(rest), users: toApi(users), platformDecisions });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch company" });
   }
 }
 
-// PLATFORM_ADMIN only — approve/suspend a company
+// PLATFORM_ADMIN only — approve/suspend a company. Refused while the
+// Figbloom console decides (PLATFORM_DECISIONS_ENABLED): its decisions arrive
+// through POST /api/platform/decisions and the same setCompanyStatus.
 export async function updateCompanyStatus(req, res) {
   try {
+    if (platformDecisionsEnabled()) return res.status(409).json(decidedInConsoleBody());
     const { status } = req.body;
     const allowed = ["active", "suspended", "pending"];
     if (!allowed.includes(status)) {
       return res.status(400).json({ error: `status must be one of: ${allowed.join(", ")}` });
     }
 
-    const before = await prisma.company.findUnique({ where: { id: req.params.id }, select: { status: true } });
-    const company = await updateCompany(req.params.id, { status });
-    if (!company) return res.status(404).json({ error: "Company not found" });
+    const change = await setCompanyStatus(prisma, req.params.id, status);
+    if (!change) return res.status(404).json({ error: "Company not found" });
 
-    // Tell the owner(s) when a waiting company is approved — in the
-    // background, so an email problem never blocks the approval.
-    if (before?.status === "pending" && status === "active") {
-      prisma.user
-        .findMany({ where: { companyId: company.id, role: "COMPANY_OWNER" }, select: { email: true } })
-        .then((owners) => owners.length && sendCompanyApprovedEmail(owners.map((o) => o.email).join(", "), { companyName: company.name }))
-        .catch((err) => console.error(`[approval email] failed for ${company.name}:`, err.message));
-    }
+    // Tells the owner(s) when a waiting company is approved, in the background.
+    notifyCompanyStatusChange(prisma, change.before, change.company);
 
-    return res.json(toApi(company));
+    return res.json(toApi(change.company));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update company status" });
@@ -101,6 +102,8 @@ export async function updateMyCompany(req, res) {
 
     const company = await updateCompany(req.user.companyId, { name: name.trim() });
     if (!company) return res.status(404).json({ error: "Company not found" });
+    // the new name goes to the Figbloom platform with the next sync
+    await enqueueCompanySyncSafely(prisma, company.id);
 
     return res.json(toApi(company));
   } catch (err) {

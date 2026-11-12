@@ -38,6 +38,9 @@ enum CompanyStatus {
   active
   suspended
   pending
+  // Not approved in the Figbloom console (the platform's fourth decision);
+  // like pending and suspended, nobody in the company can sign in.
+  rejected
 }
 
 enum Industry {
@@ -767,4 +770,54 @@ model AgentScanLog {
   details         Json       @default("[]") // [{ vehicleId, plateNumber, anomaly, reason }]
 
   @@index([runAt(sort: Desc)])
+}
+
+// ── Figbloom platform (FLEET_PLATFORM_CONTRACT.md section 2) ────────────────
+// One Company is one platform organisation and one tenant under it, both
+// with the company's id as their local id. See lib/platform/.
+
+// The outbox: a company created, renamed or whose owner changed is queued
+// here (in the same write where possible) and the every-minute job sends it.
+// One row per company: what is sent is read when it is sent, so re-queueing
+// a done row re-arms it, and a change while a row is pending bumps its
+// version (a send only completes the row if the version is still the one it
+// read, so a rename that lands mid-send is sent again).
+model PlatformSyncQueue {
+  id            Int       @id @default(autoincrement())
+  kind          String // "company"
+  localId       String // Company.id
+  version       Int       @default(1)
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now())
+  lockedUntil   DateTime?
+  lastError     String?
+  enqueuedAt    DateTime  @default(now())
+  doneAt        DateTime?
+
+  @@unique([kind, localId])
+  @@index([doneAt, nextAttemptAt])
+}
+
+// What the platform knows: kind "organization" or "tenant", the company id,
+// the platform's own id for it. lastDecisionAt (organisations) is the
+// decided_at of the last decision applied, so an older one arriving late is
+// not applied over a newer one.
+model PlatformLink {
+  kind           String
+  localId        String
+  platformId     String?
+  registeredAt   DateTime  @default(now())
+  lastDecisionAt DateTime?
+
+  @@id([kind, localId])
+}
+
+// Every decision delivery applied (x-figbloom-delivery), so a repeat is
+// acknowledged and not applied twice.
+model PlatformDecisionDelivery {
+  deliveryId String   @id
+  companyId  String
+  status     String
+  outcome    String
+  receivedAt DateTime @default(now())
 }

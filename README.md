@@ -206,6 +206,67 @@ Then visit `http://localhost:3000` in your browser.
 
 ---
 
+## Figbloom platform (company registration and approval)
+
+Fleet is a product on the Figbloom platform (contract: `FLEET_PLATFORM_CONTRACT.md`, section 2). One Fleet
+company is one platform **organization** and one **tenant** under it, both with the company's id as their local id.
+
+- **Registration (Fleet to platform).** Registering a company, renaming it (and, later, an owner/contact change) puts
+  it in the outbox table `PlatformSyncQueue`; a job every minute (`Index.js`, `backend/lib/platform/sync.js`) sends it
+  with `PUT /products/fleet/organizations/{companyId}` and `PUT /products/fleet/tenants/{companyId}`. Failed sends are
+  retried after 1, 2, 4 ... minutes, at most an hour apart. What the platform knows is kept in `PlatformLink`.
+- **Decisions (platform to Fleet).** Approve, reject, suspend and reactivate are decided in the Figbloom console
+  (https://console.figbloom.org). The platform posts each decision, signed, to `POST /api/platform/decisions`; Fleet
+  checks the signature (HMAC-SHA256 over `"<timestamp>.<raw body>"`, header `x-figbloom-signature: sha256=...`,
+  `x-figbloom-timestamp` within 5 minutes), ignores repeats (`x-figbloom-delivery`, table `PlatformDecisionDelivery`)
+  and older decisions, and sets the company's status the same way Fleet's own approve button did: the owner gets the
+  approval email, and pending, suspended and rejected companies can't sign in.
+  Status mapping: platform `active` = Company `active`, `suspended` = `suspended`, `rejected` = `rejected` (new
+  status), `pending` = `pending`.
+- **`PLATFORM_DECISIONS_ENABLED`.** Off (the default): Fleet's own `/platform` approve/suspend works as before, and a
+  correctly signed decision is answered `503` and not applied, so the platform keeps it and delivers it again later
+  (nothing decided in the console is lost; it is applied at the first retry after switch-on). On: decisions are
+  applied, Fleet's own approve/suspend answers `409` ("decided in the Figbloom console") and the company page shows a
+  link to the console instead of its buttons, and every new company starts `pending` here until the platform's answer
+  (pending, or active with the platform's auto-approve) is applied.
+- **Console summaries.** `GET /api/platform/companies` and `GET /api/platform/companies/:id`, for the console's
+  backend only (header `x-platform-secret` = `PLATFORM_CONSOLE_SECRET`): per company id, name, status, created date,
+  owner name and email, plan, counts (vehicles, drivers, admins, trips in the last 30 days) and the time of the last
+  location ping. No location data, nothing about drivers beyond the count.
+
+### Settings (backend environment)
+
+| Setting | What |
+|---|---|
+| `PLATFORM_API_URL` | The platform API's address |
+| `PLATFORM_TOKEN_URL` | The platform's Cognito token endpoint (`.../oauth2/token`) |
+| `PLATFORM_CLIENT_ID`, `PLATFORM_CLIENT_SECRET` | Fleet's machine client on the platform (client credentials; scopes `platform/tenants.read platform/tenants.write`) |
+| `PLATFORM_WEBHOOK_SECRET` | The decision webhook's signing secret (the platform's `figbloom/platform/webhook/fleet`) |
+| `PLATFORM_DECISIONS_ENABLED` | `true` once the console decides (see above); off when unset |
+| `PLATFORM_CONSOLE_SECRET` | The shared secret the console's backend sends as `x-platform-secret` (at least 32 characters) |
+| `PLATFORM_CONSOLE_URL` | Optional: the console's address for the link on the company page (default `https://console.figbloom.org`) |
+| `PLATFORM_WEBHOOK_URL` | Optional: the default address for `platform:register-webhook` |
+
+Without the first four, nothing is sent and companies wait in the queue.
+
+### One-off scripts (in `backend/`)
+
+```bash
+npm run platform:register-webhook -- https://fleet-api-staging.figbloom.org/api/platform/decisions
+npm run platform:backfill              # dry run: lists every company and the status it would send
+npm run platform:backfill -- --apply   # registers them, each with its current status
+```
+
+On the AWS server: `docker exec app-app-1 node scripts/platformRegisterWebhook.js <url>` and
+`docker exec app-app-1 node scripts/platformBackfill.js [--apply]`.
+
+### Tests
+
+`cd backend && npm test` (Node's built-in test runner; no database needed): webhook signatures, outbox retry and
+backoff, applying decisions once, and the console secret.
+
+---
+
 ## Security Notes (for later phases)
 
 - Passwords must be hashed (bcrypt/argon2) — never stored in plain text
