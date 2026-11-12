@@ -113,7 +113,8 @@ export default function GettingStarted() {
   const { canManageFleet } = useAdminAccess();
   const isOwner = user?.role === "COMPANY_OWNER";
   // Restricted admins can't do these steps, so they don't get the list.
-  const eligible = !!user && (isOwner || (user.role === "ADMIN" && canManageFleet));
+  // Nor do Figbloom staff looking on in a read-only support view.
+  const eligible = !!user && !user.support && (isOwner || (user.role === "ADMIN" && canManageFleet));
   const storageKey = user ? gettingStartedStorageKey(user.id) : null;
 
   // Only rendered inside a signed-in area (ProtectedRoute waits for the

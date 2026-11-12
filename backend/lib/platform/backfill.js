@@ -10,7 +10,8 @@
 // console's decision alone.
 import { PlatformError } from "./client.js";
 import { organizationBody, tenantBody, platformStatusOf } from "./outbox.js";
-import { loadCompanyForSync, recordPlatformLink } from "./store.js";
+import { loadCompanyForSync, recordPlatformLink, enqueueCompanySync } from "./store.js";
+import { applyPlatformDecision } from "./decisions.js";
 
 const PAGE = 200;
 
@@ -68,4 +69,35 @@ export async function backfillCompany(db, client, id, { dryRun = false } = {}) {
     entry.error = err?.message || String(err);
   }
   return entry;
+}
+
+// Registers a company that is being set up already decided (the demo seed,
+// a fleet Figbloom staff create for a client) the backfill way, so the
+// console shows it with its status rather than as a new pending
+// registration, then queues it like a normal registration for later name
+// changes. client is null when the PLATFORM_* settings aren't set (then it
+// is only queued, as for any registration). With decisions on, a company
+// the platform doesn't know yet is only queued after the backfill-style
+// registration succeeded: queued alone it would be registered without a
+// status and the platform's answer (pending) applied here. A decision staff
+// already made in the console is adopted here when decisions are on.
+// Never throws for a platform refusal; the result says what happened.
+export async function registerDecidedCompany(db, client, companyId, { decisionsOn, source = "registration (console decision)" }) {
+  const result = { decisionsOn, configured: !!client };
+  if (client) {
+    const entry = await backfillCompany(db, client, companyId);
+    result.result = entry?.result;
+    result.platformStatus = entry?.platformOrganizationStatus ?? null;
+    if (entry?.result === "error") result.error = entry.error;
+    if (entry?.result === "decided_on_platform" && decisionsOn && entry.platformOrganizationStatus && entry.platformOrganizationStatus !== entry.status) {
+      const applied = await applyPlatformDecision(db, { companyId, status: entry.platformOrganizationStatus, source });
+      result.adopted = applied.outcome === "applied" ? entry.platformOrganizationStatus : undefined;
+    }
+  }
+  const registered = result.result === "registered" || result.result === "decided_on_platform";
+  if (registered || !decisionsOn) {
+    await enqueueCompanySync(db, companyId);
+    result.queued = true;
+  }
+  return result;
 }

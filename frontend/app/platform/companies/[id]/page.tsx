@@ -10,6 +10,20 @@ import { CompanyRecord, AdminRecord, CompanyStats, PlatformDecisions } from "../
 import { industryLabel } from "../../../lib/industries";
 import { vehicleTypeLabel } from "../../../lib/vehicleTypes";
 import { formatKes } from "../../../lib/pricing";
+import OpenFleetButton from "@/app/components/staff/OpenFleetButton";
+
+// GET /api/support/audit: what Figbloom staff did to this fleet.
+interface StaffAuditRow {
+  _id: string;
+  staffEmail: string;
+  action: "support_view_started" | "support_view_ended" | "fleet_created" | string;
+  createdAt: string;
+}
+const AUDIT_LABELS: Record<string, string> = {
+  support_view_started: "opened this fleet (read-only)",
+  support_view_ended: "left the fleet",
+  fleet_created: "created this fleet",
+};
 
 const statusStyles: Record<string, string> = {
   active: "bg-teal-50 text-teal-600 border-teal-200",
@@ -30,6 +44,7 @@ export default function CompanyDetailPage() {
   const [updating, setUpdating] = useState(false);
   // While on, approval and suspension are decided in the Figbloom console.
   const [platformDecisions, setPlatformDecisions] = useState<PlatformDecisions | null>(null);
+  const [audit, setAudit] = useState<StaffAuditRow[] | null>(null);
 
   async function load() {
     try {
@@ -53,6 +68,9 @@ export default function CompanyDetailPage() {
   useEffect(() => {
     apiRequest<CompanyStats>(`/api/companies/${id}/stats`)
       .then(setStats)
+      .catch(() => {});
+    apiRequest<StaffAuditRow[]>(`/api/support/audit?companyId=${encodeURIComponent(id)}`)
+      .then(setAudit)
       .catch(() => {});
   }, [id]);
 
@@ -83,8 +101,16 @@ export default function CompanyDetailPage() {
         onClick={() => router.push("/platform/companies")}
         className="mb-4 rounded bg-gray-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-600"
       >
-        Back to companies
+        Back to customer fleets
       </button>
+
+      <div className="mb-6 flex flex-col gap-3 rounded-lg bg-white p-4 shadow-sm ring-1 ring-black/5 sm:flex-row sm:items-center">
+        <p className="min-w-0 flex-1 text-sm text-gray-600">
+          See this fleet&apos;s dashboard, vehicles, live map, trips and drivers the way its owner does. Read-only: nothing
+          can be changed, and your visit is recorded below.
+        </p>
+        <OpenFleetButton companyId={company._id} />
+      </div>
 
       <div className="mb-6 flex justify-end">
         <span className={`text-xs px-3 py-1.5 rounded-full border font-medium ${statusStyles[company.status]}`}>
@@ -162,6 +188,27 @@ export default function CompanyDetailPage() {
                     ))}
                   </div>
                 </div>
+              )}
+            </div>
+          )}
+
+          {audit && (
+            <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
+              <h3 className="text-sm font-medium text-gray-700">Figbloom staff activity</h3>
+              <p className="text-xs text-teal-600 mt-0.5 mb-3">Every time staff opened or created this fleet</p>
+              {audit.length === 0 ? (
+                <p className="text-xs text-gray-400">No staff visits yet.</p>
+              ) : (
+                <ul className="space-y-1.5 text-xs text-gray-600">
+                  {audit.map((row) => (
+                    <li key={row._id} className="flex flex-wrap gap-x-2">
+                      <span className="text-gray-400">{new Date(row.createdAt).toLocaleString()}</span>
+                      <span>
+                        <span className="font-medium text-gray-800">{row.staffEmail}</span> {AUDIT_LABELS[row.action] ?? row.action}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           )}

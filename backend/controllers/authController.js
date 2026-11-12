@@ -25,7 +25,7 @@ function hashResetToken(token) {
 // mechanism as a password reset, valid WELCOME_LINK_DAYS) plus how to sign
 // in. Runs in the background — a slow or failed email never fails the
 // request that created the user.
-function sendWelcomeInBackground(user, companyName) {
+export function sendWelcomeInBackground(user, companyName) {
   (async () => {
     const token = crypto.randomBytes(32).toString("hex");
     await prisma.user.update({
@@ -91,7 +91,7 @@ export function defaultFleetName(ownerName) {
 
 // Registers a new fleet (Company) + its first user (COMPANY_OWNER). The
 // company can be a registered business or just one person's vehicles.
-const INDUSTRIES = [
+export const INDUSTRIES = [
   "logistics_courier",
   "public_transport",
   "school_transport",
@@ -202,7 +202,7 @@ export async function registerCompany(req, res) {
 
 // "Acme Logistics" → "acme-logistics"; if another company already has that,
 // "acme-logistics-2", "-3"… Names with no usable letters fall back to "company".
-async function uniqueCompanySlug(companyName) {
+export async function uniqueCompanySlug(companyName) {
   const base =
     companyName.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "") ||
     "company";

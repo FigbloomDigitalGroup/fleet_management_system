@@ -9,7 +9,8 @@ import { AdminAccess } from "../types/auth";
 // - full / company owner / platform: everything their role allows
 export function useAdminAccess() {
   const { user } = useAuth();
-  const access: AdminAccess = user?.role === "ADMIN" ? user.adminAccess || "full" : "full";
+  // Figbloom staff in a support view can look but not change anything.
+  const access: AdminAccess = user?.support ? "viewer" : user?.role === "ADMIN" ? user.adminAccess || "full" : "full";
   return {
     access,
     // Vehicles, drivers, geofences, maintenance, company settings…

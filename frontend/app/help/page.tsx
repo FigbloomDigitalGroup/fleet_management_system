@@ -50,9 +50,10 @@ const ROLE_SECTION: Record<Role, string> = {
 
 export default function HelpPage() {
   const { user } = useAuth();
-  const mine = user ? ROLE_SECTION[user.role] : null;
+  // Staff in a support view run as the fleet's owner but are still staff.
+  const mine = user ? (user.support ? "figbloom" : ROLE_SECTION[user.role]) : null;
   const [checklistRestored, setChecklistRestored] = useState(false);
-  const canRestoreChecklist = user?.role === "COMPANY_OWNER" || user?.role === "ADMIN";
+  const canRestoreChecklist = !user?.support && (user?.role === "COMPANY_OWNER" || user?.role === "ADMIN");
 
   function restoreChecklist() {
     if (!user) return;
@@ -70,7 +71,7 @@ export default function HelpPage() {
     { id: "admin", label: "Running the day" },
     { id: "tracking", label: "Getting vehicles on the map" },
     { id: "driver-app", label: "The driver app" },
-    { id: "figbloom", label: "Figbloom staff" },
+    { id: "figbloom", label: "I'm Figbloom staff" },
     { id: "faq", label: "Common questions" },
   ];
 
@@ -104,7 +105,10 @@ export default function HelpPage() {
           <p className="mt-1 text-sm text-gray-500">
             {user ? (
               <>
-                You&apos;re signed in as <span className="font-medium text-gray-800">{roleLabel(user.role, user.adminAccess)}</span>
+                You&apos;re signed in as{" "}
+                <span className="font-medium text-gray-800">
+                  {user.support ? `Figbloom staff, viewing ${user.support.companyName} read-only` : roleLabel(user.role, user.adminAccess)}
+                </span>
                 . Your section is outlined below.
               </>
             ) : (
@@ -236,16 +240,39 @@ export default function HelpPage() {
           <p>Driver accounts can&apos;t sign in to this website; if a driver tries, they&apos;ll be told to use the app.</p>
         </Section>
 
-        <Section id="figbloom" title="Figbloom staff" highlight={mine === "figbloom"}>
+        <Section id="figbloom" title="I'm Figbloom staff — what can I do here?" highlight={mine === "figbloom"}>
           <p>
-            The platform area shows every company, platform-wide analytics and payments. Companies register themselves at{" "}
-            <Link href="/register" className="text-teal-700 hover:underline">/register</Link>; approving, suspending and billing
-            them is done in the{" "}
-            <a href="https://console.figbloom.org" target="_blank" rel="noopener noreferrer" className="text-teal-700 hover:underline">
-              Figbloom console
-            </a>
-            .
+            A Figbloom staff account doesn&apos;t have a fleet of its own. It is the view over <strong>every customer fleet</strong>:
+            you sign in on the same page as everyone else and land on <strong>Staff home</strong>. Vehicles, drivers, trips and
+            the live map always live inside a customer&apos;s fleet, so to see them you open that fleet.
           </p>
+          <ul className="list-disc space-y-1.5 pl-5">
+            <li>
+              <strong>See a customer&apos;s fleet:</strong> go to <Link href="/platform/companies" className="text-teal-700 hover:underline">Customer fleets</Link>{" "}
+              and press <strong>Open this fleet</strong>. You see their dashboard, vehicles, live map, trips, drivers and
+              reports exactly as the owner does, under a yellow &quot;Viewing … as Figbloom staff — read only&quot; bar. Nothing
+              can be changed there, billing isn&apos;t shown, and each visit (who, which fleet, when) is recorded on the
+              fleet&apos;s page. Press <strong>Exit</strong> to come back; a visit ends by itself after an hour.
+            </li>
+            <li>
+              <strong>Set up a new client:</strong> press <strong>Create a fleet</strong> on Staff home or Customer fleets. Give
+              the fleet&apos;s name and the owner&apos;s name and email. The fleet is active straight away, appears in the
+              Figbloom console, and the owner is emailed a link to set their password. They then add their own vehicles and
+              drivers (you can&apos;t add them for them).
+            </li>
+            <li>
+              <strong>Approve, reject or suspend a fleet:</strong> that happens in the{" "}
+              <a href="https://console.figbloom.org" target="_blank" rel="noopener noreferrer" className="text-teal-700 hover:underline">
+                Figbloom console
+              </a>
+              , not here. Fleets can also sign themselves up at{" "}
+              <Link href="/register" className="text-teal-700 hover:underline">/register</Link>.
+            </li>
+            <li>
+              <strong>Numbers across all fleets:</strong> Fleet reports (sizes, growth), AI checks (the anomaly scans), and
+              Billing (plans and payments).
+            </li>
+          </ul>
         </Section>
 
         <Section id="faq" title="Common questions">

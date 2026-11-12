@@ -34,11 +34,9 @@ import bcrypt from "bcryptjs";
 import prisma from "../lib/prisma.js";
 import { filterTrack } from "../lib/gpsFilter.js";
 import { distanceKm, sumTripDistanceKm, isInsideGeofence } from "../lib/geo.js";
-import { enqueueCompanySync } from "../lib/platform/store.js";
 import { sharedPlatformClient } from "../lib/platform/client.js";
-import { backfillCompany } from "../lib/platform/backfill.js";
+import { registerDecidedCompany } from "../lib/platform/backfill.js";
 import { platformDecisionsEnabled } from "../lib/platform/settings.js";
-import { applyPlatformDecision } from "../lib/platform/decisions.js";
 import { TRACKING_CONSENT_VERSION } from "../controllers/trackingController.js";
 import { INSPECTION_ITEMS } from "../controllers/inspectionController.js";
 
@@ -606,33 +604,13 @@ async function seedData(tx, company, owner, now) {
 
 // ── Figbloom platform ───────────────────────────────────────────────────────
 
-// Registers the company the backfill way (with its status, so the console
-// shows it active), then queues it like a normal registration. With
-// PLATFORM_DECISIONS_ENABLED on, queuing a company the platform doesn't know
-// yet would register it without a status, and the platform's answer
-// (pending) would be applied here, so then it is only queued after the
-// backfill-style registration succeeded.
-async function registerWithPlatform(companyId) {
-  const decisionsOn = platformDecisionsEnabled();
-  const client = sharedPlatformClient();
-  const result = { decisionsOn, configured: !!client };
-  if (client) {
-    const entry = await backfillCompany(prisma, client, companyId);
-    result.result = entry?.result;
-    result.platformStatus = entry?.platformOrganizationStatus ?? null;
-    if (entry?.result === "error") result.error = entry.error;
-    // Staff already decided in the console (e.g. suspended the demo): with decisions on, theirs stands here too.
-    if (entry?.result === "decided_on_platform" && decisionsOn && entry.platformOrganizationStatus && entry.platformOrganizationStatus !== entry.status) {
-      const applied = await applyPlatformDecision(prisma, { companyId, status: entry.platformOrganizationStatus, source: "seed (console decision)" });
-      result.adopted = applied.outcome === "applied" ? entry.platformOrganizationStatus : undefined;
-    }
-  }
-  const registered = result.result === "registered" || result.result === "decided_on_platform";
-  if (registered || !decisionsOn) {
-    await enqueueCompanySync(prisma, companyId);
-    result.queued = true;
-  }
-  return result;
+// Registered the backfill way, so the console shows it active
+// (lib/platform/backfill.js registerDecidedCompany).
+function registerWithPlatform(companyId) {
+  return registerDecidedCompany(prisma, sharedPlatformClient(), companyId, {
+    decisionsOn: platformDecisionsEnabled(),
+    source: "seed (console decision)",
+  });
 }
 
 // ── Main ────────────────────────────────────────────────────────────────────

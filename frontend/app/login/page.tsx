@@ -45,8 +45,13 @@ export default function LoginPage() {
       const isCompanyRole = user.role === "COMPANY_OWNER" || user.role === "ADMIN";
       const signedInAs = roleLabel(user.role, user.adminAccess);
       const welcome = user.fullName ? `Welcome back, ${user.fullName}.` : "Welcome back.";
+      const staffNote = "This is a Figbloom staff account: you see every customer fleet and can open any of them read-only.";
       notifySuccess(
-        isCompanyRole && user.role !== selectedRole ? `${welcome} This is a ${signedInAs} account, so you're in the ${signedInAs} area.` : welcome,
+        user.role === "PLATFORM_ADMIN"
+          ? `${welcome} ${staffNote}`
+          : isCompanyRole && user.role !== selectedRole
+            ? `${welcome} This is a ${signedInAs} account, so you're in the ${signedInAs} area.`
+            : welcome,
         `Signed in as ${signedInAs}`
       );
       router.push(redirectPathForRole(user.role));
@@ -153,6 +158,10 @@ export default function LoginPage() {
                 Registered your fleet? You&apos;re the <span className="font-medium">Company owner</span>. Given a login by
                 a fleet&apos;s owner? You&apos;re a <span className="font-medium">Fleet admin</span>. Drivers sign in from the
                 mobile app.
+              </p>
+              <p className="mt-1.5 text-xs text-gray-500">
+                <span className="font-medium">Figbloom staff</span>: sign in here with your staff email (either tile). You
+                land in the staff area, which shows every customer fleet.
               </p>
             </div>
 

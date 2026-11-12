@@ -9,7 +9,10 @@ import BarChartCard from "../../components/BarChartCard";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import { usePageHeader } from "../../components/DashboardShell";
 import { CompanyRecord } from "../../types/auth";
-import NoCompaniesYet from "../../components/NoCompaniesYet";
+import NoCompaniesYet, { FIGBLOOM_CONSOLE_URL } from "../../components/NoCompaniesYet";
+import StaffWelcomeCard from "../../components/staff/StaffWelcomeCard";
+import CreateFleetModal from "../../components/staff/CreateFleetModal";
+import OpenFleetButton from "../../components/staff/OpenFleetButton";
 
 interface AnalyticsData {
   totals: {
@@ -45,21 +48,22 @@ export default function PlatformDashboard() {
   const [companies, setCompanies] = useState<CompanyRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const statsNode = useMemo(() => {
     if (!analytics) return undefined;
     const { totals } = analytics;
     return (
       <div className="grid grid-cols-2 gap-3 h-full">
-        <StatCard label="Total companies" value={totals.totalCompanies} accent="blue" description="Companies registered on the platform" />
-        <StatCard label="Total vehicles" value={totals.totalVehicles} accent="green" description="Vehicles across all companies" />
-        <StatCard label="Total users" value={totals.totalUsers} accent="green" description="Admins and drivers combined" />
-        <StatCard label="Pending approval" value={totals.pendingCompanies} accent="orange" description="Companies awaiting review" />
+        <StatCard label="Customer fleets" value={totals.totalCompanies} accent="blue" description="Every fleet on Figbloom Fleet" />
+        <StatCard label="Vehicles" value={totals.totalVehicles} accent="green" description="Across all fleets (open a fleet to see them)" />
+        <StatCard label="People" value={totals.totalUsers} accent="green" description="Owners, admins and drivers in all fleets" />
+        <StatCard label="Waiting for approval" value={totals.pendingCompanies} accent="orange" description="Approved in the Figbloom console" />
       </div>
     );
   }, [analytics]);
 
-  usePageHeader("Platform overview", "Your platform, your network.", statsNode);
+  usePageHeader("Staff home", "Every customer fleet on Figbloom Fleet", statsNode);
 
   function loadAll() {
     setLoading(true);
@@ -82,9 +86,26 @@ export default function PlatformDashboard() {
     loadAll();
   }, []);
 
-  if (loading) return <FullPageLoading label="Loading dashboard" />;
+  // The staff guide sits above everything, loaded or not.
+  const intro = (
+    <>
+      <StaffWelcomeCard onCreateFleet={() => setCreating(true)} />
+      {creating && <CreateFleetModal onClose={() => setCreating(false)} onCreated={() => loadAll()} />}
+    </>
+  );
+
+  if (loading) {
+    return (
+      <div>
+        {intro}
+        <FullPageLoading label="Loading dashboard" />
+      </div>
+    );
+  }
   if (loadError || !analytics) {
     return (
+      <div>
+        {intro}
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <p className="text-sm text-red-600 mb-4">{loadError || "Failed to load dashboard data."}</p>
         <button
@@ -93,6 +114,7 @@ export default function PlatformDashboard() {
         >
           Retry
         </button>
+      </div>
       </div>
     );
   }
@@ -113,15 +135,16 @@ export default function PlatformDashboard() {
 
   return (
     <div>
+      {intro}
       {/* Recently registered companies */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
-          <h2 className="text-base font-semibold text-gray-900">Recently registered</h2>
+          <h2 className="text-base font-semibold text-gray-900">Newest fleets</h2>
           <Link href="/platform/companies" className="rounded bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
             View all
           </Link>
         </div>
-        <p className="text-xs text-teal-600 mb-3">The 5 most recently signed-up companies</p>
+        <p className="text-xs text-teal-600 mb-3">The 5 newest customer fleets. Open one to see its vehicles, drivers and live map (read-only).</p>
         <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
           {recentCompanies.length === 0 ? (
             <NoCompaniesYet />
@@ -155,6 +178,9 @@ export default function PlatformDashboard() {
                         {c.status}
                       </span>
                     </td>
+                    <td className="px-5 py-3 text-right">
+                      <OpenFleetButton companyId={c._id} size="sm" />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -167,15 +193,15 @@ export default function PlatformDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
         <div className="lg:col-span-2">
           <BarChartCard
-            title="Vehicles per company"
-            description="How fleet size compares across your companies"
+            title="Vehicles per fleet"
+            description="How fleet size compares across customer fleets"
             data={vehiclesPerCompany.map((v) => ({ name: v.name, vehicles: v.count }))}
             dataKey="vehicles"
             color="#e16d00"
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <CircleStat percentage={activeCompanyPct} label="Companies active" color="#0e4f27" description="Share of companies in active status" />
+          <CircleStat percentage={activeCompanyPct} label="Fleets active" color="#0e4f27" description="Share of fleets that are active" />
           <CircleStat percentage={activeVehiclePct} label="Vehicles active" color="#0e4f27" description="Share of vehicles currently active" />
         </div>
       </div>
@@ -183,7 +209,7 @@ export default function PlatformDashboard() {
       {/* Growth chart */}
       <div className="mb-4">
         <BarChartCard
-          title="New companies — last 6 months"
+          title="New fleets — last 6 months"
           description="Sign-ups per month across the platform"
           data={growth}
           dataKey="companies"
@@ -195,12 +221,18 @@ export default function PlatformDashboard() {
       {pendingCompanies.length > 0 && (
         <div className="mb-4">
           <div className="flex items-center justify-between mb-1">
-            <h2 className="text-base font-semibold text-gray-900">Needs approval</h2>
+            <h2 className="text-base font-semibold text-gray-900">Waiting for approval</h2>
             <Link href="/platform/companies" className="rounded bg-orange-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-orange-600">
               View all
             </Link>
           </div>
-          <p className="text-xs text-teal-600 mb-3">Companies waiting on a decision, oldest signups included</p>
+          <p className="text-xs text-teal-600 mb-3">
+            Fleets waiting on a decision. Approvals are made in the{" "}
+            <a href={FIGBLOOM_CONSOLE_URL} target="_blank" rel="noopener noreferrer" className="font-medium underline">
+              Figbloom console
+            </a>
+            .
+          </p>
           <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
             <table className="w-full text-sm">
               <tbody>

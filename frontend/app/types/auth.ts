@@ -11,6 +11,17 @@ export interface User {
   role: Role;
   companyId: string | null;
   adminAccess?: AdminAccess | null;
+  // Set while Figbloom staff view a customer fleet read-only (support view):
+  // the session then runs as that company's owner, the API refuses every
+  // change, and the staff member's own session waits in "staffSession".
+  support?: SupportView | null;
+}
+
+export interface SupportView {
+  sessionId: string;
+  companyId: string;
+  companyName: string;
+  expiresAt: string;
 }
 
 export interface LoginResponse {
