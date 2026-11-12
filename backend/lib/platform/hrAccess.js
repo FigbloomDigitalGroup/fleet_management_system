@@ -9,7 +9,7 @@
 //   /api/integrations/my-hr/* with its own
 //   platform token. The person and the company come from the session only,
 //   never from the request. HR reuses the Schools headers for this:
-//   x-figbloom-school (here Fleet's Company.id) and x-figbloom-person (User.id).
+//   x-figbloom-company (Fleet's Company.id) and x-figbloom-person (User.id).
 // Everything is hidden and answers 404 hr_off while HR_INTEGRATION_ENABLED is
 // off, and is refused in a Figbloom staff support view.
 import { hrIntegrationEnabled, hrMyHrUrl } from "./settings.js";
@@ -103,7 +103,7 @@ export function makeHrHandlers({ db, getClient, env = process.env, fetch: fetchF
           headers: {
             authorization: `Bearer ${token}`,
             accept: "application/json",
-            "x-figbloom-school": String(req.user.companyId),
+            "x-figbloom-company": String(req.user.companyId),
             "x-figbloom-person": String(req.user.id),
             "x-figbloom-product": "fleet",
             ...(req.method === "POST" ? { "content-type": "application/json" } : {}),

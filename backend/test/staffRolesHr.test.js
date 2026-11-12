@@ -187,7 +187,7 @@ test("My HR asks HR as the signed-in person only, on the listed routes only", as
   const { url, init } = calls.fetches[0];
   assert.equal(url, "https://hr.example.org/api/integrations/my-hr/summary");
   assert.equal(init.headers.authorization, "Bearer platform-token");
-  assert.equal(init.headers["x-figbloom-school"], "c1");
+  assert.equal(init.headers["x-figbloom-company"], "c1");
   assert.equal(init.headers["x-figbloom-person"], "d1");
 
   await call(h.myHr, { user: driver, path: "/attendance", query: { from: "2026-11-01", to: "2026-11-30", x: "1" } });
