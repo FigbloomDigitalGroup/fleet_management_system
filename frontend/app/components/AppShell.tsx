@@ -9,6 +9,8 @@ import { FaLocationPinLock } from "react-icons/fa6";
 import { useAuth } from "../context/AuthContext";
 import { useAdminAccess } from "../lib/adminAccess";
 import { FleetNav, FleetNavItem, activeNavItem, fleetNav, platformNav } from "../lib/fleetNav";
+import { canManageTeam } from "../lib/staffRoles";
+import { useHrStatus } from "../lib/hrStatus";
 import { apiRequest } from "../lib/api";
 import Avatar from "./Avatar";
 import BrandIcon from "./BrandIcon";
@@ -126,19 +128,30 @@ export default function AppShell({ children, portal }: { children: ReactNode; po
   const support = user?.support ?? null;
   const supportView = !!support;
 
+  const hr = useHrStatus();
+  const role = user?.role ?? null;
+  const manageTeam = canManageTeam(user);
   const nav = useMemo(
     () =>
       isPlatform
         ? platformNav()
-        : fleetNav(`/${portal}` as "/admin" | "/company", { isOwner, canEditCompany: access === "full", supportView }),
-    [isPlatform, portal, isOwner, access, supportView]
+        : fleetNav(`/${portal}` as "/admin" | "/company", {
+            isOwner,
+            canEditCompany: access === "full",
+            supportView,
+            role,
+            canManageTeam: manageTeam,
+            showHr: hr.canOpenHr,
+            showMyHr: hr.hasMyHr,
+          }),
+    [isPlatform, portal, isOwner, access, supportView, role, manageTeam, hr.canOpenHr, hr.hasMyHr]
   );
   const isMap = !!nav.mapHref && pathname === nav.mapHref;
   const activeItem = activeNavItem(nav, pathname);
 
   const { companyName, companyLogoUrl, alertCount, toasts, dismissToast, unreadMessages, zoneCounts } = useShellData({
     alerts: !!nav.alertsHref,
-    messages: !isPlatform,
+    messages: !isPlatform && nav.items.some((i) => i.label === "Messages"),
     // The map works these out itself from its own, faster poll.
     zones: !isPlatform && !isMap,
   });

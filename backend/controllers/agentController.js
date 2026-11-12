@@ -128,7 +128,7 @@ export async function askAboutFleet(req, res) {
     if (looksLikeRouteRequest(trimmed)) {
       // Route creation mirrors the Routes page's own permission split —
       // both ADMIN and COMPANY_OWNER can manage routes.
-      if (req.user.role !== "ADMIN" && req.user.role !== "COMPANY_OWNER") {
+      if (!["ADMIN", "OPERATOR", "COMPANY_OWNER"].includes(req.user.role)) {
         return res.json({ answer: "Only fleet admins can create routes — ask your admin to draw this one." });
       }
       const routeResult = await tryHandleRouteRequest(trimmed);

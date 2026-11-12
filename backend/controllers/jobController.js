@@ -8,6 +8,19 @@ import { routeThrough } from "../services/mapMatching.js";
 import { optimizeStops, driveMinutes } from "../lib/routeOptimizer.js";
 import { distanceKm } from "../lib/geo.js";
 import { ownedUploadIds, uploadUrl } from "./uploadController.js";
+import { leaveWarning } from "../lib/platform/hrEvents.js";
+
+// A job given to a driver who is on leave that day (approved in Figbloom
+// HR) is saved, with a warning for dispatch to show. Never blocks the save.
+async function withLeaveWarning(job, body) {
+  try {
+    const warning = await leaveWarning(prisma, { companyId: job.companyId, userId: job.driverId, date: job.scheduledDate });
+    return warning ? { ...body, warning } : body;
+  } catch (err) {
+    console.error("[hr] leave check failed:", err.message);
+    return body;
+  }
+}
 
 const OPEN_STATUSES = ["assigned", "started", "arrived"];
 const NEXT_STATUS = {
@@ -186,7 +199,7 @@ export async function createJob(req, res) {
       },
     });
     await clearJobRoutes(job);
-    return res.status(201).json(present(job));
+    return res.status(201).json(await withLeaveWarning(job, present(job)));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to create job" });
@@ -235,7 +248,8 @@ export async function updateJob(req, res) {
     }
     const updated = await prisma.job.update({ where: { id: job.id }, data });
     if (ROUTE_FIELDS.some((field) => field in data)) await clearJobRoutes(job, updated);
-    return res.json(present(updated));
+    const reassigned = "driverId" in data || "scheduledDate" in data;
+    return res.json(reassigned ? await withLeaveWarning(updated, present(updated)) : present(updated));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update job" });

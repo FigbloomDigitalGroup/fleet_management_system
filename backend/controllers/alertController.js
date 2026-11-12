@@ -2,6 +2,7 @@ import prisma from "../lib/prisma.js";
 import { toApi } from "../lib/serialize.js";
 import { tenantScope } from "../middleware/auth.js";
 import { AlertType } from "@prisma/client";
+import { MECHANIC_ALERT_TYPES } from "../lib/staffRoles.js";
 
 // Every alert type the database accepts (the AlertType enum in schema.prisma).
 const ALERT_TYPES = Object.values(AlertType);
@@ -62,8 +63,12 @@ export async function listAlerts(req, res) {
 
 export async function resolveAlert(req, res) {
   try {
-    const alert = await prisma.alert.findFirst({ where: { id: req.params.id, ...tenantScope(req) }, select: { id: true } });
+    const alert = await prisma.alert.findFirst({ where: { id: req.params.id, ...tenantScope(req) }, select: { id: true, type: true } });
     if (!alert) return res.status(404).json({ error: "Alert not found" });
+    // A mechanic closes defects: maintenance due and failed inspections.
+    if (req.user.role === "MECHANIC" && !MECHANIC_ALERT_TYPES.includes(alert.type)) {
+      return res.status(403).json({ error: "Your mechanic account can close maintenance and inspection alerts only.", code: "role_forbidden" });
+    }
     // Kept as history; lib/cleanup.js deletes it after at least 90 days.
     const resolved = await prisma.alert.update({ where: { id: alert.id }, data: { resolved: true, resolvedAt: new Date() } });
     return res.json(toApi(resolved));
@@ -100,7 +105,7 @@ export async function createAlert(req, res) {
     if (!vehicleId || !type || !message) {
       return res.status(400).json({ error: "vehicleId, type, and message are required" });
     }
-    if (type === "admin_message" && !["ADMIN", "COMPANY_OWNER", "PLATFORM_ADMIN"].includes(req.user.role)) {
+    if (type === "admin_message" && !["ADMIN", "OPERATOR", "COMPANY_OWNER", "PLATFORM_ADMIN"].includes(req.user.role)) {
       return res.status(403).json({ error: "Only fleet admins can message a driver" });
     }
 

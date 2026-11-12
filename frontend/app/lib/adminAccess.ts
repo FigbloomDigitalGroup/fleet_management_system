@@ -1,5 +1,6 @@
 import { useAuth } from "../context/AuthContext";
 import { AdminAccess } from "../types/auth";
+import { isStaffRole, staffAbilities } from "./staffRoles";
 
 // What the signed-in user may change, mirroring the server's central check
 // in backend/middleware/auth.js (the server stays the authority — this only
@@ -7,17 +8,37 @@ import { AdminAccess } from "../types/auth";
 // - viewer: nothing
 // - dispatcher: jobs, routes, messages, alerts (and the AI agent)
 // - full / company owner / platform: everything their role allows
+// - staff roles (lib/staffRoles.ts): the fleet read-only, plus their own
+//   work (an operator dispatches, a mechanic keeps maintenance...)
 export function useAdminAccess() {
   const { user } = useAuth();
+  const staff = isStaffRole(user?.role) && !user?.support ? staffAbilities(user?.role) : null;
   // Figbloom staff in a support view can look but not change anything.
-  const access: AdminAccess = user?.support ? "viewer" : user?.role === "ADMIN" ? user.adminAccess || "full" : "full";
+  const access: AdminAccess = user?.support
+    ? "viewer"
+    : staff
+      ? staff.canDispatch
+        ? "dispatcher"
+        : "viewer"
+      : user?.role === "ADMIN"
+        ? user.adminAccess || "full"
+        : "full";
+  const canManageFleet = access === "full";
+  const canDispatch = access !== "viewer";
   return {
     access,
     // Vehicles, drivers, geofences, maintenance, company settings…
-    canManageFleet: access === "full",
+    canManageFleet,
     // Jobs, routes, messages, alerts
-    canDispatch: access !== "viewer",
+    canDispatch,
     isViewer: access === "viewer",
+    // Close alerts: dispatchers, supervisors, mechanics (their kinds only)
+    canCloseAlerts: canDispatch || !!staff?.canCloseAlerts,
+    onlyMechanicAlerts: user?.role === "MECHANIC",
+    // Maintenance records and reminders
+    canMaintain: canManageFleet || !!staff?.canMaintain,
+    // Sign off drivers' inspections
+    canReviewInspections: canManageFleet || !!staff?.canReviewInspections,
   };
 }
 

@@ -9,6 +9,11 @@ export function redirectPathForRole(role: Role): string {
     case "COMPANY_OWNER":
       return "/company/dashboard";
     case "ADMIN":
+    case "OPERATOR":
+    case "ACCOUNTANT":
+    case "MECHANIC":
+    case "SUPERVISOR":
+      // the staff roles use the admin area, with their own menu
       return "/admin/dashboard";
     case "DRIVER":
       return "/driver/dashboard";
@@ -23,6 +28,10 @@ export const ROLE_LABELS: Record<Role, string> = {
   COMPANY_OWNER: "Company owner",
   ADMIN: "Fleet admin",
   DRIVER: "Driver",
+  OPERATOR: "Operator",
+  ACCOUNTANT: "Accountant",
+  MECHANIC: "Mechanic",
+  SUPERVISOR: "Supervisor",
 };
 
 export function roleLabel(role: Role | undefined | null, adminAccess?: AdminAccess | null): string {

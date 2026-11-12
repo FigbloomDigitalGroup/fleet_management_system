@@ -24,6 +24,7 @@ import maintenanceRoutes from "./routes/maintenanceRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import publicRoutes from "./routes/publicRoutes.js";
 import platformRoutes from "./routes/platformRoutes.js";
+import hrRoutes from "./routes/hrRoutes.js";
 import supportRoutes from "./routes/supportRoutes.js";
 import { runAiAnomalyScan } from "./services/aiAnomalyDetector.js";
 import { closeStaleTrips, sweepOfflineDevices } from "./controllers/trackingController.js";
@@ -65,12 +66,14 @@ app.use(
 // signature verification — express.json() would consume the request stream
 // first and leave nothing for them to read, so this skips those paths and
 // lets express.json() handle every other route as before.
-const RAW_BODY_PATHS = new Set(["/api/billing/webhook", "/api/platform/decisions"]);
+const RAW_BODY_PATHS = new Set(["/api/billing/webhook", "/api/platform/decisions", "/api/platform/events"]);
 app.use((req, res, next) => {
   if (RAW_BODY_PATHS.has(req.originalUrl.split("?")[0])) return next();
   // Photos (base64) and batches of offline-buffered GPS points need more
   // than express's 100kb default.
-  const limit = req.originalUrl.startsWith("/api/uploads") ? "4mb" : "1mb";
+  // A leave application to Figbloom HR may carry a document of up to 5 MB (base64).
+  const path = req.originalUrl.split("?")[0];
+  const limit = req.originalUrl.startsWith("/api/uploads") ? "4mb" : path === "/api/hr/my/leave/applications" ? "8mb" : "1mb";
   express.json({ limit })(req, res, next);
 });
 // /healthz is the same check under the name AWS's load balancer polls
@@ -102,6 +105,7 @@ app.use("/api/maintenance", maintenanceRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/public", publicRoutes);
 app.use("/api/platform", platformRoutes);
+app.use("/api/hr", hrRoutes);
 app.use("/api/support", supportRoutes);
 
 

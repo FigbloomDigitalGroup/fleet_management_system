@@ -51,7 +51,7 @@ export function prismaQueue(db) {
         UPDATE "PlatformSyncQueue" q
            SET "lockedUntil" = ${new Date(now.getTime() + LEASE_MS)}, "attempts" = q."attempts" + 1
           FROM due WHERE q."id" = due."id"
-        RETURNING q."id", q."kind", q."localId", q."version", q."attempts"`;
+        RETURNING q."id", q."kind", q."localId", q."companyId", q."version", q."attempts"`;
       return rows.sort((a, b) => a.id - b.id);
     },
 

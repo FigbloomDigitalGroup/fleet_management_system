@@ -8,6 +8,7 @@ import { processQueue } from "./outbox.js";
 import { prismaQueue, loadCompanyForSync, recordPlatformLink } from "./store.js";
 import { applyPlatformDecision } from "./decisions.js";
 import { platformDecisionsEnabled } from "./settings.js";
+import { sendStaffRow, loadPersonForSync, prismaStaffLinks } from "./staffEvents.js";
 
 let running = false;
 let warned = false;
@@ -30,6 +31,8 @@ export async function runPlatformSync({ db = prisma, client = sharedPlatformClie
       // the platform's answer is its decision: applied the same way as a webhook
       adoptStatus: async (company, answer) =>
         (await applyPlatformDecision(db, { companyId: company.id, status: answer.status, source: "registration" })).outcome,
+      // fleet.staff.* for Figbloom HR (queued only while HR_INTEGRATION_ENABLED is on)
+      sendStaff: (row) => sendStaffRow(row, { client, loadPerson: (id) => loadPersonForSync(db, id), links: prismaStaffLinks(db) }),
       limit,
     });
   } finally {

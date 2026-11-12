@@ -16,7 +16,11 @@ import {
   FiSliders,
   FiUserPlus,
   FiUsers,
+  FiUser,
+  FiBookOpen,
 } from "react-icons/fi";
+import { Role } from "../types/auth";
+import { isStaffRole, staffPageAllowed } from "./staffRoles";
 import { IoCarSportSharp } from "react-icons/io5";
 
 // One flat menu per role, always visible on desktop and the same list in the
@@ -68,7 +72,25 @@ export function platformNav(): FleetNav {
 
 export function fleetNav(
   base: "/admin" | "/company",
-  { isOwner, canEditCompany, supportView = false }: { isOwner: boolean; canEditCompany: boolean; supportView?: boolean }
+  {
+    isOwner,
+    canEditCompany,
+    supportView = false,
+    role = null,
+    canManageTeam = false,
+    showHr = false,
+    showMyHr = false,
+  }: {
+    isOwner: boolean;
+    canEditCompany: boolean;
+    supportView?: boolean;
+    role?: Role | null;
+    // Team: the owner and full admins
+    canManageTeam?: boolean;
+    // HR & Payroll (one click into Figbloom HR) and My HR, when HR is on
+    showHr?: boolean;
+    showMyHr?: boolean;
+  }
 ): FleetNav {
   const items: FleetNavItem[] = [
     { label: "Overview", href: `${base}/dashboard`, icon: FiHome },
@@ -83,17 +105,26 @@ export function fleetNav(
     { label: "Inspections & maintenance", href: `${base}/inspections`, icon: FiClipboard },
     { label: "Reports", href: `${base}/reports`, icon: FiBarChart2 },
     { label: "Messages", href: `${base}/messages`, icon: FiMessageSquare, badge: "messages" },
-    ...(isOwner ? [{ label: "Admins", href: `${base}/admins`, icon: FiUserPlus }] : []),
+    // The owner's Team page has always lived at /company/admins (Figbloom
+    // staff in a support view see it read-only); full admins have /admin/team.
+    ...(isOwner ? [{ label: "Team", href: `${base}/admins`, icon: FiUserPlus }] : []),
+    ...(!isOwner && canManageTeam ? [{ label: "Team", href: `${base}/team`, icon: FiUserPlus }] : []),
     // Billing isn't shown to Figbloom staff in a support view.
-    ...(isOwner && !supportView ? [{ label: "Billing", href: `${base}/billing`, icon: FiCreditCard }] : []),
+    ...((isOwner || role === "ACCOUNTANT") && !supportView ? [{ label: "Billing", href: `${base}/billing`, icon: FiCreditCard }] : []),
+    ...(showHr ? [{ label: "HR & Payroll", href: `${base}/hr`, icon: FiBookOpen }] : []),
+    ...(showMyHr ? [{ label: "My HR", href: `${base}/my-hr`, icon: FiUser }] : []),
     ...(canEditCompany ? [{ label: "Settings", href: `${base}/settings`, icon: FiSliders }] : []),
   ];
 
+  // Each staff role sees only its own pages.
+  const visible = isStaffRole(role) ? items.filter((i) => staffPageAllowed(role, i.href)) : items;
+  const alertsHref = visible.some((i) => i.href === `${base}/alerts`) ? `${base}/alerts` : null;
+
   return {
     mapHref: `${base}/live-map`,
-    alertsHref: `${base}/alerts`,
-    items,
-    tabs: [`${base}/dashboard`, `${base}/live-map`, `${base}/vehicles`, `${base}/alerts`],
+    alertsHref,
+    items: visible,
+    tabs: [`${base}/dashboard`, `${base}/live-map`, `${base}/vehicles`, alertsHref ?? `${base}/trips`],
   };
 }
 

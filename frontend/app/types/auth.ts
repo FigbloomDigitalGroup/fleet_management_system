@@ -1,4 +1,16 @@
-export type Role = "PLATFORM_ADMIN" | "COMPANY_OWNER" | "ADMIN" | "DRIVER";
+export type Role =
+  | "PLATFORM_ADMIN"
+  | "COMPANY_OWNER"
+  | "ADMIN"
+  | "DRIVER"
+  // Company staff roles (backend/lib/staffRoles.js): web, in the /admin area,
+  // each with its own menu (lib/staffRoles.ts).
+  | "OPERATOR"
+  | "ACCOUNTANT"
+  | "MECHANIC"
+  | "SUPERVISOR";
+
+export type StaffRole = "OPERATOR" | "ACCOUNTANT" | "MECHANIC" | "SUPERVISOR";
 
 // Only meaningful for ADMIN users — null/undefined for every other role.
 // Older stored sessions predate the field, so treat a missing value as "full".
@@ -106,8 +118,9 @@ export interface AdminRecord {
   fullName: string;
   role: string;
   status: string;
-  adminAccess?: AdminAccess;
+  adminAccess?: AdminAccess | null;
   avatarUrl?: string | null;
+  phone?: string | null;
   createdAt: string;
 }
 
@@ -378,6 +391,9 @@ export interface InspectionRecord {
   passed: boolean;
   odometerKm?: number | null;
   notes?: string | null;
+  // Signed off by a supervisor, mechanic, full admin or the owner.
+  reviewedAt?: string | null;
+  reviewNote?: string | null;
   createdAt: string;
 }
 
