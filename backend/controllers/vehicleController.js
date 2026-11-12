@@ -242,7 +242,9 @@ export async function getVehicle(req, res) {
       include: VEHICLE_INCLUDE,
     });
     if (!vehicle) return res.status(404).json({ error: "Vehicle not found" });
-    return res.json(toApi(vehicle));
+    // The token itself is never sent back (only once, when it's issued);
+    // the vehicle page just needs to know whether one exists.
+    return res.json({ ...toApi(vehicle), hasTrackerToken: !!vehicle.trackerToken });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch vehicle" });

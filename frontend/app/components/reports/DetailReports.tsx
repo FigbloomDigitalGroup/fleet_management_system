@@ -179,7 +179,7 @@ export function SafetyTable({ report }: { report: SafetyReport }) {
                   </li>
                 );
               })}
-              <li className="pt-2 text-xs text-gray-400">Resolved alerts are cleared after 30 minutes, so older ones may not be counted.</li>
+              <li className="pt-2 text-xs text-gray-400">Resolved alerts are kept for at least 90 days, so older ones may not be counted.</li>
             </ul>
           )}
         </div>

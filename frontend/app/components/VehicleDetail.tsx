@@ -2,12 +2,13 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { apiRequest } from "../lib/api";
+import { apiRequest, errorMessage } from "../lib/api";
 import FullPageLoading from "@/app/components/FullPageLoading";
 import ZoneStatusBadge from "@/app/components/ZoneStatusBadge";
 import VehicleTripsMap from "@/app/components/VehicleTripsMap";
 import { usePageHeader } from "@/app/components/DashboardShell";
 import VehicleExtras from "@/app/components/VehicleExtras";
+import ConnectTracking from "@/app/components/ConnectTracking";
 import { useAdminAccess } from "@/app/lib/adminAccess";
 import { CompanyRecord, GeofenceRecord, VehicleRecord } from "../types/auth";
 
@@ -63,8 +64,8 @@ export default function VehicleDetail({ basePath }: { basePath: "/admin" | "/com
       if (!mileageDirtyRef.current) {
         setMileageInput(data.avgConsumptionLPer100Km != null ? String(data.avgConsumptionLPer100Km) : "");
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to load vehicle");
+    } catch (err) {
+      setError(errorMessage(err, "Failed to load vehicle"));
     } finally {
       setLoading(false);
     }
@@ -73,6 +74,14 @@ export default function VehicleDetail({ basePath }: { basePath: "/admin" | "/com
   useEffect(() => {
     load();
   }, [id]);
+
+  // Links like ".../vehicles/<id>#connect-tracking" land here before the
+  // vehicle has loaded, so scroll to the panel once it's on the page.
+  const hasVehicle = !!vehicle;
+  useEffect(() => {
+    if (!hasVehicle || window.location.hash !== "#connect-tracking") return;
+    document.getElementById("connect-tracking")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [hasVehicle]);
 
   async function updateMileage(e: FormEvent) {
     e.preventDefault();
@@ -85,8 +94,8 @@ export default function VehicleDetail({ basePath }: { basePath: "/admin" | "/com
       });
       mileageDirtyRef.current = false;
       await load();
-    } catch (err: any) {
-      setMileageError(err.message || "Failed to update mileage");
+    } catch (err) {
+      setMileageError(errorMessage(err, "Failed to update mileage"));
     } finally {
       setSavingMileage(false);
     }
@@ -105,8 +114,8 @@ export default function VehicleDetail({ basePath }: { basePath: "/admin" | "/com
     try {
       await apiRequest(`/api/vehicles/${id}`, { method: "PUT", body: JSON.stringify({ status }) });
       await load();
-    } catch (err: any) {
-      setError(err.message || "Failed to update status");
+    } catch (err) {
+      setError(errorMessage(err, "Failed to update status"));
     } finally {
       setUpdating(false);
     }
@@ -120,8 +129,8 @@ export default function VehicleDetail({ basePath }: { basePath: "/admin" | "/com
         body: JSON.stringify({ startGeofenceId: geofenceId || null }),
       });
       await load();
-    } catch (err: any) {
-      setError(err.message || "Failed to update starting zone");
+    } catch (err) {
+      setError(errorMessage(err, "Failed to update starting zone"));
     } finally {
       setSavingZone(false);
     }
@@ -150,12 +159,26 @@ export default function VehicleDetail({ basePath }: { basePath: "/admin" | "/com
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-3">
+          <ConnectTracking
+            vehicleId={vehicle._id}
+            plateNumber={vehicle.plateNumber}
+            deviceId={vehicle.deviceId}
+            hasTrackerToken={!!vehicle.hasTrackerToken}
+            driverName={vehicle.driverId?.fullName ?? null}
+            lastSeenAt={lastLocation?.recordedAt ?? null}
+            driversHref={`${basePath}/drivers`}
+            canManage={canManageFleet}
+            onDeviceIdSaved={load}
+          />
+        </div>
+
         <div className="lg:col-span-2 bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
           <h3 className="text-sm font-medium text-gray-700">Vehicle details</h3>
           <p className="text-xs text-teal-600 mt-0.5 mb-3">Registration info for this vehicle</p>
           <dl className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <dt className="text-gray-500">Device ID</dt>
+              <dt className="text-gray-500">Tracker ID</dt>
               <dd className="text-gray-900 font-medium mt-0.5">{vehicle.deviceId || "Not set"}</dd>
             </div>
             <div>
@@ -237,11 +260,11 @@ export default function VehicleDetail({ basePath }: { basePath: "/admin" | "/com
 
         <div className="lg:col-span-3 bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5">
           <h3 className="text-sm font-medium text-gray-700">Daily starting point</h3>
-          <p className="text-xs text-teal-600 mt-0.5 mb-3">Where this vehicle's driver should start their day</p>
+          <p className="text-xs text-teal-600 mt-0.5 mb-3">Where this vehicle&apos;s driver should start their day</p>
 
           {geofences.length === 0 && (
             <p className="text-sm text-gray-400">
-              No geofence zones yet — create one on the Live Map page to set a starting point.
+              No zones yet. Draw one on the Geofences page to set a starting point.
             </p>
           )}
 

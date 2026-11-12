@@ -19,7 +19,8 @@ const SLIDE_MS = 6000;
 // fleet. Pauses while hovered so a slide can be read or its link clicked.
 export default function OverviewSlides({ isOwner }: { isOwner: boolean }) {
   const slides: Slide[] = [
-    ...(SPECIAL_OFFER.active
+    // Offers are for the person who pays: the owner.
+    ...(SPECIAL_OFFER.active && isOwner
       ? [
           {
             badge: "Special offer",
@@ -47,7 +48,7 @@ export default function OverviewSlides({ isOwner }: { isOwner: boolean }) {
       badge: "Driver mobile app",
       badgeClass: "bg-emerald-700 text-white",
       title: "Your drivers get FIGBLOOM FLEET in their pocket.",
-      body: "One-tap SOS to your dashboard, their vehicle's status and zone, trip history and real-time alerts — on Google Play.",
+      body: "One-tap SOS to your dashboard, their vehicle's status and zone, trip history and real-time alerts. Coming soon to Google Play.",
     },
   ];
 

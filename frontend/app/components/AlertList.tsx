@@ -340,7 +340,7 @@ export default function AlertsList() {
 
           {!loading && !error && (
             <p className="border-t border-gray-100 px-4 py-2 text-[11px] text-gray-400">
-              Resolved alerts are cleared automatically 30 minutes after they&apos;re resolved.
+              Resolved alerts stay here as history for at least 90 days (the Resolved tab shows them).
             </p>
           )}
         </div>

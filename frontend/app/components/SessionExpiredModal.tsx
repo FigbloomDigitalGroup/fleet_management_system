@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { FiLock } from "react-icons/fi";
 import { onSessionExpired } from "../lib/sessionEvents";
 import NoticeModal from "./NoticeModal";
@@ -9,6 +10,7 @@ import { useAuth } from "../context/AuthContext";
 export default function SessionExpiredModal() {
   const [open, setOpen] = useState(false);
   const { logout } = useAuth();
+  const pathname = usePathname();
 
   useEffect(() => onSessionExpired(() => setOpen(true)), []);
 
@@ -22,7 +24,8 @@ export default function SessionExpiredModal() {
       primaryLabel="Go to login"
       onPrimary={() => {
         setOpen(false);
-        logout();
+        // Back to this page after signing in again.
+        logout({ returnTo: `${pathname}${window.location.search}` });
       }}
     />
   );

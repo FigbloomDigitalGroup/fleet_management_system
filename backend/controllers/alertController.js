@@ -33,14 +33,26 @@ const DRIVER_VISIBLE_TYPES = [
 // admin_message is a message TO a driver, not an operational alert ABOUT a
 // vehicle — it's excluded here so it only ever shows up on the driver's own
 // phone (getMyAlerts below), never cluttering the admin/company dashboard.
+//
+// Every open alert (up to 500), plus resolved history: the most recent 300
+// resolved in the last ?days (default 90, up to 365). Resolved alerts are no
+// longer deleted after 30 minutes, so open ones can't be pushed out of the
+// list by old history.
 export async function listAlerts(req, res) {
   try {
-    const alerts = await prisma.alert.findMany({
-      where: { ...tenantScope(req), type: { not: "admin_message" } },
-      include: { vehicle: { select: { id: true, plateNumber: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 100,
-    });
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 90, 1), 365);
+    const base = { ...tenantScope(req), type: { not: "admin_message" } };
+    const include = { vehicle: { select: { id: true, plateNumber: true } } };
+    const [open, resolved] = await Promise.all([
+      prisma.alert.findMany({ where: { ...base, resolved: false }, include, orderBy: { createdAt: "desc" }, take: 500 }),
+      prisma.alert.findMany({
+        where: { ...base, resolved: true, createdAt: { gte: new Date(Date.now() - days * 86400000) } },
+        include,
+        orderBy: { createdAt: "desc" },
+        take: 300,
+      }),
+    ]);
+    const alerts = [...open, ...resolved].sort((a, b) => b.createdAt - a.createdAt);
     return res.json(toApi(alerts));
   } catch (err) {
     console.error(err);
@@ -52,7 +64,7 @@ export async function resolveAlert(req, res) {
   try {
     const alert = await prisma.alert.findFirst({ where: { id: req.params.id, ...tenantScope(req) }, select: { id: true } });
     if (!alert) return res.status(404).json({ error: "Alert not found" });
-    // lib/cleanup.js deletes it 30 minutes after resolvedAt.
+    // Kept as history; lib/cleanup.js deletes it after at least 90 days.
     const resolved = await prisma.alert.update({ where: { id: alert.id }, data: { resolved: true, resolvedAt: new Date() } });
     return res.json(toApi(resolved));
   } catch (err) {

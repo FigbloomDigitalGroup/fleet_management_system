@@ -21,7 +21,10 @@ interface Popup {
   shownAt: number;
 }
 
-const DEFAULT_TITLES: Record<NotifyKind, string> = { error: "Something went wrong", success: "Done", info: "Heads up" };
+// An error popup without its own title is almost always a form check
+// ("Password must be at least 8 characters"), so it says that, not
+// "Something went wrong".
+const DEFAULT_TITLES: Record<NotifyKind, string> = { error: "Please check this", success: "Done", info: "Heads up" };
 
 // Every response error, lost connection and unexpected failure on the site
 // shows here as its own popup instead of red text in the console. Mounted
@@ -40,6 +43,10 @@ export default function ErrorPopups() {
       // in one load) restarts the existing popup rather than stacking copies.
       const same = list.find((p) => p.message === message);
       if (same) return list.map((p) => (p === same ? { ...p, shownAt: Date.now() } : p));
+      // Something just worked, so earlier failures are out of date: clear
+      // them rather than leave a red popup beside the green one. The
+      // offline popup stays until the connection is back.
+      if (kind === "success") list = list.filter((p) => p.kind !== "error" || p.offline);
       // While offline, the offline popup already says why requests fail.
       if (kind === "error" && message === OFFLINE_MESSAGE && list.some((p) => p.offline)) return list;
       const popup: Popup = {
@@ -112,7 +119,8 @@ export default function ErrorPopups() {
   return (
     <div
       aria-live="assertive"
-      className="pointer-events-none fixed inset-x-4 top-4 z-[200] flex flex-col items-end gap-2 sm:left-auto sm:right-4 sm:w-96"
+      // Below the page header (title, alerts bell), not on top of it.
+      className="pointer-events-none fixed inset-x-4 top-16 z-[200] flex flex-col items-end gap-2 sm:left-auto sm:right-4 sm:w-96"
     >
       <AnimatePresence initial={false}>
         {popups.map((p) => (

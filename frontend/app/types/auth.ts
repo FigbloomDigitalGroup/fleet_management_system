@@ -117,6 +117,8 @@ export interface VehicleRecord {
   make?: string;
   model?: string;
   deviceId?: string;
+  // Only on GET /api/vehicles/:id: whether a GPS tracker token has been issued.
+  hasTrackerToken?: boolean;
   vehicleType?: string;
   status: "active" | "idle" | "offline" | "maintenance";
   driverId?: { _id: string; fullName: string; email: string; avatarUrl?: string | null } | null;

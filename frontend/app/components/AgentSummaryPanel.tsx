@@ -56,7 +56,7 @@ export default function AgentSummaryPanel() {
     );
   }, [summary]);
 
-  usePageHeader("AI Agent", "How the anomaly-detection agent is watching your fleet", statsNode);
+  usePageHeader("AI agent", "How the anomaly-detection agent is watching your fleet", statsNode);
 
   if (loading) return <FullPageLoading label="Loading agent status" />;
   if (error) return <p className="text-sm text-red-600">{error}</p>;

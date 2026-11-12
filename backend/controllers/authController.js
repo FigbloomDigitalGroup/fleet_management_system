@@ -145,7 +145,8 @@ export async function registerCompany(req, res) {
     // Once the Figbloom console decides, every new company starts pending
     // here; the platform's answer (pending, or active with its auto-approve)
     // is then applied by the sync (lib/platform/sync.js).
-    const startsPending = settings.requireManualApproval || platformDecisionsEnabled();
+    const approval = approvalMode(settings);
+    const startsPending = approval !== "auto";
 
     const passwordHash = await bcrypt.hash(password, 10);
     // Company and owner together, so a failure can't leave an ownerless company.
@@ -186,6 +187,12 @@ export async function registerCompany(req, res) {
     return res.status(201).json({
       message: "Company and owner account created",
       company: toApi(company),
+      // How a pending company gets switched on, so the "received" screen can
+      // say what really happens next: "console" (the Figbloom console's
+      // per-product auto-approve or a person there decides, usually within
+      // minutes), "manual" (Figbloom staff approve it here), or "auto".
+      approval,
+      supportEmail: settings.supportEmail,
       user: { id: user.id, email: user.email, role: user.role },
       accessToken,
       refreshToken,
@@ -198,6 +205,15 @@ export async function registerCompany(req, res) {
     }
     return res.status(500).json({ error: "Failed to register company", code: err?.code });
   }
+}
+
+// How a newly registered company is switched on. With Figbloom-console
+// decisions on, the console decides (its per-product auto-approve, or a
+// person there) and requireManualApproval is not used; otherwise the
+// platform setting decides between staff approval and straight to active.
+export function approvalMode(settings, env = process.env) {
+  if (platformDecisionsEnabled(env)) return "console";
+  return settings.requireManualApproval ? "manual" : "auto";
 }
 
 // "Acme Logistics" → "acme-logistics"; if another company already has that,
@@ -400,25 +416,30 @@ export async function login(req, res) {
     // expiry were previously only ever set, never actually checked anywhere.
     if (user.companyId) {
       const company = await prisma.company.findUnique({ where: { id: user.companyId } });
-      if (company && company.status === "suspended") {
+      // Each refusal carries a `code` and the details the web sign-in page
+      // needs to show a proper status screen (the app just shows `error`).
+      const refuse = async (code, error) => {
+        const settings = await getPlatformSettings();
         return res.status(403).json({
-          error: "Your company's account has been suspended. Please contact support.",
+          error,
+          code,
+          companyName: company.name,
+          registeredAt: company.createdAt,
+          approval: approvalMode(settings),
+          supportEmail: settings.supportEmail,
         });
+      };
+      if (company && company.status === "suspended") {
+        return refuse("company_suspended", "Your company's account has been suspended. Please contact support.");
       }
       if (company && company.status === "rejected") {
-        return res.status(403).json({
-          error: "Your company's registration was not approved. Please contact support.",
-        });
+        return refuse("company_rejected", "Your company's registration was not approved. Please contact support.");
       }
       if (company && company.status === "pending") {
-        return res.status(403).json({
-          error: "Your company's account is awaiting approval. Please check back soon.",
-        });
+        return refuse("company_pending", "Your company's account is awaiting approval. Please check back soon.");
       }
       if (company && company.subscriptionPlan === "trial" && company.trialEndsAt && company.trialEndsAt.getTime() < Date.now()) {
-        return res.status(403).json({
-          error: "Your trial period has ended. Please upgrade your plan to continue.",
-        });
+        return refuse("trial_ended", "Your trial period has ended. Please upgrade your plan to continue.");
       }
     }
 
