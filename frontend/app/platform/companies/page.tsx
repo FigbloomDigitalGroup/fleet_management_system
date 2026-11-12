@@ -9,6 +9,9 @@ import { usePageHeader } from "../../components/DashboardShell";
 import { industryLabel } from "../../lib/industries";
 import Avatar from "../../components/Avatar";
 import NoCompaniesYet from "../../components/NoCompaniesYet";
+import OpenFleetButton from "../../components/staff/OpenFleetButton";
+import CreateFleetModal from "../../components/staff/CreateFleetModal";
+import { FiPlus } from "react-icons/fi";
 
 const statusStyles: Record<string, string> = {
   active: "bg-teal-50 text-teal-600 border-teal-200",
@@ -21,6 +24,7 @@ export default function CompaniesPage() {
   const [companies, setCompanies] = useState<CompanyRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -36,10 +40,25 @@ export default function CompaniesPage() {
     load();
   }, []);
 
-  usePageHeader("Companies", "Every vehicle company registered on the platform");
+  usePageHeader("Customer fleets", "Every fleet on Figbloom Fleet");
 
   return (
     <div>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="max-w-2xl text-xs text-gray-600">
+          Vehicles, drivers and the live map live inside each fleet. Use <strong>Open this fleet</strong> to see one the way
+          its owner does: read-only, and your visit is recorded.
+        </p>
+        <button
+          onClick={() => setCreating(true)}
+          className="inline-flex shrink-0 items-center gap-1.5 self-start rounded bg-orange-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-orange-600"
+        >
+          <FiPlus size={14} /> Create a fleet
+        </button>
+      </div>
+      {creating && (
+        <CreateFleetModal onClose={() => setCreating(false)} onCreated={(c) => setCompanies((list) => [{ ...c, userCount: 1 }, ...list])} />
+      )}
       {loading && <Skeleton rows={5} rowClassName="h-12" />}
 
       {error && (
@@ -49,22 +68,23 @@ export default function CompaniesPage() {
       )}
 
       {!loading && !error && (
-        <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
               <tr>
-                <th className="text-left px-5 py-3 font-medium">Company</th>
+                <th className="text-left px-5 py-3 font-medium">Fleet</th>
                 <th className="text-left px-5 py-3 font-medium">Status</th>
                 <th className="text-left px-5 py-3 font-medium">Plan</th>
                 <th className="text-left px-5 py-3 font-medium">Industry</th>
                 <th className="text-left px-5 py-3 font-medium">Users</th>
                 <th className="text-left px-5 py-3 font-medium">Registered</th>
+                <th className="px-5 py-3"><span className="sr-only">Open</span></th>
               </tr>
             </thead>
             <tbody>
               {companies.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={7}>
                     <NoCompaniesYet />
                   </td>
                 </tr>
@@ -90,6 +110,9 @@ export default function CompaniesPage() {
                     <td className="px-5 py-3 text-gray-600">{c.userCount ?? "-"}</td>
                     <td className="px-5 py-3 text-gray-500">
                       {new Date(c.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <OpenFleetButton companyId={c._id} size="sm" />
                     </td>
                   </tr>
                 ))

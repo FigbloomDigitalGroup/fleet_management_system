@@ -125,7 +125,8 @@ export function sendCompanyApprovedEmail(to, { companyName }) {
   });
 }
 
-// A company added this person as an admin or driver. The link lets them set
+// A company added this person as an admin or driver (or Figbloom staff set
+// up a fleet with this person as its owner: role COMPANY_OWNER). The link lets them set
 // their own password; drivers also get the app download.
 export function sendUserWelcomeEmail(to, { fullName, companyName, role, setPasswordLink, validDays }) {
   const isDriver = role === "DRIVER";
@@ -136,15 +137,15 @@ export function sendUserWelcomeEmail(to, { fullName, companyName, role, setPassw
     : `Then sign in on the web dashboard at <a href="${login}">${escapeHtml(login)}</a>.`;
   return send({
     to,
-    subject: `You've been added to ${companyName} on FIGBLOOM FLEET`,
+    subject: role === "COMPANY_OWNER" ? `Your fleet ${companyName} is ready on FIGBLOOM FLEET` : `You've been added to ${companyName} on FIGBLOOM FLEET`,
     heading: `Welcome, ${fullName}!`,
     paragraphs: [
-      `<strong>${escapeHtml(companyName)}</strong> has added you to FIGBLOOM FLEET as ${isDriver ? "a driver" : "an admin"}.`,
+      `<strong>${escapeHtml(companyName)}</strong> ${role === "COMPANY_OWNER" ? "has been set up for you on FIGBLOOM FLEET by the Figbloom team. You are its owner." : `has added you to FIGBLOOM FLEET as ${isDriver ? "a driver" : "an admin"}.`}`,
       `Set your own password to get started — the link works for ${validDays} days.`,
     ],
     button: { label: "Set your password", href: setPasswordLink },
     after: [next],
-    text: `${companyName} has added you to FIGBLOOM FLEET. Set your password (link valid ${validDays} days): ${setPasswordLink} — then ${
+    text: `${role === "COMPANY_OWNER" ? `Your fleet ${companyName} is ready on FIGBLOOM FLEET.` : `${companyName} has added you to FIGBLOOM FLEET.`} Set your password (link valid ${validDays} days): ${setPasswordLink} — then ${
       isDriver ? `install the driver app: ${app}` : `sign in: ${login}`
     }`,
   });

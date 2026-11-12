@@ -3,7 +3,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "../lib/api";
-import { User, LoginResponse } from "../types/auth";
+import { User, LoginResponse, SupportView } from "../types/auth";
+import { STAFF_SESSION_KEY, SUPPORT_VIEW_ENDED_EVENT, enterSupportSession, restoreStaffSession } from "../lib/supportView";
 
 interface RegisterPayload {
   companyName: string;
@@ -22,6 +23,9 @@ interface AuthContextType {
   // that was switched on while its owner waited on the "received" screen).
   adoptSession: (data: LoginResponse) => void;
   logout: () => void;
+  // Figbloom staff: open a customer fleet read-only (support view), and leave it.
+  startSupportView: (companyId: string) => Promise<void>;
+  exitSupportView: () => Promise<void>;
 }
 
 interface RegisterResult {
@@ -64,7 +68,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
+  // The API ended the support view (its hour ran out): the staff session is
+  // already back (lib/supportView.ts), so take them back to their area.
+  useEffect(() => {
+    function onEnded(e: Event) {
+      const staff = (e as CustomEvent<{ staff: User | null }>).detail?.staff;
+      if (!staff) return;
+      setUser(staff);
+      router.push("/platform/dashboard");
+    }
+    window.addEventListener(SUPPORT_VIEW_ENDED_EVENT, onEnded);
+    return () => window.removeEventListener(SUPPORT_VIEW_ENDED_EVENT, onEnded);
+  }, [router]);
+
+  async function startSupportView(companyId: string) {
+    if (!user || user.role !== "PLATFORM_ADMIN") throw new Error("Only Figbloom staff can open a customer fleet");
+    const data = await apiRequest<{ token: string; session: SupportView & { id: string } }>("/api/support/sessions", {
+      method: "POST",
+      body: JSON.stringify({ companyId }),
+      successMessage: false,
+    });
+    const supportUser: User = {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      role: "COMPANY_OWNER",
+      companyId: data.session.companyId,
+      adminAccess: null,
+      support: {
+        sessionId: data.session.id,
+        companyId: data.session.companyId,
+        companyName: data.session.companyName,
+        expiresAt: data.session.expiresAt,
+      },
+    };
+    enterSupportSession(data.token, supportUser);
+    setUser(supportUser);
+    router.push("/company/dashboard");
+  }
+
+  async function exitSupportView() {
+    const support = user?.support;
+    const staff = restoreStaffSession();
+    if (!staff) {
+      // Nothing to go back to (storage cleared): sign in again.
+      logout();
+      return;
+    }
+    setUser(staff);
+    router.push(support ? `/platform/companies/${support.companyId}` : "/platform/dashboard");
+    if (support) {
+      // Recorded with the staff member's own sign-in, so it works even
+      // after the support token has run out.
+      apiRequest(`/api/support/sessions/${support.sessionId}/end`, { method: "POST", successMessage: false }).catch(() => {});
+    }
+  }
+
   function persistSession(data: LoginResponse) {
+    localStorage.removeItem(STAFF_SESSION_KEY); // a fresh sign-in is never a support view
     localStorage.setItem("accessToken", data.accessToken);
     localStorage.setItem("refreshToken", data.refreshToken);
     localStorage.setItem("user", JSON.stringify(data.user));
@@ -94,6 +155,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function logout() {
+    // Signing out of a support view signs the staff member out too.
+    if (localStorage.getItem(STAFF_SESSION_KEY)) {
+      const sessionId = user?.support?.sessionId;
+      restoreStaffSession();
+      if (sessionId) apiRequest(`/api/support/sessions/${sessionId}/end`, { method: "POST", successMessage: false }).catch(() => {});
+    }
     const refreshToken = localStorage.getItem("refreshToken");
     if (refreshToken) {
       // Best-effort — revoke the refresh token server-side so it can't be
@@ -111,7 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, adoptSession: persistSession, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, adoptSession: persistSession, logout, startSupportView, exitSupportView }}>
       {children}
     </AuthContext.Provider>
   );

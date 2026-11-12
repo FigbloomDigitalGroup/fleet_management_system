@@ -44,15 +44,18 @@ export async function listThreads(req, res) {
   }
 }
 
-async function threadFor(driverId, markReadFromDriver) {
+async function threadFor(driverId, markReadFromDriver, { markRead = true } = {}) {
   // The driver's own view leaves out messages they deleted.
   const where = markReadFromDriver ? { driverId } : { driverId, hiddenForDriverAt: null };
   const messages = await prisma.message.findMany({ where, orderBy: { createdAt: "desc" }, take: 200 });
-  // Opening a thread marks the other side's messages as read.
-  await prisma.message.updateMany({
-    where: { driverId, fromDriver: markReadFromDriver, readAt: null },
-    data: { readAt: new Date() },
-  });
+  // Opening a thread marks the other side's messages as read (not when
+  // Figbloom staff look on in a read-only support view).
+  if (markRead) {
+    await prisma.message.updateMany({
+      where: { driverId, fromDriver: markReadFromDriver, readAt: null },
+      data: { readAt: new Date() },
+    });
+  }
   return toApi(messages.reverse());
 }
 
@@ -64,7 +67,7 @@ export async function getThread(req, res) {
       select: { id: true },
     });
     if (!driver) return res.status(404).json({ error: "Driver not found" });
-    return res.json(await threadFor(driver.id, true));
+    return res.json(await threadFor(driver.id, true, { markRead: !req.user.support }));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch messages" });

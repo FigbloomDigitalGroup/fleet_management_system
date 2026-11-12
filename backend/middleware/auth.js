@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma.js";
+import { SUPPORT_TOKEN_TYPE, resolveSupportSession, supportModeDenial } from "../lib/supportSession.js";
 
 // Verifies the JWT and attaches current user info to req.user
 export async function authenticate(req, res, next) {
@@ -12,22 +13,39 @@ export async function authenticate(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await prisma.user.findUnique({
-      where: { id: String(decoded.id) },
-      select: { id: true, role: true, companyId: true, adminAccess: true },
-    });
-    if (!user) {
-      return res.status(401).json({ error: "User account no longer exists" });
-    }
+    // A Figbloom staff support view (lib/supportSession.js): one company's
+    // owner area as its owner sees it, read-only, checked against its session
+    // row on every request.
+    if (decoded?.typ === SUPPORT_TOKEN_TYPE) {
+      const support = await resolveSupportSession(prisma, decoded);
+      if (!support) {
+        return res.status(401).json({ error: "This support view has ended or expired", code: "support_session_ended" });
+      }
+      req.user = support;
+    } else {
+      const user = await prisma.user.findUnique({
+        where: { id: String(decoded.id) },
+        select: { id: true, role: true, companyId: true, adminAccess: true },
+      });
+      if (!user) {
+        return res.status(401).json({ error: "User account no longer exists" });
+      }
 
-    req.user = {
-      id: user.id,
-      role: user.role,
-      companyId: user.companyId,
-      adminAccess: user.role === "ADMIN" ? user.adminAccess || "full" : null,
-    };
+      req.user = {
+        id: user.id,
+        role: user.role,
+        companyId: user.companyId,
+        adminAccess: user.role === "ADMIN" ? user.adminAccess || "full" : null,
+      };
+    }
   } catch (err) {
     return res.status(401).json({ error: "Invalid or expired token" });
+  }
+
+  if (req.user.support) {
+    const refused = supportModeDenial(req);
+    if (refused) return res.status(403).json({ error: refused, code: "support_read_only" });
+    return next();
   }
 
   const denied = adminAccessDenial(req);

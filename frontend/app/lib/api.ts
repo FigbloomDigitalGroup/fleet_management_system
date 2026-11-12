@@ -1,4 +1,5 @@
 import { emitSessionExpired } from "./sessionEvents";
+import { SUPPORT_READ_ONLY_MESSAGE, inSupportView, supportViewExpired } from "./supportView";
 import { OFFLINE_MESSAGE, UNREACHABLE_MESSAGE, friendlyStatusMessage, isOffline, notifyError, notifySuccess } from "./notify";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -124,6 +125,13 @@ export async function apiRequest<T = any>(
   // the browser sets its own multipart boundary only when we leave it unset.
   const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
   const { successMessage, ...init } = options;
+  const method = (init.method || "GET").toUpperCase();
+
+  // A Figbloom staff support view is read-only; the API refuses changes too,
+  // this just says so without a round trip.
+  if (inSupportView() && !["GET", "HEAD", "OPTIONS"].includes(method)) {
+    throw failed(SUPPORT_READ_ONLY_MESSAGE, 403);
+  }
 
   let res: Response;
   try {
@@ -137,6 +145,12 @@ export async function apiRequest<T = any>(
     });
   } catch {
     throw failed(isOffline() ? OFFLINE_MESSAGE : UNREACHABLE_MESSAGE);
+  }
+
+  // The support view ran out (or was ended): back to the staff session.
+  if (res.status === 401 && inSupportView()) {
+    supportViewExpired();
+    throw failed("This support view has ended. You are back in the Figbloom staff area.", 401);
   }
 
   // Token expired or missing — try refreshing once, then retry the request
@@ -167,7 +181,6 @@ export async function apiRequest<T = any>(
 
   // Changes (not plain loads, which would pop up on every page and poll)
   // confirm themselves in a popup.
-  const method = (init.method || "GET").toUpperCase();
   const quiet = QUIET_SUCCESS.some((p) => path.startsWith(p));
   if (method !== "GET" && successMessage !== false && !quiet) {
     notifySuccess(successMessage || data.message || successText(method, path));
@@ -190,6 +203,10 @@ export async function apiDownload(path: string, fallbackFilename: string, isRetr
     throw failed(isOffline() ? OFFLINE_MESSAGE : UNREACHABLE_MESSAGE);
   }
 
+  if (res.status === 401 && inSupportView()) {
+    supportViewExpired();
+    throw failed("This support view has ended. You are back in the Figbloom staff area.", 401);
+  }
   if (res.status === 401 && !isRetry) {
     const newToken = await refreshAccessToken();
     if (newToken) return apiDownload(path, fallbackFilename, true);

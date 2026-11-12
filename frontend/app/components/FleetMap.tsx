@@ -478,7 +478,7 @@ export default function FleetMap({
   return (
     // Traccar's main screen: the map fills the window and everything else
     // floats on top of it.
-    <div className="relative h-screen w-full">
+    <div className="relative h-full w-full">
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={mapCenter}

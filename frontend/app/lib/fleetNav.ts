@@ -53,36 +53,34 @@ export function navHomeHref(nav: FleetNav) {
   return nav.mapHref ?? nav.sections[0].items[0].href;
 }
 
-// The platform owner's portal, in the same Traccar-style sections.
+// Figbloom staff's area (/platform), in plain words: the customer fleets
+// and what staff do with them first, billing and settings second. Vehicles,
+// drivers and the live map live inside each fleet (open one from Customer
+// fleets to see it read-only).
 export function platformNav(): FleetNav {
   return {
     mapHref: null,
     alertsHref: null,
     sections: [
       {
-        key: "reports",
-        label: "Reports",
-        icon: FiPieChart,
-        items: [
-          { label: "Overview", href: "/platform/dashboard", icon: FiHome },
-          { label: "Analytics", href: "/platform/analytics", icon: FiBarChart2 },
-          { label: "AI Agent", href: "/platform/agent", icon: FiCpu },
-        ],
-      },
-      {
         key: "companies",
-        label: "Companies",
+        label: "Customer fleets",
         icon: FiBriefcase,
         items: [
-          { label: "Companies", href: "/platform/companies", icon: FiBriefcase },
-          { label: "Billing", href: "/platform/billing", icon: FiCreditCard },
+          { label: "Staff home", href: "/platform/dashboard", icon: FiHome },
+          { label: "Customer fleets", href: "/platform/companies", icon: FiBriefcase },
+          { label: "Fleet reports", href: "/platform/analytics", icon: FiBarChart2 },
+          { label: "AI checks", href: "/platform/agent", icon: FiCpu },
         ],
       },
       {
         key: "settings",
-        label: "Settings",
+        label: "Billing & settings",
         icon: FiSettings,
-        items: [{ label: "Platform", href: "/platform/settings", icon: FiSliders }],
+        items: [
+          { label: "Billing", href: "/platform/billing", icon: FiCreditCard },
+          { label: "Settings", href: "/platform/settings", icon: FiSliders },
+        ],
       },
     ],
   };
@@ -90,7 +88,7 @@ export function platformNav(): FleetNav {
 
 export function fleetNav(
   base: "/admin" | "/company",
-  { isOwner, canEditCompany }: { isOwner: boolean; canEditCompany: boolean }
+  { isOwner, canEditCompany, supportView = false }: { isOwner: boolean; canEditCompany: boolean; supportView?: boolean }
 ): FleetNav {
   const reports: FleetNavItem[] = [
     { label: "Overview", href: `${base}/dashboard`, icon: FiHome },
@@ -113,7 +111,8 @@ export function fleetNav(
     ...(isOwner
       ? [
           { label: "Admins", href: `${base}/admins`, icon: FiUserPlus },
-          { label: "Billing", href: `${base}/billing`, icon: FiCreditCard },
+          // Billing isn't shown to Figbloom staff in a support view.
+          ...(supportView ? [] : [{ label: "Billing", href: `${base}/billing`, icon: FiCreditCard }]),
         ]
       : []),
     ...(canEditCompany ? [{ label: "Company", href: `${base}/settings`, icon: FiSliders }] : []),

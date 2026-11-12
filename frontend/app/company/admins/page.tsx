@@ -3,7 +3,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { apiRequest, errorMessage } from "../../lib/api";
 import { AdminAccess, AdminRecord } from "../../types/auth";
-import { ADMIN_ACCESS_OPTIONS } from "../../lib/adminAccess";
+import { ADMIN_ACCESS_OPTIONS, useAdminAccess } from "../../lib/adminAccess";
 import Skeleton from "../../components/Skeleton";
 import PasswordInput from "../../components/PasswordInput";
 import { usePageHeader } from "../../components/DashboardShell";
@@ -12,6 +12,8 @@ import EmptyState from "../../components/EmptyState";
 import { FiUserPlus } from "react-icons/fi";
 
 export default function AdminsPage() {
+  // Figbloom staff in a read-only support view see the list, not the controls.
+  const { isViewer: readOnly } = useAdminAccess();
   const [admins, setAdmins] = useState<AdminRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +108,7 @@ export default function AdminsPage() {
                         icon={FiUserPlus}
                         title="No admins yet"
                         text="You can run your fleet yourself, so admins are optional. Add one if someone else should help manage vehicles, drivers and the day's work."
-                        action={{ label: "Add your first admin", href: "#add-admin" }}
+                        action={readOnly ? undefined : { label: "Add your first admin", href: "#add-admin" }}
                       />
                     </td>
                   </tr>
@@ -123,7 +125,7 @@ export default function AdminsPage() {
                       <td className="px-5 py-3">
                         <select
                           value={a.adminAccess || "full"}
-                          disabled={changingId === a._id}
+                          disabled={readOnly || changingId === a._id}
                           onChange={(e) => handleChangeAccess(a, e.target.value as AdminAccess)}
                           title={ADMIN_ACCESS_OPTIONS.find((o) => o.value === (a.adminAccess || "full"))?.description}
                           className="text-sm border border-gray-300 rounded px-2 py-1 outline-none focus:border-teal-600 disabled:opacity-50"
@@ -155,6 +157,7 @@ export default function AdminsPage() {
         </div>
 
         {/* Add admin form */}
+        {!readOnly && (
         <div id="add-admin" className="scroll-mt-4 bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-5 h-fit">
           <h3 className="text-sm font-medium text-gray-700">Add an admin</h3>
           <p className="text-xs text-teal-600 mt-0.5 mb-4">
@@ -229,6 +232,7 @@ export default function AdminsPage() {
             </button>
           </form>
         </div>
+        )}
       </div>
     </div>
   );

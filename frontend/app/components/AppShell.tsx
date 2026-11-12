@@ -3,7 +3,7 @@
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FiArrowLeft, FiBell, FiChevronLeft, FiHelpCircle, FiLogOut, FiMapPin, FiMenu } from "react-icons/fi";
+import { FiArrowLeft, FiBell, FiChevronLeft, FiEye, FiHelpCircle, FiLogOut, FiMapPin, FiMenu } from "react-icons/fi";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import { FaLocationPinLock } from "react-icons/fa6";
 import { useAuth } from "../context/AuthContext";
@@ -101,6 +101,30 @@ export function BottomMenu({ dark = false }: { dark?: boolean }) {
   );
 }
 
+// Shown on every page while Figbloom staff view a customer fleet read-only:
+// whose fleet, that nothing can be changed, and the way back.
+export const SUPPORT_BANNER_HEIGHT = "2.5rem";
+function SupportBanner({ companyName, onExit }: { companyName: string; onExit: () => void }) {
+  return (
+    <div
+      role="status"
+      style={{ height: SUPPORT_BANNER_HEIGHT }}
+      className="fixed inset-x-0 top-0 z-[60] flex items-center gap-2 bg-amber-400 px-3 text-xs font-medium text-amber-950 shadow print:hidden sm:gap-3 sm:px-4 sm:text-sm"
+    >
+      <FiEye className="shrink-0" size={16} />
+      <span className="min-w-0 flex-1 truncate">
+        Viewing <strong>{companyName}</strong> as Figbloom staff — read only
+      </span>
+      <button
+        onClick={onExit}
+        className="shrink-0 rounded-full bg-amber-950 px-3 py-1 text-xs font-semibold text-amber-50 hover:bg-black"
+      >
+        Exit
+      </button>
+    </div>
+  );
+}
+
 function CountBadge({ count, tone }: { count: number; tone: "red" | "orange" }) {
   if (count <= 0) return null;
   return (
@@ -116,14 +140,19 @@ function CountBadge({ count, tone }: { count: number; tone: "red" | "orange" }) 
 
 export default function AppShell({ children, portal }: { children: ReactNode; portal: "admin" | "company" | "platform" }) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, exitSupportView } = useAuth();
   const { access, isViewer } = useAdminAccess();
   const isOwner = user?.role === "COMPANY_OWNER";
   const isPlatform = portal === "platform";
+  const support = user?.support ?? null;
+  const supportView = !!support;
 
   const nav = useMemo(
-    () => (isPlatform ? platformNav() : fleetNav(`/${portal}` as "/admin" | "/company", { isOwner, canEditCompany: access === "full" })),
-    [isPlatform, portal, isOwner, access]
+    () =>
+      isPlatform
+        ? platformNav()
+        : fleetNav(`/${portal}` as "/admin" | "/company", { isOwner, canEditCompany: access === "full", supportView }),
+    [isPlatform, portal, isOwner, access, supportView]
   );
   const homeHref = navHomeHref(nav);
   const isMap = !!nav.mapHref && pathname === nav.mapHref;
@@ -154,8 +183,17 @@ export default function AppShell({ children, portal }: { children: ReactNode; po
 
   const [header, setHeader] = useState<PageHeaderValue | null>(null);
   const headerContextValue = useMemo(() => ({ header, setHeader }), [header]);
-  const roleName = roleLabel(user?.role, user?.adminAccess);
-  const headerCompany = isPlatform ? "Figbloom platform" : companyName;
+  // Which kind of account this is, in every header: staff see that they are
+  // in the Figbloom staff account (every customer fleet), and in a support
+  // view that they are staff looking at one fleet read-only.
+  const roleName = supportView
+    ? "Figbloom staff · read-only support view"
+    : isPlatform
+      ? "Figbloom staff account"
+      : roleLabel(user?.role, user?.adminAccess);
+  const headerCompany = isPlatform ? "All customer fleets" : (companyName ?? support?.companyName ?? null);
+  const banner = support && <SupportBanner companyName={companyName || support.companyName} onExit={exitSupportView} />;
+  const bannerPad = support ? { paddingTop: SUPPORT_BANNER_HEIGHT } : undefined;
   const shellValue = useMemo(
     () => ({ nav, alertCount, unreadMessages, companyName, roleName }),
     [nav, alertCount, unreadMessages, companyName, roleName]
@@ -182,7 +220,10 @@ export default function AppShell({ children, portal }: { children: ReactNode; po
       <ShellContext.Provider value={shellValue}>
         <PageHeaderContext.Provider value={headerContextValue}>
           {overlays}
-          <div className="h-screen overflow-hidden">{children}</div>
+          {banner}
+          <div className="h-screen overflow-hidden" style={bannerPad}>
+            {children}
+          </div>
         </PageHeaderContext.Provider>
       </ShellContext.Provider>
     );
@@ -227,8 +268,9 @@ export default function AppShell({ children, portal }: { children: ReactNode; po
 
   return (
     <ShellContext.Provider value={shellValue}>
-      <div className="flex h-screen overflow-hidden bg-[#f5f6f8] print:block print:h-auto print:overflow-visible">
+      <div className="flex h-screen overflow-hidden bg-[#f5f6f8] print:block print:h-auto print:overflow-visible" style={bannerPad}>
         {overlays}
+        {banner}
 
         {mobileMenuOpen && (
           <div className="fixed inset-0 z-30 bg-black/30 md:hidden print:hidden" onClick={() => setMobileMenuOpen(false)} />
@@ -240,6 +282,8 @@ export default function AppShell({ children, portal }: { children: ReactNode; po
           className={`fixed inset-y-0 left-0 z-40 flex w-60 shrink-0 flex-col bg-teal-950 text-white transition-transform print:hidden md:static md:z-auto ${
             mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
           } ${menuCollapsed ? "md:hidden" : "md:translate-x-0"}`}
+          // below the support banner when it opens over the page on phones
+          style={support ? { top: SUPPORT_BANNER_HEIGHT } : undefined}
         >
           <div className="flex items-center gap-2 border-b border-teal-900 px-3 py-3">
             <Link
@@ -249,7 +293,14 @@ export default function AppShell({ children, portal }: { children: ReactNode; po
             >
               <FiArrowLeft size={18} />
             </Link>
-            <span className="flex-1 text-sm font-semibold">{section?.label}</span>
+            <span className="min-w-0 flex-1">
+              {(isPlatform || supportView) && (
+                <span className="block text-[10px] font-semibold uppercase tracking-wider text-amber-300">
+                  {supportView ? "Figbloom staff · read only" : "Figbloom staff"}
+                </span>
+              )}
+              <span className="block truncate text-sm font-semibold">{section?.label}</span>
+            </span>
             <button
               onClick={() => {
                 setMenuCollapsed(true);
@@ -305,7 +356,7 @@ export default function AppShell({ children, portal }: { children: ReactNode; po
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[11px] font-medium text-white">{me.fullName}</p>
                   {/* Platform staff have no company to store an image under */}
-                  {!isPlatform && (
+                  {!isPlatform && !supportView && (
                     <ImageUploadButton
                       endpoint="/api/users/me/avatar"
                       kind="avatar"
@@ -318,7 +369,7 @@ export default function AppShell({ children, portal }: { children: ReactNode; po
                 </div>
               </div>
             )}
-            {access !== "full" && (
+            {access !== "full" && !supportView && (
               <span
                 className="mt-2 inline-block rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-medium text-orange-200"
                 title={

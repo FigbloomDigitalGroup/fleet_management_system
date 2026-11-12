@@ -821,3 +821,43 @@ model PlatformDecisionDelivery {
   outcome    String
   receivedAt DateTime @default(now())
 }
+
+// ── Figbloom staff ──────────────────────────────────────────────────────────
+
+// A Figbloom staff member (PLATFORM_ADMIN) viewing one company's owner area
+// read-only (support view). The support token (middleware/auth.js) names this
+// row and is only honoured while it is neither ended nor past expiresAt, and
+// only for the staff member and company it was issued for. No relations, so
+// the record outlives a deleted user or company.
+model SupportSession {
+  id          String    @id @default(cuid())
+  staffUserId String
+  companyId   String
+  startedAt   DateTime  @default(now())
+  expiresAt   DateTime
+  endedAt     DateTime?
+  // "exit" (staff left), "replaced" (a newer support view by the same person)
+  endReason   String?
+  ip          String?
+  userAgent   String?
+
+  @@index([staffUserId, endedAt])
+  @@index([companyId, startedAt])
+}
+
+// What Figbloom staff did to customer fleets: support views started and
+// ended, fleets created. Append-only; who, which company, when.
+model StaffAuditLog {
+  id          String   @id @default(cuid())
+  staffUserId String
+  staffEmail  String
+  // support_view_started | support_view_ended | fleet_created
+  action      String
+  companyId   String
+  sessionId   String?
+  details     Json?
+  createdAt   DateTime @default(now())
+
+  @@index([companyId, createdAt])
+  @@index([staffUserId, createdAt])
+}
