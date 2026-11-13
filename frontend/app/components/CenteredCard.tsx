@@ -7,7 +7,7 @@ export default function CenteredCard({ title, children }: { title: string; child
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4 py-10">
       <span className="mb-6 flex items-center gap-2 text-lg font-bold text-teal-900">
-        <BrandIcon className="h-6 w-6" />
+        <BrandIcon variant="dark" className="h-6 w-6" />
         FIGBLOOM FLEET
       </span>
       <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-sm ring-1 ring-black/5">

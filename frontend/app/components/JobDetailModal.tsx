@@ -25,7 +25,9 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord; onClo
   return (
     <div className="fixed inset-0 z-[90] flex justify-end bg-black/40" onClick={onClose}>
       <aside
-        className="h-full w-full max-w-md overflow-y-auto bg-white p-6 shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        className="h-full w-full max-w-md overflow-y-auto overscroll-contain bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] shadow-2xl sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
@@ -33,7 +35,7 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord; onClo
             <h2 className="text-base font-bold text-blue-950">{job.title}</h2>
             <p className="mt-0.5 text-xs text-teal-600">{job.address}</p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+          <button onClick={onClose} aria-label="Close" className="-mr-2 -mt-2 flex h-10 w-10 shrink-0 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600">
             <FiX size={18} />
           </button>
         </div>

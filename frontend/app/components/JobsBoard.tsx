@@ -399,7 +399,8 @@ export default function JobsBoard() {
                             {job.contactPhone ? ` · ${job.contactPhone}` : ""}
                           </p>
                         </div>
-                        <div className="flex shrink-0 items-center gap-1">
+                        {/* own row on phones, so the job's title keeps the width */}
+                        <div className="flex shrink-0 items-center gap-1 max-sm:-mt-1 max-sm:w-full max-sm:justify-end">
                           <IconButton label="Details" onClick={() => setSelected(job)} icon={<FiEye size={14} />} />
                           <IconButton
                             label={copiedId === job._id ? "Copied!" : "Copy customer link"}
@@ -563,7 +564,7 @@ function IconButton({
       disabled={disabled}
       title={label}
       aria-label={label}
-      className={`rounded p-1.5 transition-colors disabled:opacity-40 ${
+      className={`inline-flex h-10 w-10 items-center justify-center rounded transition-colors disabled:opacity-40 sm:h-auto sm:w-auto sm:p-1.5 ${
         active
           ? "bg-teal-50 text-teal-600"
           : danger

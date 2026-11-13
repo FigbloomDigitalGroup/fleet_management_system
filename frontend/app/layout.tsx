@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 //import AuthContext from "./context/AuthContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -32,6 +32,15 @@ const jetbrainsMono = localFont({
 export const metadata: Metadata = {
   title: "FIGBLOOM FLEET",
   description: "Vehicle Tracking & Fleet Analytics Platform",
+};
+
+// viewportFit "cover" lets the app use the whole phone screen; the shell
+// pads its header, tab bar and sheets with env(safe-area-inset-*) so nothing
+// sits under a notch or the home indicator.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

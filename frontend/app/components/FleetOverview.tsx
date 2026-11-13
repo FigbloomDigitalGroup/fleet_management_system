@@ -261,7 +261,7 @@ function RecentTrips({ trips, basePath }: { trips: TripRecord[]; basePath: strin
   return (
     <div className="min-w-0 flex-1">
       <SectionHead title="Recent trips" text="The 5 most recently started trips" href={`${basePath}/trips`} />
-      <div className="overflow-x-auto rounded-lg bg-white shadow-sm ring-1 ring-black/5">
+      <div className="table-scroll rounded-lg bg-white shadow-sm ring-1 ring-black/5">
         {trips.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-400">No trips recorded yet.</p>
         ) : (
@@ -294,7 +294,7 @@ function RoutesTable({ routes, vehicles, basePath }: { routes: RouteRecord[]; ve
   return (
     <div className="min-w-0 flex-1">
       <SectionHead title="Routes" text="Distance and estimated fuel per planned route" href={`${basePath}/routes`} />
-      <div className="overflow-x-auto rounded-lg bg-white shadow-sm ring-1 ring-black/5">
+      <div className="table-scroll rounded-lg bg-white shadow-sm ring-1 ring-black/5">
         {routes.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-400">No routes created yet.</p>
         ) : (

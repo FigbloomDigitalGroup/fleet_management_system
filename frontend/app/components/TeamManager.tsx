@@ -157,8 +157,8 @@ export default function TeamManager() {
         {loading && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
         {error && <p className="text-sm text-red-600 p-5">{error}</p>}
         {!loading && !error && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="table-scroll">
+            <table className="table-cards w-full text-sm">
               <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
                 <tr>
                   <th className="text-left px-5 py-3 font-medium">Name</th>
@@ -185,23 +185,23 @@ export default function TeamManager() {
                     const active = m.status === "active";
                     return (
                       <tr key={m._id} className={`border-t border-gray-100 ${active ? "" : "opacity-60"}`}>
-                        <td className="px-5 py-3">
-                          <span className="inline-flex items-center gap-2.5">
+                        <td className="card-title px-5 py-3">
+                          <span className="inline-flex min-w-0 items-center gap-2.5">
                             <Avatar src={m.avatarUrl} name={m.fullName} size="sm" />
-                            <span>
+                            <span className="min-w-0">
                               <span className="block font-medium text-gray-900">{m.fullName}</span>
-                              <span className="block text-xs text-gray-500">{m.email}</span>
+                              <span className="block break-all text-xs text-gray-500">{m.email}</span>
                             </span>
                           </span>
                         </td>
-                        <td className="px-5 py-3">
+                        <td data-label="Role" className="px-5 py-3">
                           <select
                             value={current}
                             disabled={!canEdit || self || busyId === m._id}
                             onChange={(e) => changeRole(m, e.target.value as TeamRoleChoice)}
                             title={TEAM_ROLE_OPTIONS.find((o) => o.value === current)?.description}
                             aria-label={`${m.fullName}'s role`}
-                            className="text-sm border border-gray-300 rounded px-2 py-1 outline-none focus:border-teal-600 disabled:opacity-50"
+                            className="min-h-9 text-sm border border-gray-300 rounded px-2 py-1 outline-none focus:border-teal-600 disabled:opacity-50"
                           >
                             {TEAM_ROLE_OPTIONS.map((o) => (
                               <option key={o.value} value={o.value}>
@@ -210,8 +210,8 @@ export default function TeamManager() {
                             ))}
                           </select>
                         </td>
-                        <td className="px-5 py-3">
-                          <span className="inline-flex items-center gap-2">
+                        <td data-label="Account" className="px-5 py-3">
+                          <span className="inline-flex flex-wrap items-center justify-end gap-2">
                             <span
                               className={`text-xs px-2 py-1 rounded-full border ${
                                 active ? "bg-teal-50 text-teal-600 border-teal-200" : "bg-gray-50 text-gray-500 border-gray-200"
@@ -224,7 +224,7 @@ export default function TeamManager() {
                                 type="button"
                                 onClick={() => setActive(m, !active)}
                                 disabled={busyId === m._id}
-                                className="text-xs font-medium text-gray-600 underline-offset-2 hover:underline disabled:opacity-50"
+                                className="min-h-9 px-1 text-xs font-medium text-gray-600 underline-offset-2 hover:underline disabled:opacity-50"
                               >
                                 {active ? "Switch off" : "Switch on"}
                               </button>
@@ -270,12 +270,12 @@ export default function TeamManager() {
                       </span>
                     </span>
                     {canEdit && (
-                      <span className="flex shrink-0 gap-3">
+                      <span className="flex shrink-0 gap-3 max-sm:w-full max-sm:justify-end">
                         <button
                           type="button"
                           disabled={inviteBusy === inv.id}
                           onClick={() => invitationAction(inv, "resend")}
-                          className="text-xs font-medium text-teal-700 hover:underline disabled:opacity-50"
+                          className="min-h-9 text-xs font-medium text-teal-700 hover:underline disabled:opacity-50"
                         >
                           Send again
                         </button>
@@ -283,7 +283,7 @@ export default function TeamManager() {
                           type="button"
                           disabled={inviteBusy === inv.id}
                           onClick={() => invitationAction(inv, "revoke")}
-                          className="text-xs font-medium text-gray-600 hover:underline disabled:opacity-50"
+                          className="min-h-9 text-xs font-medium text-gray-600 hover:underline disabled:opacity-50"
                         >
                           Cancel invitation
                         </button>

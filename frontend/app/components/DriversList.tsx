@@ -169,7 +169,8 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
             <p className="text-xs text-teal-600 px-5 pt-4">
               Everyone with driver access on your account and the vehicle they're currently on.
             </p>
-            <table className="w-full text-sm mt-2">
+            <div className="table-scroll mt-2">
+            <table className="table-cards table-tight w-full text-sm">
             <thead className="bg-gray-50 text-black text-xs uppercase">
               <tr>
                 <th className="text-left px-5 py-3 font-bold">Name</th>
@@ -200,26 +201,26 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                   const assigned = vehicleForDriver(d._id);
                   return (
                     <tr key={d._id} className="border-t border-gray-100">
-                      <td className="px-5 py-3 font-medium text-blue-950">
+                      <td className="card-title px-5 py-3 font-medium text-blue-950">
                         <Link href={`${driversBasePath}/${d._id}`} className="inline-flex items-center gap-2.5 hover:text-teal-600 hover:underline">
                           <Avatar src={d.avatarUrl} name={d.fullName} size="sm" />
                           {d.fullName}
                         </Link>
                       </td>
-                      <td className="px-5 py-3 text-blue-950">{d.email}</td>
-                      <td className="whitespace-nowrap px-5 py-3">
-                        <span className="inline-flex items-center gap-2">
+                      <td data-label="Email" className="px-5 py-3 text-blue-950">{d.email}</td>
+                      <td data-label="Phone" className="px-5 py-3">
+                        <span className="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-1 md:justify-start">
                           <CallButton phone={d.phone} name={d.fullName} size="xs" />
-                          {d.phone && <span className="text-xs text-gray-500">{d.phone}</span>}
+                          {d.phone && <span className="whitespace-nowrap text-xs text-gray-500">{d.phone}</span>}
                         </span>
                       </td>
-                      <td className="px-5 py-3">
+                      <td data-label="Vehicle" className="px-5 py-3">
                         {canAssignVehicle ? (
                           <select
                             value={assigned?._id || ""}
                             disabled={assigningId === d._id}
                             onChange={(e) => handleAssignVehicle(d._id, e.target.value)}
-                            className="text-sm border border-gray-300 rounded px-2 py-1 outline-none focus:border-teal-600"
+                            className="min-h-9 text-sm border border-gray-300 rounded px-2 py-1 outline-none focus:border-teal-600"
                           >
                             <option value="">No vehicle</option>
                             {vehicles.map((v) => (
@@ -240,7 +241,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
                           <span className="text-xs font-bold text-blue-950">No vehicle</span>
                         )}
                       </td>
-                      <td className="px-5 py-3">
+                      <td data-label="Score" className="px-5 py-3">
                         {(() => {
                           const s = scores[d._id];
                           if (!s) return <span className="text-xs text-gray-400">—</span>;
@@ -260,6 +261,7 @@ export default function DriversList({ canAdd = false, canAssignVehicle = false }
               )}
             </tbody>
           </table>
+          </div>
           </>
         )}
       </div>

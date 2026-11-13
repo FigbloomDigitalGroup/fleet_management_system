@@ -68,8 +68,8 @@ export default function CompaniesPage() {
       )}
 
       {!loading && !error && (
-        <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="table-scroll bg-white rounded-lg shadow-sm ring-1 ring-black/5">
+          <table className="table-cards w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
               <tr>
                 <th className="text-left px-5 py-3 font-medium">Fleet</th>
@@ -91,7 +91,7 @@ export default function CompaniesPage() {
               ) : (
                 companies.map((c) => (
                   <tr key={c._id} className="border-t border-gray-100">
-                    <td className="px-5 py-3">
+                    <td className="card-title px-5 py-3">
                       <Link
                         href={`/platform/companies/${c._id}`}
                         className="inline-flex items-center gap-2.5 font-medium text-gray-900 hover:text-teal-700 hover:underline"
@@ -100,18 +100,18 @@ export default function CompaniesPage() {
                         {c.name}
                       </Link>
                     </td>
-                    <td className="px-5 py-3">
+                    <td data-label="Status" className="px-5 py-3">
                       <span className={`text-xs px-2 py-1 rounded-full border ${statusStyles[c.status]}`}>
                         {c.status}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-gray-600">{c.subscriptionPlan}</td>
-                    <td className="px-5 py-3 text-gray-600">{industryLabel(c.industry)}</td>
-                    <td className="px-5 py-3 text-gray-600">{c.userCount ?? "-"}</td>
-                    <td className="px-5 py-3 text-gray-500">
+                    <td data-label="Plan" className="px-5 py-3 text-gray-600">{c.subscriptionPlan}</td>
+                    <td data-label="Industry" className="px-5 py-3 text-gray-600">{industryLabel(c.industry)}</td>
+                    <td data-label="Users" className="px-5 py-3 text-gray-600">{c.userCount ?? "-"}</td>
+                    <td data-label="Registered" className="px-5 py-3 text-gray-500">
                       {new Date(c.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-5 py-3 text-right">
+                    <td className="card-actions px-5 py-3 text-right">
                       <OpenFleetButton companyId={c._id} size="sm" />
                     </td>
                   </tr>

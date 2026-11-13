@@ -225,7 +225,7 @@ export default function ReportsView() {
           </div>
         )}
         {tab === "summary" && report && !error && (
-          <div className={`overflow-x-auto print:overflow-visible ${loading ? "opacity-60" : ""}`}>
+          <div className={`table-scroll print:overflow-visible ${loading ? "opacity-60" : ""}`}>
             <p className="px-5 pt-4 text-xs text-teal-600 print:hidden">
               Stops and idle time are measured inside recorded trips. Scores need at least 10 km of driving.
             </p>

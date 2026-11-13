@@ -19,7 +19,7 @@ export default function SectionTabs({ tabs }: { tabs: { label: string; href: str
               href={t.href}
               role="tab"
               aria-selected={active}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+              className={`inline-flex min-h-9 items-center rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
                 active ? "bg-teal-600 text-white" : "text-gray-600 hover:bg-gray-100"
               }`}
             >

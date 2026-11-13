@@ -1,6 +1,7 @@
 "use client";
 
 import { IconType } from "react-icons";
+import ModalSheet from "./ModalSheet";
 
 interface NoticeModalProps {
   icon: IconType;
@@ -25,8 +26,7 @@ export default function NoticeModal({
   onSecondary,
 }: NoticeModalProps) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-sm rounded-lg bg-white p-6 text-center shadow-2xl">
+    <ModalSheet size="sm" className="text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-teal-50">
           <Icon size={24} className="text-teal-600" />
         </div>
@@ -50,7 +50,6 @@ export default function NoticeModal({
             {primaryLabel}
           </button>
         </div>
-      </div>
-    </div>
+    </ModalSheet>
   );
 }

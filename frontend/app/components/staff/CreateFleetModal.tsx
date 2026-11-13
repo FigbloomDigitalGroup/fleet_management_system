@@ -6,6 +6,7 @@ import { apiRequest } from "../../lib/api";
 import { INDUSTRIES } from "../../lib/industries";
 import { CompanyRecord } from "../../types/auth";
 import OpenFleetButton from "./OpenFleetButton";
+import ModalSheet from "../ModalSheet";
 
 interface CreateFleetResult {
   message: string;
@@ -57,8 +58,7 @@ export default function CreateFleetModal({ onClose, onCreated }: { onClose: () =
   })();
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
-      <div className="max-h-full w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-2xl">
+    <ModalSheet>
         <div className="mb-4 flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <h2 className="text-base font-semibold text-gray-900">{result ? "Fleet created" : "Create a fleet for a client"}</h2>
@@ -69,7 +69,7 @@ export default function CreateFleetModal({ onClose, onCreated }: { onClose: () =
               </p>
             )}
           </div>
-          <button onClick={onClose} aria-label="Close" className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+          <button onClick={onClose} aria-label="Close" className="-mr-2 -mt-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700">
             <FiX size={18} />
           </button>
         </div>
@@ -139,7 +139,6 @@ export default function CreateFleetModal({ onClose, onCreated }: { onClose: () =
             </div>
           </form>
         )}
-      </div>
-    </div>
+    </ModalSheet>
   );
 }

@@ -54,7 +54,7 @@ export default function AnalyticsPage() {
     const statsNode = useMemo(() => {
         if (!data) return undefined;
         return (
-            <div className="grid grid-cols-2 gap-3 h-full">
+            <div className="grid grid-cols-1 gap-3 h-full sm:grid-cols-2 xl:grid-cols-4">
                 <StatCard label="Total companies" value={data.totals.totalCompanies} accent="blue" description="Companies registered on the platform" />
                 <StatCard label="Total vehicles" value={data.totals.totalVehicles} accent="green" description="Vehicles across all companies" />
                 <StatCard label="Total users" value={data.totals.totalUsers} accent="green" description="Admins and drivers combined" />
