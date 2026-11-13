@@ -39,6 +39,9 @@ export function useAdminAccess() {
     canMaintain: canManageFleet || !!staff?.canMaintain,
     // Sign off drivers' inspections
     canReviewInspections: canManageFleet || !!staff?.canReviewInspections,
+    // Add, correct, delete and check expenses: the owner, full admins and
+    // accountants (not Figbloom staff)
+    canManageExpenses: (canManageFleet && user?.role !== "PLATFORM_ADMIN") || !!staff?.canManageExpenses,
   };
 }
 

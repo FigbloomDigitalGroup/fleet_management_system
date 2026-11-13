@@ -46,6 +46,8 @@ export function staffAbilities(role: Role | undefined | null) {
     // sign off drivers' inspections
     canReviewInspections: role === "SUPERVISOR" || role === "MECHANIC",
     canPay: role === "ACCOUNTANT",
+    // add, correct, delete and check expenses
+    canManageExpenses: role === "ACCOUNTANT",
   };
 }
 
@@ -58,7 +60,7 @@ export type TeamRoleChoice = "ADMIN:full" | "ADMIN:dispatcher" | "ADMIN:viewer" 
 export const TEAM_ROLE_OPTIONS: { value: TeamRoleChoice; label: string; description: string }[] = [
   { value: "ADMIN:full", label: "Full admin", description: "Manages everything: vehicles, drivers, zones, settings, the team and the day's work." },
   { value: "OPERATOR", label: "Operator", description: "Runs the day: jobs, routes, dispatch, messages and alerts. Sees vehicles and drivers but can't change them." },
-  { value: "ACCOUNTANT", label: "Accountant", description: "Expenses, fuel, tolls, billing and reports, and HR & Payroll. Sees the rest of the fleet read-only." },
+  { value: "ACCOUNTANT", label: "Accountant", description: "Adds, corrects and checks expenses (fuel, tolls, repairs), billing and reports, and HR & Payroll. Sees the rest of the fleet read-only." },
   { value: "MECHANIC", label: "Mechanic", description: "Vehicles' maintenance, inspections and defects. Sees the rest read-only." },
   { value: "SUPERVISOR", label: "Supervisor", description: "Sees everything in the fleet, closes alerts and signs off inspections. No settings, team or billing." },
   { value: "ADMIN:dispatcher", label: "Dispatcher admin", description: "Jobs, routes, messages and alerts, but not vehicles, drivers or settings." },
