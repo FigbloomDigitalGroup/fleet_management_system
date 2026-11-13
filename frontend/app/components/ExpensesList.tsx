@@ -12,6 +12,8 @@ import { useAdminAccess } from "../lib/adminAccess";
 import { uploadImage } from "../lib/imageUpload";
 import Skeleton from "./Skeleton";
 import WheelIcon from "./WheelIcon";
+import ModalSheet, { SHEET_ACTIONS } from "./ModalSheet";
+import FiltersPanel from "./FiltersPanel";
 
 type Category = ExpenseRecord["category"];
 
@@ -187,8 +189,8 @@ export default function ExpensesList() {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-black/5">
+      {/* Filters (one "Filters" button on phones) */}
+      <FiltersPanel activeCount={Object.values(filters).filter(Boolean).length}>
         <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <div>
             <label className={labelClass} htmlFor="exp-from">From</label>
@@ -241,11 +243,11 @@ export default function ExpensesList() {
           </div>
         </div>
         {filtered && (
-          <button onClick={() => setFilters(NO_FILTERS)} className="mt-3 text-xs font-medium text-teal-700 hover:underline">
+          <button onClick={() => setFilters(NO_FILTERS)} className="mt-3 min-h-9 text-xs font-medium text-teal-700 hover:underline">
             Clear filters
           </button>
         )}
-      </div>
+      </FiltersPanel>
 
       {/* Totals for what's shown */}
       {data && (
@@ -271,8 +273,8 @@ export default function ExpensesList() {
         {loading && !data && <Skeleton rows={6} rowClassName="h-12" className="p-5" />}
         {error && <p className="p-5 text-sm text-red-600">{error}</p>}
         {data && (
-          <div className={`overflow-x-auto transition-opacity ${loading ? "opacity-60" : ""}`}>
-            <table className="w-full min-w-[900px] text-sm">
+          <div className={`table-scroll transition-opacity ${loading ? "opacity-60" : ""}`}>
+            <table className="table-cards w-full min-w-[900px] text-sm">
               <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Date</th>
@@ -312,10 +314,10 @@ export default function ExpensesList() {
                 ) : (
                   expenses.map((e) => (
                     <tr key={e._id} className="border-t border-gray-100 align-top">
-                      <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                      <td data-label="Date" className="whitespace-nowrap px-4 py-3 text-gray-600">
                         {new Date(e.incurredAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
                       </td>
-                      <td className="px-4 py-3 text-xs font-bold text-gray-900">
+                      <td data-label="Vehicle" className="px-4 py-3 text-xs font-bold text-gray-900">
                         {typeof e.vehicleId === "object" ? (
                           <Link href={`${basePath}/${e.vehicleId._id}`} className="inline-flex items-center gap-2 whitespace-nowrap hover:text-teal-600">
                             <WheelIcon size={16} className="spin-slow shrink-0" />
@@ -325,13 +327,13 @@ export default function ExpensesList() {
                           "—"
                         )}
                       </td>
-                      <td className="px-4 py-3 text-gray-600">{typeof e.driverId === "object" && e.driverId ? e.driverId.fullName : "—"}</td>
-                      <td className="px-4 py-3">
+                      <td data-label="Driver" className="px-4 py-3 text-gray-600">{typeof e.driverId === "object" && e.driverId ? e.driverId.fullName : "—"}</td>
+                      <td data-label="Type" className="px-4 py-3">
                         <span className={`rounded-full border px-2 py-1 text-xs ${CATEGORY_STYLES[e.category]}`}>{CATEGORY_LABELS[e.category]}</span>
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-900">{formatKes(e.amount)}</td>
-                      <td className="max-w-[220px] px-4 py-3 text-gray-500">{e.note || "—"}</td>
-                      <td className="px-4 py-3">
+                      <td data-label="Amount" className="whitespace-nowrap px-4 py-3 font-medium text-gray-900">{formatKes(e.amount)}</td>
+                      <td data-label="Note" className="max-w-[220px] px-4 py-3 text-gray-500">{e.note || "—"}</td>
+                      <td data-label="Receipt" className="px-4 py-3">
                         {e.receiptUrl ? (
                           <a href={API_URL + e.receiptUrl} target="_blank" rel="noreferrer" title="Open receipt photo" className="block w-fit">
                             {/* eslint-disable-next-line @next/next/no-img-element -- a signed API image, not a static asset */}
@@ -341,19 +343,19 @@ export default function ExpensesList() {
                           <span className="text-gray-400">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-600">
+                      <td data-label="Entered by" className="px-4 py-3 text-xs text-gray-600">
                         {e.fromDriverApp !== false ? "Driver (phone app)" : e.enteredBy?.fullName ?? "Office"}
                       </td>
-                      <td className="px-4 py-3 text-xs">
+                      <td data-label="Checked" className="px-4 py-3 text-xs">
                         <CheckedCell expense={e} canManage={canManage} busy={busyId === e._id} onChange={(checked) => setChecked(e, checked)} />
                       </td>
                       {canManage && (
-                        <td className="whitespace-nowrap px-4 py-3 text-right">
+                        <td className="card-actions whitespace-nowrap px-4 py-3 text-right">
                           <button
                             onClick={() => setEditing(e)}
                             disabled={busyId === e._id}
                             title="Edit this expense"
-                            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-teal-700 hover:bg-teal-50 disabled:opacity-50"
+                            className="inline-flex min-h-9 items-center gap-1 rounded px-2 py-1 text-xs font-medium text-teal-700 hover:bg-teal-50 disabled:opacity-50"
                           >
                             <FiEdit2 size={13} /> Edit
                           </button>
@@ -361,7 +363,7 @@ export default function ExpensesList() {
                             onClick={() => remove(e)}
                             disabled={busyId === e._id}
                             title="Delete this expense"
-                            className="ml-1 inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-gray-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                            className="ml-1 inline-flex min-h-9 items-center gap-1 rounded px-2 py-1 text-xs text-gray-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                           >
                             <FiTrash2 size={13} /> Delete
                           </button>
@@ -429,7 +431,7 @@ function CheckedCell({
       disabled={busy}
       title={checked ? `${who}. Click to undo.` : "Tick once you've checked this against the receipt"}
       aria-pressed={checked}
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded border px-2 py-1 font-medium transition-colors disabled:opacity-50 ${
+      className={`inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded border px-2 py-1 font-medium transition-colors disabled:opacity-50 ${
         checked ? "border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100" : "border-gray-300 bg-white text-gray-600 hover:border-teal-400 hover:text-teal-700"
       }`}
     >
@@ -545,15 +547,7 @@ function ExpenseForm({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => !saving && onClose()}>
-      <form
-        onSubmit={save}
-        onClick={(ev) => ev.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="expense-form-title"
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6 shadow-2xl"
-      >
+    <ModalSheet as="form" onSubmit={save} onClose={saving ? undefined : onClose} size="lg" labelledBy="expense-form-title">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 id="expense-form-title" className="text-base font-semibold text-gray-900">
@@ -565,7 +559,7 @@ function ExpenseForm({
                 : "For costs paid by the office, or ones a driver forgot to log."}
             </p>
           </div>
-          <button type="button" onClick={onClose} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600" aria-label="Close">
+          <button type="button" onClick={onClose} className="-mr-2 -mt-2 flex h-10 w-10 shrink-0 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600" aria-label="Close">
             <FiX size={18} />
           </button>
         </div>
@@ -594,7 +588,7 @@ function ExpenseForm({
                   role="radio"
                   aria-checked={category === c}
                   onClick={() => setCategory(c)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`min-h-9 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     category === c ? "border-teal-600 bg-teal-600 text-white" : "border-gray-300 text-gray-600 hover:border-teal-400"
                   }`}
                 >
@@ -695,7 +689,7 @@ function ExpenseForm({
           </p>
         )}
 
-        <div className="mt-6 flex justify-end gap-2">
+        <div className={SHEET_ACTIONS}>
           <button type="button" onClick={onClose} disabled={saving} className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
             Cancel
           </button>
@@ -707,7 +701,6 @@ function ExpenseForm({
             {saving ? "Saving…" : expense ? "Save changes" : "Add expense"}
           </button>
         </div>
-      </form>
-    </div>
+    </ModalSheet>
   );
 }

@@ -54,7 +54,7 @@ export default function PlatformDashboard() {
     if (!analytics) return undefined;
     const { totals } = analytics;
     return (
-      <div className="grid grid-cols-2 gap-3 h-full">
+      <div className="grid grid-cols-1 gap-3 h-full sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Customer fleets" value={totals.totalCompanies} accent="blue" description="Every fleet on Figbloom Fleet" />
         <StatCard label="Vehicles" value={totals.totalVehicles} accent="green" description="Across all fleets (open a fleet to see them)" />
         <StatCard label="People" value={totals.totalUsers} accent="green" description="Owners, admins and drivers in all fleets" />
@@ -149,7 +149,8 @@ export default function PlatformDashboard() {
           {recentCompanies.length === 0 ? (
             <NoCompaniesYet />
           ) : (
-            <table className="w-full text-sm">
+            <div className="table-scroll">
+<table className="w-full text-sm">
               <tbody>
                 {recentCompanies.map((c) => (
                   <tr key={c._id} className="border-t border-gray-100 first:border-t-0">
@@ -185,6 +186,7 @@ export default function PlatformDashboard() {
                 ))}
               </tbody>
             </table>
+</div>
           )}
         </div>
       </div>
@@ -234,7 +236,8 @@ export default function PlatformDashboard() {
             .
           </p>
           <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="table-scroll">
+<table className="w-full text-sm">
               <tbody>
                 {pendingCompanies.map((c) => (
                   <tr key={c._id} className="border-t border-gray-100 first:border-t-0">
@@ -258,6 +261,7 @@ export default function PlatformDashboard() {
                 ))}
               </tbody>
             </table>
+</div>
           </div>
         </div>
       )}

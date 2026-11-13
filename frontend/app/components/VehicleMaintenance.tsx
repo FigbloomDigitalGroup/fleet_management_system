@@ -328,7 +328,7 @@ export default function VehicleMaintenance({ vehicleId, canEdit }: { vehicleId: 
             {records.length === 0 ? (
               <p className="text-sm text-gray-400">No service records yet.</p>
             ) : (
-              <div className="overflow-x-auto rounded border border-gray-100">
+              <div className="table-scroll rounded border border-gray-100">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                     <tr>

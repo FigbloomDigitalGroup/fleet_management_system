@@ -616,7 +616,7 @@ export default function FleetMap({
 
       {/* FLOATING CARD — toolbar, vehicle list, bottom menu. Full width along
           the bottom on phones, a column on the left from md up. */}
-      <div className="absolute inset-x-2 bottom-2 z-10 flex max-h-[55vh] flex-col overflow-hidden rounded-lg bg-white shadow-xl ring-1 ring-black/5 md:inset-x-auto md:bottom-3 md:left-3 md:top-3 md:max-h-none md:w-[360px]">
+      <div className="absolute inset-x-2 bottom-2 z-10 flex max-h-[55dvh] flex-col overflow-hidden rounded-lg bg-white shadow-xl ring-1 ring-black/5 md:inset-x-auto md:bottom-3 md:left-3 md:top-3 md:max-h-none md:w-[360px]">
         <div className="border-b border-gray-100 px-3 pt-3 pb-2">
           <form
             onSubmit={handleSearch}

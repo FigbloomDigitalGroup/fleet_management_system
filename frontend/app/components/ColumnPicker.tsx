@@ -49,7 +49,7 @@ export default function ColumnPicker<K extends string>({
       <label className="mb-1 block text-xs font-medium text-gray-600">Columns</label>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1.5 rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+        className="inline-flex min-h-10 items-center gap-1.5 rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
       >
         {shown} of {columns.length} shown
         <FiChevronDown size={14} />
@@ -61,7 +61,7 @@ export default function ColumnPicker<K extends string>({
             {columns.map((c) => (
               <label
                 key={c.key}
-                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                className="flex min-h-10 cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
               >
                 <span className="flex-1">{c.label}</span>
                 <Switch size="sm" checked={visible.includes(c.key)} onChange={() => onToggle(c.key)} />

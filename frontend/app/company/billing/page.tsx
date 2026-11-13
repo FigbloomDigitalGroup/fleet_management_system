@@ -265,7 +265,8 @@ export default function CompanyBillingPage() {
           {transactions.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">No payments yet.</p>
           ) : (
-            <table className="w-full text-sm">
+            <div className="table-scroll">
+<table className="w-full text-sm">
               <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
                 <tr>
                   <th className="text-left px-5 py-3 font-medium">Date</th>
@@ -301,6 +302,7 @@ export default function CompanyBillingPage() {
                 ))}
               </tbody>
             </table>
+</div>
           )}
         </div>
       </div>

@@ -78,7 +78,7 @@ export default function BillingPage() {
 
   const statsNode = useMemo(
     () => (
-      <div className="grid grid-cols-2 gap-3 h-full">
+      <div className="grid grid-cols-2 gap-3 h-full lg:grid-cols-3 xl:grid-cols-5">
         <StatCard label="Revenue (real payments)" value={formatKes(totalRevenueKes)} accent="green" />
         {PLAN_OPTIONS.map((plan) => (
           <StatCard
@@ -101,7 +101,8 @@ export default function BillingPage() {
   return (
     <div>
       <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="table-scroll">
+<table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
             <tr>
               <th className="text-left px-5 py-3 font-medium">Company</th>
@@ -142,6 +143,7 @@ export default function BillingPage() {
             ))}
           </tbody>
         </table>
+</div>
       </div>
 
       <div className="mt-8">
@@ -152,7 +154,8 @@ export default function BillingPage() {
           {transactions.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">No payments yet.</p>
           ) : (
-            <table className="w-full text-sm">
+            <div className="table-scroll">
+<table className="w-full text-sm">
               <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
                 <tr>
                   <th className="text-left px-5 py-3 font-medium">Date</th>
@@ -192,6 +195,7 @@ export default function BillingPage() {
                 ))}
               </tbody>
             </table>
+</div>
           )}
         </div>
       </div>

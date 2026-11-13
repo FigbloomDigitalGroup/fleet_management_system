@@ -164,7 +164,7 @@ export default function CompanyOpsSettings({ canEdit = true }: { canEdit?: boole
             </div>
 
             <h4 className="mb-2 mt-6 text-xs font-bold uppercase tracking-wide text-gray-500">Alert types</h4>
-            <div className="overflow-x-auto rounded border border-gray-100">
+            <div className="table-scroll rounded border border-gray-100">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                   <tr>

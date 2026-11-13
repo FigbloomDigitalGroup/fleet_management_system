@@ -99,7 +99,7 @@ export default function CompanyDetailPage() {
     <div>
       <button
         onClick={() => router.push("/platform/companies")}
-        className="mb-4 rounded bg-gray-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-600"
+        className="mb-4 min-h-10 rounded bg-gray-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-gray-600"
       >
         Back to customer fleets
       </button>
@@ -216,7 +216,8 @@ export default function CompanyDetailPage() {
           <div className="bg-white rounded-lg shadow-sm ring-1 ring-black/5 overflow-hidden">
             <h3 className="text-sm font-medium text-gray-700 px-5 pt-5">Users</h3>
             <p className="text-xs text-teal-600 px-5">Admins and drivers on this company's account</p>
-            <table className="w-full text-sm mt-3">
+            <div className="table-scroll mt-3">
+            <table className="table-cards w-full text-sm">
               <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
                 <tr>
                   <th className="text-left px-5 py-3 font-medium">Name</th>
@@ -234,14 +235,15 @@ export default function CompanyDetailPage() {
                 ) : (
                   users.map((u) => (
                     <tr key={u._id} className="border-t border-gray-100">
-                      <td className="px-5 py-3 font-medium text-gray-900">{u.fullName}</td>
-                      <td className="px-5 py-3 text-gray-600">{u.email}</td>
-                      <td className="px-5 py-3 text-gray-600">{u.role}</td>
+                      <td className="card-title px-5 py-3 font-medium text-gray-900">{u.fullName}</td>
+                      <td data-label="Email" className="px-5 py-3 text-gray-600">{u.email}</td>
+                      <td data-label="Role" className="px-5 py-3 text-gray-600">{u.role}</td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
 

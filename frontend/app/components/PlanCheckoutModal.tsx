@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ModalSheet from "./ModalSheet";
 import { FaCheckCircle } from "react-icons/fa";
 import { apiRequest } from "../lib/api";
 import { CompanyRecord } from "../types/auth";
@@ -133,8 +134,7 @@ export default function PlanCheckoutModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+    <ModalSheet zIndex="z-50">
         {step === "confirm" && (
           <>
             <p className="text-xs uppercase tracking-wide text-teal-600 font-bold mb-1">Upgrade plan</p>
@@ -214,7 +214,6 @@ export default function PlanCheckoutModal({
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </ModalSheet>
   );
 }

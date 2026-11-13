@@ -166,7 +166,7 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
           <select
             value={vehicleId}
             onChange={(e) => setVehicleId(e.target.value)}
-            className="rounded border border-gray-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-teal-600"
+            className="min-h-10 rounded border border-gray-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-teal-600"
           >
             <option value="">All vehicles</option>
             {vehicles.map((v) => (
@@ -181,7 +181,7 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value as Period)}
-            className="rounded border border-gray-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-teal-600"
+            className="min-h-10 rounded border border-gray-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-teal-600"
           >
             {PERIODS.map((p) => (
               <option key={p.value} value={p.value}>
@@ -225,8 +225,8 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
         {loading && !result && <Skeleton rows={5} rowClassName="h-12" className="p-5" />}
         {result?.error && !loading && <p className="p-5 text-sm text-red-600">{result.error}</p>}
         {result && !result.error && (
-          <div className={`overflow-x-auto ${loading ? "opacity-60" : ""}`}>
-            <table className="mt-2 w-full text-sm">
+          <div className={`table-scroll mt-2 ${loading ? "opacity-60" : ""}`}>
+            <table className="table-cards w-full text-sm">
               <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                 <tr>
                   <th className="px-5 py-3 text-left font-medium">Vehicle</th>
@@ -253,20 +253,20 @@ export default function TripsList({ basePath = "/admin/trips" }: { basePath?: st
                 ) : (
                   trips.map((t) => (
                     <tr key={t._id} className="border-t border-gray-100 hover:bg-gray-50/60">
-                      <td className="px-5 py-3 text-xs font-bold text-teal-600">
+                      <td className="card-title px-5 py-3 text-xs font-bold text-teal-600">
                         <Link href={`${basePath}/${t._id}`} className="hover:underline">
                           {t.vehicleId?.plateNumber || "View trip"}
                         </Link>
                       </td>
                       {columns.map((c) => (
-                        <td key={c.key} className="whitespace-nowrap px-4 py-3 text-gray-600">
+                        <td key={c.key} data-label={c.label} className="whitespace-nowrap px-4 py-3 text-gray-600">
                           {cell(t, c.key)}
                         </td>
                       ))}
-                      <td className="px-4 py-3">
+                      <td className="card-actions px-4 py-3">
                         <Link
                           href={`${basePath}/${t._id}`}
-                          className="inline-flex items-center gap-1.5 rounded bg-orange-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-orange-600"
+                          className="inline-flex min-h-9 items-center gap-1.5 rounded bg-orange-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-orange-600"
                         >
                           <FaRoute size={12} />
                           Replay

@@ -55,8 +55,9 @@ const DEFAULT_HINT = "Ask about your fleet.";
 const BUTTON_PX = 48;
 const EDGE_PX = 8;
 const GAP_PX = 12;
-// Phone tab bar (AppShell) height plus a little air.
-const PHONE_BREAKPOINT = 768;
+// Below this width the shell shows its tab bar along the bottom (AppShell,
+// lg); the button keeps clear of it (tab bar height plus a little air).
+const PHONE_BREAKPOINT = 1024;
 const PHONE_MIN_BOTTOM = 68;
 const POSITION_KEY = "fleet:assistant-position";
 const HINT_SEEN_KEY = "fleet:assistant-hint-seen";

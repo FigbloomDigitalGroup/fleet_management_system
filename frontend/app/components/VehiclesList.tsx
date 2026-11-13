@@ -217,7 +217,8 @@ export default function VehiclesList({
                 </button>
               </div>
             )}
-            <table className="w-full text-sm mt-2">
+            <div className="table-scroll mt-2">
+            <table className="table-cards table-tight w-full text-sm">
             <thead className="bg-gray-50 text-black text-xs uppercase">
               <tr>
                 <th className="text-left px-5 py-3 font-bold">Plate</th>
@@ -247,7 +248,7 @@ export default function VehiclesList({
               ) : (
                 vehicles.map((v) => (
                   <tr key={v._id} className="border-t border-gray-100">
-                    <td className="px-5 py-3">
+                    <td className="card-title px-5 py-3">
                       <Link
                         href={`${basePath}/${v._id}`}
                         className="inline-flex items-center gap-2 text-[11px] font-bold text-blue-950 hover:text-teal-600"
@@ -256,26 +257,26 @@ export default function VehiclesList({
                         {v.plateNumber}
                       </Link>
                     </td>
-                    <td className="px-5 py-3 text-blue-950">
+                    <td data-label="Make / Model" className="px-5 py-3 text-blue-950">
                       {[v.make, v.model].filter(Boolean).join(" ") || "-"}
                     </td>
-                    <td className="px-5 py-3">
+                    <td data-label="Status" className="px-5 py-3">
                       <span className={`text-xs px-2 py-1 rounded-full border ${statusStyles[v.status]}`}>
                         {v.status}
                       </span>
                     </td>
-                    <td className="px-5 py-3">
+                    <td data-label="Zone" className="px-5 py-3">
                       <ZoneStatusBadge lastLocation={liveLocations[v._id]} geofences={geofences} />
                     </td>
 
-<td className="px-5 py-3">
+<td data-label="Driver" className="px-5 py-3">
   {canAssignDriver ? (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center justify-end gap-2 md:justify-start">
       <select
         value={v.driverId?._id || ""}
         disabled={assigningId === v._id}
         onChange={(e) => handleAssignDriver(v._id, e.target.value)}
-        className="text-sm border border-gray-300 rounded px-2 py-1 outline-none focus:border-teal-400"
+        className="min-h-9 max-w-[11rem] text-sm border border-gray-300 rounded px-2 py-1 outline-none focus:border-teal-400"
       >
         <option value="">Unassigned</option>
         {drivers.map((d) => (
@@ -291,7 +292,7 @@ export default function VehiclesList({
       )}
     </div>
   ) : (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center justify-end gap-2 md:justify-start">
       {v.driverId && <Avatar src={v.driverId.avatarUrl} name={v.driverId.fullName} size="xs" />}
       <span className="text-gray-600">{v.driverId ? v.driverId.fullName : "Unassigned"}</span>
       {!v.driverId && (
@@ -303,11 +304,11 @@ export default function VehiclesList({
   )}
 </td>
 {canDelete && (
-  <td className="px-5 py-3">
+  <td className="card-actions px-5 py-3">
     <button
       onClick={() => handleDelete(v._id, v.plateNumber)}
       disabled={deletingId === v._id}
-      className="text-xs text-red-500 hover:underline disabled:opacity-60"
+      className="min-h-9 px-1 text-xs text-red-500 hover:underline disabled:opacity-60"
     >
       {deletingId === v._id ? "Deleting…" : "Delete"}
     </button>
@@ -319,6 +320,7 @@ export default function VehiclesList({
               )}
             </tbody>
           </table>
+          </div>
           </>
         )}
       </div>

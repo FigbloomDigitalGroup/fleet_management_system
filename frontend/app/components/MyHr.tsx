@@ -192,7 +192,7 @@ function Payslips() {
 
   if (list.length === 0) return <EmptyState icon={FiFileText} title="No payslips yet" text="Payslips show here once your company's payroll is approved in Figbloom HR." />;
   return (
-    <div className={`${CARD} overflow-x-auto p-0`}>
+    <div className={`${CARD} table-scroll p-0`}>
       <table className="w-full text-sm">
         <thead className="bg-gray-50 text-xs uppercase text-gray-500">
           <tr>
@@ -309,12 +309,13 @@ function Leave() {
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
-        <div className={`${CARD} overflow-x-auto p-0`}>
+        <div className={`${CARD} table-scroll p-0`}>
           <h3 className="px-5 pt-4 text-sm font-medium text-gray-700">Balances</h3>
           {balances.length === 0 ? (
             <p className="px-5 py-4 text-sm text-gray-500">No leave balances yet.</p>
           ) : (
-            <table className="mt-2 w-full text-sm">
+            <div className="table-scroll mt-2">
+<table className="w-full text-sm">
               <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                 <tr>
                   <th className="px-5 py-2 text-left font-medium">Type</th>
@@ -334,9 +335,10 @@ function Leave() {
                 ))}
               </tbody>
             </table>
+</div>
           )}
         </div>
-        <div className={`${CARD} overflow-x-auto p-0`}>
+        <div className={`${CARD} table-scroll p-0`}>
           <h3 className="px-5 pt-4 text-sm font-medium text-gray-700">Your requests</h3>
           {apps.length === 0 ? (
             <p className="px-5 py-4 text-sm text-gray-500">No leave requests yet.</p>
@@ -457,12 +459,13 @@ function Attendance() {
           </div>
         ))}
       </div>
-      <div className={`${CARD} overflow-x-auto p-0`}>
+      <div className={`${CARD} table-scroll p-0`}>
         <h3 className="px-5 pt-4 text-sm font-medium text-gray-700">This month</h3>
         {days.length === 0 ? (
           <p className="px-5 py-4 text-sm text-gray-500">No attendance recorded this month.</p>
         ) : (
-          <table className="mt-2 w-full text-sm">
+          <div className="table-scroll mt-2">
+<table className="w-full text-sm">
             <thead className="bg-gray-50 text-xs uppercase text-gray-500">
               <tr>
                 <th className="px-5 py-2 text-left font-medium">Day</th>
@@ -484,6 +487,7 @@ function Attendance() {
               ))}
             </tbody>
           </table>
+</div>
         )}
       </div>
     </div>
@@ -496,11 +500,12 @@ function Kpis() {
   const items: Json[] = data.items ?? [];
   if (!data.period || items.length === 0) return <EmptyState icon={FiTarget} title="No KPIs yet" text="Your targets show here once HR opens a KPI period for you." />;
   return (
-    <div className={`${CARD} overflow-x-auto p-0`}>
+    <div className={`${CARD} table-scroll p-0`}>
       <h3 className="px-5 pt-4 text-sm font-medium text-gray-700">
         {data.period.name} ({day(data.period.starts_on)} to {day(data.period.ends_on)})
       </h3>
-      <table className="mt-2 w-full text-sm">
+      <div className="table-scroll mt-2">
+<table className="w-full text-sm">
         <thead className="bg-gray-50 text-xs uppercase text-gray-500">
           <tr>
             <th className="px-5 py-2 text-left font-medium">KPI</th>
@@ -528,6 +533,7 @@ function Kpis() {
           })}
         </tbody>
       </table>
+</div>
     </div>
   );
 }

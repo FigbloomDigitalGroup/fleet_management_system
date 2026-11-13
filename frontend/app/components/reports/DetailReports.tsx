@@ -21,7 +21,7 @@ type Col = { label: string; align?: "left" | "right" };
 
 function Table({ cols, children, footer, empty }: { cols: Col[]; children: ReactNode; footer?: ReactNode; empty?: string | null }) {
   return (
-    <div className="overflow-x-auto print:overflow-visible">
+    <div className="table-scroll print:overflow-visible">
       <table className="w-full text-sm print:text-[10px]">
         <thead className="bg-gray-50 text-xs uppercase text-black">
           <tr>

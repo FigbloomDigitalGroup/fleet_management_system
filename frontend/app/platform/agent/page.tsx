@@ -57,7 +57,7 @@ export default function AgentOverviewPage() {
 
   const statsNode = useMemo(
     () => (
-      <div className="grid grid-cols-2 gap-3 h-full">
+      <div className="grid grid-cols-1 gap-3 h-full sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Total scans" value={totalScans} accent="blue" description="Runs recorded" />
         <StatCard label="Anomalies (7d)" value={anomaliesLast7Days} accent="orange" description="Flagged in the last 7 days" />
         <StatCard
@@ -105,7 +105,8 @@ export default function AgentOverviewPage() {
             No scans yet — they run automatically every 15 minutes, or click &quot;Run scan now&quot;.
           </p>
         ) : (
-          <table className="w-full text-sm">
+          <div className="table-scroll">
+<table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
               <tr>
                 <th className="text-left px-5 py-3 font-medium">Run at</th>
@@ -178,6 +179,7 @@ export default function AgentOverviewPage() {
               })}
             </tbody>
           </table>
+</div>
         )}
       </div>
     </div>
