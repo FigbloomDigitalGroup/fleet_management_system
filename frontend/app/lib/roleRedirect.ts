@@ -2,7 +2,7 @@ import { AdminAccess, Role } from "../types/auth";
 
 // Every role lands on its own area's dashboard after signing in, and is sent
 // back there if it opens a page from another role's area (ProtectedRoute).
-export function redirectPathForRole(role: Role): string {
+export function redirectPathForRole(role: Role | null | undefined): string {
   switch (role) {
     case "PLATFORM_ADMIN":
       return "/platform/dashboard";
@@ -17,6 +17,9 @@ export function redirectPathForRole(role: Role): string {
       return "/admin/dashboard";
     case "DRIVER":
       return "/driver/dashboard";
+    case null:
+      // signed in, but in no fleet right now
+      return "/no-fleet";
     default:
       return "/";
   }

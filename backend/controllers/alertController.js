@@ -81,7 +81,7 @@ export async function resolveAlert(req, res) {
 // DRIVER — unresolved alerts for whichever vehicle is currently assigned to them
 export async function getMyAlerts(req, res) {
   try {
-    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id }, select: { id: true } });
+    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id, companyId: req.user.companyId }, select: { id: true } });
     if (!vehicle) return res.json([]);
 
     const alerts = await prisma.alert.findMany({
@@ -132,7 +132,7 @@ export async function createAlert(req, res) {
 // dashboard keeps it until an admin resolves it.
 export async function hideMyAlert(req, res) {
   try {
-    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id }, select: { id: true } });
+    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id, companyId: req.user.companyId }, select: { id: true } });
     if (!vehicle) return res.status(404).json({ error: "Alert not found" });
     const { count } = await prisma.alert.updateMany({
       where: { id: req.params.id, vehicleId: vehicle.id },

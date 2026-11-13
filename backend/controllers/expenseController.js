@@ -10,7 +10,7 @@ const withReceiptUrl = (e) => ({ ...toApi(e), receiptUrl: uploadUrl(e.receiptUpl
 // DRIVER — log an expense against the vehicle currently assigned to them.
 export async function createMyExpense(req, res) {
   try {
-    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id }, select: { id: true, companyId: true } });
+    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id, companyId: req.user.companyId }, select: { id: true, companyId: true } });
     if (!vehicle) return res.status(400).json({ error: "No vehicle is assigned to you yet" });
 
     const { category, amount, note, incurredAt, receiptUploadId } = req.body;
@@ -46,7 +46,7 @@ export async function createMyExpense(req, res) {
 // DRIVER — their own expense history
 export async function listMyExpenses(req, res) {
   try {
-    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id }, select: { id: true } });
+    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id, companyId: req.user.companyId }, select: { id: true } });
     if (!vehicle) return res.json([]);
 
     const expenses = await prisma.expense.findMany({ where: { vehicleId: vehicle.id }, orderBy: { incurredAt: "desc" }, take: 50 });

@@ -2,8 +2,12 @@ import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma.js";
 import { SUPPORT_TOKEN_TYPE, resolveSupportSession, supportModeDenial } from "../lib/supportSession.js";
 import { isStaffRole, staffAccessDenial } from "../lib/staffRoles.js";
+import { resolveAccess, NO_FLEET_MESSAGE } from "../lib/session.js";
 
-// Verifies the JWT and attaches current user info to req.user
+// Verifies the JWT and attaches who the request runs as to req.user:
+// { id (the person), role, companyId, adminAccess (the active membership,
+// FLEET_MEMBERSHIPS_CONTRACT.md section 2), isPlatformAdmin, app }. The
+// membership is re-read on every request (lib/session.js resolveAccess).
 export async function authenticate(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith("Bearer ")) {
@@ -24,25 +28,12 @@ export async function authenticate(req, res, next) {
       }
       req.user = support;
     } else {
-      const user = await prisma.user.findUnique({
-        where: { id: String(decoded.id) },
-        select: { id: true, role: true, companyId: true, adminAccess: true, status: true },
-      });
-      if (!user) {
-        return res.status(401).json({ error: "User account no longer exists" });
-      }
-      // Deactivated by the owner, or by an exit completed in Figbloom HR
-      // (hr.employee.left): signed out at the next request, not at token expiry.
-      if (user.status && user.status !== "active") {
-        return res.status(401).json({ error: "This account has been deactivated", code: "account_inactive" });
-      }
-
-      req.user = {
-        id: user.id,
-        role: user.role,
-        companyId: user.companyId,
-        adminAccess: user.role === "ADMIN" ? user.adminAccess || "full" : null,
-      };
+      const access = await resolveAccess(prisma, decoded);
+      if (access.failure) return res.status(access.failure.status).json(access.failure.body);
+      // Signed in, but in no fleet: only the /api/auth account routes
+      // (switch fleet, invitations, new fleet) are open to them.
+      if (access.noFleet) return res.status(403).json({ error: NO_FLEET_MESSAGE, code: "no_fleet" });
+      req.user = access.user;
     }
   } catch (err) {
     return res.status(401).json({ error: "Invalid or expired token" });
@@ -119,6 +110,49 @@ export function authorize(...allowedRoles) {
     }
     next();
   };
+}
+
+// The person behind a token, whatever fleet (or none) it runs as: for the
+// account routes that work across fleets (switch fleet, accept an
+// invitation, start another fleet). Sets req.identity = { id, email,
+// fullName, isPlatformAdmin, companyId (the token's fleet or null), app }.
+// Never a support view.
+export async function authenticateIdentity(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing or invalid authorization header" });
+  }
+  let decoded;
+  try {
+    decoded = jwt.verify(header.split(" ")[1], process.env.JWT_SECRET);
+  } catch {
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+  if (decoded?.typ === SUPPORT_TOKEN_TYPE) {
+    return res.status(403).json({ error: "Not available in a support view", code: "support_read_only" });
+  }
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: String(decoded.id) },
+      select: { id: true, email: true, fullName: true, isPlatformAdmin: true, status: true },
+    });
+    if (!user) return res.status(401).json({ error: "User account no longer exists" });
+    if (user.isPlatformAdmin && user.status && user.status !== "active") {
+      return res.status(401).json({ error: "This account has been deactivated", code: "account_inactive" });
+    }
+    req.identity = {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      isPlatformAdmin: !!user.isPlatformAdmin,
+      companyId: decoded.companyId ?? null,
+      app: decoded.app ?? null,
+    };
+    next();
+  } catch (err) {
+    console.error("[auth] identity check failed:", err);
+    return res.status(500).json({ error: "Something went wrong. Please try again." });
+  }
 }
 
 // Builds a Prisma where-clause scoped to the requester's tenant.

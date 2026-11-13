@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma.js";
+import { findMember } from "../lib/memberships.js";
 import { toApi } from "../lib/serialize.js";
 import { tenantScope } from "../middleware/auth.js";
 
@@ -44,15 +45,17 @@ export async function listThreads(req, res) {
   }
 }
 
-async function threadFor(driverId, markReadFromDriver, { markRead = true } = {}) {
+// One driver's conversation with one fleet (a driver in two fleets has one
+// thread in each).
+async function threadFor(driverId, companyId, markReadFromDriver, { markRead = true } = {}) {
   // The driver's own view leaves out messages they deleted.
-  const where = markReadFromDriver ? { driverId } : { driverId, hiddenForDriverAt: null };
+  const where = markReadFromDriver ? { driverId, companyId } : { driverId, companyId, hiddenForDriverAt: null };
   const messages = await prisma.message.findMany({ where, orderBy: { createdAt: "desc" }, take: 200 });
   // Opening a thread marks the other side's messages as read (not when
   // Figbloom staff look on in a read-only support view).
   if (markRead) {
     await prisma.message.updateMany({
-      where: { driverId, fromDriver: markReadFromDriver, readAt: null },
+      where: { driverId, companyId, fromDriver: markReadFromDriver, readAt: null },
       data: { readAt: new Date() },
     });
   }
@@ -62,12 +65,9 @@ async function threadFor(driverId, markReadFromDriver, { markRead = true } = {})
 // ADMIN/COMPANY_OWNER — one driver's conversation (?driverId=)
 export async function getThread(req, res) {
   try {
-    const driver = await prisma.user.findFirst({
-      where: { id: String(req.query.driverId ?? ""), role: "DRIVER", ...tenantScope(req) },
-      select: { id: true },
-    });
+    const driver = await findMember(prisma, { userId: String(req.query.driverId ?? ""), role: "DRIVER", ...tenantScope(req) }, { user: {} });
     if (!driver) return res.status(404).json({ error: "Driver not found" });
-    return res.json(await threadFor(driver.id, true, { markRead: !req.user.support }));
+    return res.json(await threadFor(driver.id, driver.companyId, true, { markRead: !req.user.support }));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch messages" });
@@ -77,7 +77,7 @@ export async function getThread(req, res) {
 // DRIVER — their conversation with dispatch
 export async function getMyThread(req, res) {
   try {
-    return res.json(await threadFor(req.user.id, false));
+    return res.json(await threadFor(req.user.id, req.user.companyId, false));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch messages" });
@@ -88,7 +88,7 @@ export async function getMyThread(req, res) {
 export async function getMyUnreadCount(req, res) {
   try {
     const count = await prisma.message.count({
-      where: { driverId: req.user.id, fromDriver: false, readAt: null, hiddenForDriverAt: null },
+      where: { driverId: req.user.id, companyId: req.user.companyId, fromDriver: false, readAt: null, hiddenForDriverAt: null },
     });
     return res.json({ count });
   } catch (err) {
@@ -111,10 +111,7 @@ export async function sendMessage(req, res) {
       driverId = req.user.id;
       companyId = req.user.companyId;
     } else {
-      const driver = await prisma.user.findFirst({
-        where: { id: String(req.body.driverId ?? ""), role: "DRIVER", ...tenantScope(req) },
-        select: { id: true, companyId: true },
-      });
+      const driver = await findMember(prisma, { userId: String(req.body.driverId ?? ""), role: "DRIVER", ...tenantScope(req) }, { user: {} });
       if (!driver) return res.status(404).json({ error: "Driver not found" });
       driverId = driver.id;
       companyId = driver.companyId;
@@ -136,7 +133,7 @@ export async function sendMessage(req, res) {
 export async function hideMyMessage(req, res) {
   try {
     const { count } = await prisma.message.updateMany({
-      where: { id: req.params.id, driverId: req.user.id },
+      where: { id: req.params.id, driverId: req.user.id, companyId: req.user.companyId },
       data: { hiddenForDriverAt: new Date() },
     });
     if (!count) return res.status(404).json({ error: "Message not found" });

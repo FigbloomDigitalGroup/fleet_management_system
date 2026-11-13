@@ -55,7 +55,7 @@ const ROLE_SECTION: Record<Role, string> = {
 export default function HelpPage() {
   const { user } = useAuth();
   // Staff in a support view run as the fleet's owner but are still staff.
-  const mine = user ? (user.support ? "figbloom" : ROLE_SECTION[user.role]) : null;
+  const mine = user ? (user.support ? "figbloom" : user.role ? ROLE_SECTION[user.role] : null) : null;
   const [checklistRestored, setChecklistRestored] = useState(false);
   const canRestoreChecklist = !user?.support && (user?.role === "COMPANY_OWNER" || user?.role === "ADMIN");
 

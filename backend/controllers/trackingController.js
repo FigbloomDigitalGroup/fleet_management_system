@@ -673,7 +673,7 @@ const DEVICE_STATUS_EVENTS = ["heartbeat", "tracking_started", "tracking_stopped
 // dashboard needs to tell "vehicle parked" apart from "driver switched it off".
 export async function reportDeviceStatus(req, res) {
   try {
-    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id } });
+    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id, companyId: req.user.companyId } });
     if (!vehicle) return res.status(400).json({ error: "No vehicle is assigned to you yet" });
 
     const { batteryLevel, isCharging, locationEnabled, permission, appState, isSharing, platform, appVersion } = req.body;
@@ -747,7 +747,7 @@ const SENSOR_EVENT_MESSAGES = {
 // Accepts a batch so events buffered offline arrive with their real times.
 export async function reportDrivingEvents(req, res) {
   try {
-    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id } });
+    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id, companyId: req.user.companyId } });
     if (!vehicle) return res.status(400).json({ error: "No vehicle is assigned to you yet" });
 
     const events = Array.isArray(req.body.events) ? req.body.events.slice(0, 200) : [];
@@ -789,13 +789,13 @@ export async function reportDrivingEvents(req, res) {
 export async function getTrackingConfig(req, res) {
   try {
     const [vehicle, user] = await Promise.all([
-      prisma.vehicle.findFirst({ where: { driverId: req.user.id }, select: { id: true, companyId: true, plateNumber: true } }),
+      prisma.vehicle.findFirst({ where: { driverId: req.user.id, companyId: req.user.companyId }, select: { id: true, companyId: true, plateNumber: true } }),
       prisma.user.findUnique({
         where: { id: req.user.id },
-        select: { consentVersion: true, consentAcceptedAt: true, companyId: true },
+        select: { consentVersion: true, consentAcceptedAt: true },
       }),
     ]);
-    const companyId = vehicle?.companyId || user?.companyId;
+    const companyId = vehicle?.companyId || req.user.companyId;
     const settings = companyId ? await getCompanySettings(companyId) : null;
     return res.json({
       vehicleId: vehicle?.id ?? null,

@@ -20,9 +20,13 @@ export interface User {
   id: string;
   email: string;
   fullName?: string;
-  role: Role;
+  // The role in the fleet this session runs as (the active membership).
+  // null: signed in but in no fleet right now (the /no-fleet page).
+  role: Role | null;
   companyId: string | null;
   adminAccess?: AdminAccess | null;
+  isPlatformAdmin?: boolean;
+  companyName?: string;
   // Set while Figbloom staff view a customer fleet read-only (support view):
   // the session then runs as that company's owner, the API refuses every
   // change, and the staff member's own session waits in "staffSession".
@@ -36,10 +40,38 @@ export interface SupportView {
   expiresAt: string;
 }
 
+// One fleet this person belongs to (FLEET_MEMBERSHIPS_CONTRACT.md), as the
+// fleet switcher shows it.
+export interface Membership {
+  companyId: string;
+  companyName: string | null;
+  companyStatus: "active" | "suspended" | "pending" | "rejected" | null;
+  role: Role;
+  roleTitle?: string;
+  adminAccess: AdminAccess | null;
+  lastUsedAt: string | null;
+  current: boolean;
+}
+
 export interface LoginResponse {
   user: User;
   accessToken: string;
   refreshToken: string;
+  // the fleets this person can switch to (older API versions: absent)
+  memberships?: Membership[];
+}
+
+// GET /api/invitations (the Team page) and the /invite page.
+export interface InvitationRecord {
+  id: string;
+  email: string;
+  role: Role;
+  roleTitle: string;
+  adminAccess: AdminAccess | null;
+  expiresAt: string;
+  lastSentAt: string;
+  createdAt: string;
+  state: "open" | "expired" | "revoked" | "used";
 }
 
 // GET /api/companies/:id: whether the Figbloom console decides approval and

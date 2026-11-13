@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import prisma from "../lib/prisma.js";
+import { findMembers } from "../lib/memberships.js";
 import { tenantScope } from "../middleware/auth.js";
 import { toApi } from "../lib/serialize.js";
 import { computeDriverScores, gradeFor } from "../lib/driverScore.js";
@@ -99,10 +100,7 @@ async function buildOverview(req, range) {
     if (e.category === "fuel") d.fuelKes += e.amount;
   }
 
-  const drivers = await prisma.user.findMany({
-    where: { role: "DRIVER", ...scope },
-    select: { id: true, fullName: true, avatarUploadId: true },
-  });
+  const drivers = await findMembers(prisma, { role: "DRIVER", ...scope }, { user: { fullName: true, avatarUploadId: true } });
   const scoreDays = Math.max(7, Math.ceil(span / 86400000));
   const ids = drivers.map((d) => d.id);
   const [scores, prevScores] = ids.length
@@ -236,7 +234,7 @@ async function buildSafety(req, { from, to }, groupBy) {
   const scope = tenantScope(req);
   const byDriver = groupBy === "driver";
   const subjects = byDriver
-    ? await prisma.user.findMany({ where: { role: "DRIVER", ...scope }, select: { id: true, fullName: true }, orderBy: { createdAt: "asc" } })
+    ? await findMembers(prisma, { role: "DRIVER", ...scope }, { user: { fullName: true }, orderBy: { createdAt: "asc" } })
     : await prisma.vehicle.findMany({ where: scope, select: { id: true, plateNumber: true }, orderBy: { createdAt: "asc" } });
   const empty = (s) => ({
     id: s.id,

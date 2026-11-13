@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import prisma from "../lib/prisma.js";
+import { findMember } from "../lib/memberships.js";
 import { toApi } from "../lib/serialize.js";
 import { tenantScope } from "../middleware/auth.js";
 import { raiseAlert } from "../lib/alerts.js";
@@ -107,10 +108,7 @@ const ROUTE_FIELDS = ["address", "latitude", "longitude", "driverId", "scheduled
 
 async function resolveDriverAndVehicle(req, driverId) {
   if (!driverId) return { driverId: null, vehicleId: null };
-  const driver = await prisma.user.findFirst({
-    where: { id: String(driverId), role: "DRIVER", ...tenantScope(req) },
-    select: { id: true, companyId: true },
-  });
+  const driver = await findMember(prisma, { userId: String(driverId), role: "DRIVER", ...tenantScope(req) }, { user: {} });
   if (!driver) return { error: "Driver not found" };
   const vehicle = await prisma.vehicle.findFirst({ where: { driverId: driver.id }, select: { id: true } });
   return { driverId: driver.id, vehicleId: vehicle?.id ?? null, companyId: driver.companyId };
@@ -367,7 +365,8 @@ export async function getMyJobRoute(req, res) {
     const route = await prisma.jobRoute.findUnique({
       where: { driverId_scheduledDate: { driverId: req.user.id, scheduledDate: todayKey() } },
     });
-    return res.json(route ? toApi(route) : null);
+    // only the fleet the session runs as
+    return res.json(route && route.companyId === req.user.companyId ? toApi(route) : null);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch your route" });
@@ -382,6 +381,7 @@ export async function listMyJobs(req, res) {
     const jobs = await prisma.job.findMany({
       where: {
         driverId: req.user.id,
+        companyId: req.user.companyId,
         OR: [
           { status: { in: OPEN_STATUSES }, scheduledDate: { lte: today } },
           { scheduledDate: today, status: { in: ["completed", "failed"] } },
@@ -399,7 +399,7 @@ export async function listMyJobs(req, res) {
 // DRIVER — one of their own jobs, whatever its date or status
 export async function getMyJob(req, res) {
   try {
-    const job = await prisma.job.findFirst({ where: { id: req.params.id, driverId: req.user.id } });
+    const job = await prisma.job.findFirst({ where: { id: req.params.id, driverId: req.user.id, companyId: req.user.companyId } });
     if (!job) return res.status(404).json({ error: "Job not found" });
     return res.json(present(job));
   } catch (err) {
@@ -413,7 +413,7 @@ export async function getMyJob(req, res) {
 // signature, or a note.
 export async function updateMyJobStatus(req, res) {
   try {
-    const job = await prisma.job.findFirst({ where: { id: req.params.id, driverId: req.user.id } });
+    const job = await prisma.job.findFirst({ where: { id: req.params.id, driverId: req.user.id, companyId: req.user.companyId } });
     if (!job) return res.status(404).json({ error: "Job not found" });
 
     const { status } = req.body;

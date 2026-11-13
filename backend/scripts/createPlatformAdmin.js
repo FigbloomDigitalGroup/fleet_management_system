@@ -42,8 +42,8 @@ async function run() {
       email,
       passwordHash,
       fullName,
-      role: "PLATFORM_ADMIN",
-      companyId: null,
+      // Figbloom staff: no fleet membership of their own
+      isPlatformAdmin: true,
     },
   });
 

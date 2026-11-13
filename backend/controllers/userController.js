@@ -6,6 +6,7 @@ import { TRACKING_CONSENT_VERSION } from "./trackingController.js";
 import { setImageField } from "./uploadController.js";
 import { TEAM_ROLES, canManageTeam } from "../lib/staffRoles.js";
 import { enqueueStaffSyncSafely } from "../lib/platform/staffEvents.js";
+import { findMember, findMembers, teamAudit } from "../lib/memberships.js";
 
 // Self-editable profile fields — deliberately excludes identity/account
 // fields (email, fullName, role, companyId, status) which aren't meant to
@@ -21,14 +22,14 @@ const PROFILE_FIELDS = [
   "emergencyPhone",
 ];
 
+// People are found through their membership in the requester's company
+// (lib/memberships.js): role, adminAccess and status are that fleet's.
+
 // COMPANY_OWNER — list Admins under their own company
 // PLATFORM_ADMIN — list all Admins across every company
 export async function listAdmins(req, res) {
   try {
-    const admins = await prisma.user.findMany({
-      where: { role: "ADMIN", ...tenantScope(req) },
-      orderBy: { createdAt: "desc" },
-    });
+    const admins = await findMembers(prisma, { role: "ADMIN", ...tenantScope(req) });
     return res.json(toApi(admins));
   } catch (err) {
     console.error(err);
@@ -39,10 +40,7 @@ export async function listAdmins(req, res) {
 // List Drivers under the requester's company (or all, for PLATFORM_ADMIN)
 export async function listDrivers(req, res) {
   try {
-    const drivers = await prisma.user.findMany({
-      where: { role: "DRIVER", ...tenantScope(req) },
-      orderBy: { createdAt: "desc" },
-    });
+    const drivers = await findMembers(prisma, { role: "DRIVER", ...tenantScope(req) });
     return res.json(toApi(drivers));
   } catch (err) {
     console.error(err);
@@ -54,9 +52,7 @@ export async function listDrivers(req, res) {
 // a driver outside the requester's own company 404s instead of leaking).
 export async function getDriverById(req, res) {
   try {
-    const driver = await prisma.user.findFirst({
-      where: { id: req.params.id, role: "DRIVER", ...tenantScope(req) },
-    });
+    const driver = await findMember(prisma, { userId: String(req.params.id), role: "DRIVER", ...tenantScope(req) });
     if (!driver) return res.status(404).json({ error: "Driver not found" });
     return res.json(toApi(driver));
   } catch (err) {
@@ -65,13 +61,27 @@ export async function getDriverById(req, res) {
   }
 }
 
+// The signed-in person's own record: their profile, with role, companyId,
+// adminAccess and status from the fleet the session runs as.
+function asMe(req, user) {
+  if (!user) return null;
+  const { isPlatformAdmin: _p, identitySub: _s, ...rest } = user;
+  return {
+    ...rest,
+    role: req.user.role,
+    companyId: req.user.companyId,
+    adminAccess: req.user.adminAccess ?? null,
+    status: "active",
+  };
+}
+
 // Any authenticated user — read their own profile (used by the mobile app's
 // Complete profile screen to prefill previously saved details).
 export async function getMyProfile(req, res) {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
     if (!user) return res.status(404).json({ error: "User not found" });
-    return res.json(toApi(user));
+    return res.json(toApi(asMe(req, user)));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch profile" });
@@ -86,9 +96,12 @@ export async function updateMyProfile(req, res) {
       if (field in req.body) data[field] = req.body[field] == null ? null : String(req.body[field]);
     }
     const user = await prisma.user.update({ where: { id: req.user.id }, data });
-    // a new phone number goes to Figbloom HR
-    if ("phone" in data && user.companyId) await enqueueStaffSyncSafely(prisma, user.id, user.companyId);
-    return res.json(toApi(user));
+    // a new phone number goes to Figbloom HR, in every fleet they are in
+    if ("phone" in data) {
+      const fleets = await prisma.membership.findMany({ where: { userId: user.id, status: "active" }, select: { companyId: true } });
+      for (const { companyId } of fleets) await enqueueStaffSyncSafely(prisma, user.id, companyId);
+    }
+    return res.json(toApi(asMe(req, user)));
   } catch (err) {
     if (err?.code === "P2025") return res.status(404).json({ error: "User not found" });
     console.error(err);
@@ -101,10 +114,7 @@ const scoreDays = (req) => Math.min(365, Math.max(7, Number(req.query.days) || 3
 // ADMIN/COMPANY_OWNER — one driver's safety score (see lib/driverScore.js)
 export async function getDriverScore(req, res) {
   try {
-    const driver = await prisma.user.findFirst({
-      where: { id: req.params.id, role: "DRIVER", ...tenantScope(req) },
-      select: { id: true },
-    });
+    const driver = await findMember(prisma, { userId: String(req.params.id), role: "DRIVER", ...tenantScope(req) }, { user: {} });
     if (!driver) return res.status(404).json({ error: "Driver not found" });
     const scores = await computeDriverScores([driver.id], scoreDays(req));
     return res.json(scores.get(driver.id));
@@ -117,10 +127,7 @@ export async function getDriverScore(req, res) {
 // ADMIN/COMPANY_OWNER — every driver's score, for comparing and coaching
 export async function listDriverScores(req, res) {
   try {
-    const drivers = await prisma.user.findMany({
-      where: { role: "DRIVER", ...tenantScope(req) },
-      select: { id: true, fullName: true, email: true },
-    });
+    const drivers = await findMembers(prisma, { role: "DRIVER", ...tenantScope(req) }, { user: { fullName: true, email: true } });
     const scores = await computeDriverScores(drivers.map((d) => d.id), scoreDays(req));
     return res.json(
       drivers
@@ -156,7 +163,7 @@ export async function acceptTrackingConsent(req, res) {
       where: { id: req.user.id },
       data: { consentAcceptedAt: new Date(), consentVersion: version },
     });
-    return res.json(toApi(user));
+    return res.json(toApi(asMe(req, user)));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to save consent" });
@@ -170,13 +177,10 @@ export async function updateAdminAccess(req, res) {
     if (!["full", "dispatcher", "viewer"].includes(adminAccess)) {
       return res.status(400).json({ error: "adminAccess must be full, dispatcher or viewer" });
     }
-    const admin = await prisma.user.findFirst({
-      where: { id: req.params.id, role: "ADMIN", ...tenantScope(req) },
-      select: { id: true },
-    });
+    const admin = await findMember(prisma, { userId: String(req.params.id), role: "ADMIN", ...tenantScope(req) }, { user: {} });
     if (!admin) return res.status(404).json({ error: "Admin not found" });
-    const updated = await prisma.user.update({ where: { id: admin.id }, data: { adminAccess } });
-    return res.json(toApi(updated));
+    await prisma.membership.update({ where: { id: admin.membershipId }, data: { adminAccess } });
+    return res.json(toApi(await findMember(prisma, { id: admin.membershipId })));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update admin access" });
@@ -205,10 +209,7 @@ export async function updateMyAvatar(req, res) {
 export async function updateDriverAvatar(req, res) {
   try {
     if (req.body.uploadId === undefined) return res.status(400).json({ error: "uploadId is required (or null to remove)" });
-    const driver = await prisma.user.findFirst({
-      where: { id: req.params.id, role: "DRIVER", ...tenantScope(req) },
-      select: { id: true, companyId: true },
-    });
+    const driver = await findMember(prisma, { userId: String(req.params.id), role: "DRIVER", ...tenantScope(req) }, { user: {} });
     if (!driver) return res.status(404).json({ error: "Driver not found" });
     const { error, url } = await setImageField("user", driver.id, "avatarUploadId", req.body.uploadId, {
       companyId: driver.companyId,
@@ -226,7 +227,8 @@ export async function updateDriverAvatar(req, res) {
 // admins manage the company's team (full/dispatcher/viewer admins and the
 // staff roles) and switch people, drivers included, off and on again.
 
-const TEAM_FIELDS = { id: true, email: true, fullName: true, role: true, adminAccess: true, status: true, phone: true, avatarUploadId: true, createdAt: true };
+// The person's own fields a team row shows (role, access, status: the membership's).
+const TEAM_FIELDS = { email: true, fullName: true, phone: true, avatarUploadId: true };
 
 function teamManager(req, res) {
   if (req.user.role === "PLATFORM_ADMIN" || canManageTeam(req.user)) return true;
@@ -239,11 +241,7 @@ export async function listTeam(req, res) {
   try {
     // Figbloom staff in a support view (as the owner) see it read-only.
     if (!(req.user.role === "COMPANY_OWNER" && req.user.support) && !teamManager(req, res)) return;
-    const team = await prisma.user.findMany({
-      where: { role: { in: TEAM_ROLES }, ...tenantScope(req) },
-      select: TEAM_FIELDS,
-      orderBy: { createdAt: "desc" },
-    });
+    const team = await findMembers(prisma, { role: { in: TEAM_ROLES }, ...tenantScope(req) }, { user: TEAM_FIELDS });
     return res.json(toApi(team));
   } catch (err) {
     console.error(err);
@@ -259,12 +257,12 @@ export async function updateTeamMember(req, res) {
     const { role } = req.body;
     if (!TEAM_ROLES.includes(role)) return res.status(400).json({ error: `role must be one of: ${TEAM_ROLES.join(", ")}` });
     const adminAccess = role === "ADMIN" ? (["full", "dispatcher", "viewer"].includes(req.body.adminAccess) ? req.body.adminAccess : "full") : null;
-    const member = await prisma.user.findFirst({ where: { id: req.params.id, role: { in: TEAM_ROLES }, ...tenantScope(req) }, select: { id: true, companyId: true, role: true } });
+    const member = await findMember(prisma, { userId: String(req.params.id), role: { in: TEAM_ROLES }, ...tenantScope(req) }, { user: {} });
     if (!member) return res.status(404).json({ error: "Team member not found" });
     if (member.id === req.user.id) return res.status(400).json({ error: "You can't change your own role" });
-    const updated = await prisma.user.update({ where: { id: member.id }, data: { role, adminAccess }, select: TEAM_FIELDS });
+    await prisma.membership.update({ where: { id: member.membershipId }, data: { role, adminAccess } });
     if (member.role !== role) await enqueueStaffSyncSafely(prisma, member.id, member.companyId);
-    return res.json(toApi(updated));
+    return res.json(toApi(await findMember(prisma, { id: member.membershipId }, { user: TEAM_FIELDS })));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update the team member" });
@@ -272,23 +270,34 @@ export async function updateTeamMember(req, res) {
 }
 
 // PATCH /api/users/:id/status { status: "active" | "inactive" }: switch a
-// team member or driver off (signed out at their next request, told to
-// Figbloom HR as fleet.staff.left) or back on. Never the owner or yourself.
+// team member's or driver's membership in this fleet off (signed out of this
+// fleet at their next request, told to Figbloom HR as fleet.staff.left) or
+// back on. Their other fleets are not affected; their sign-in sessions are
+// ended only when this was their last fleet. Never the owner or yourself
+// ("disabled" is accepted as well as "inactive").
 export async function setPersonStatus(req, res) {
   try {
     if (!teamManager(req, res)) return;
-    const { status } = req.body;
+    const status = req.body.status === "disabled" ? "inactive" : req.body.status;
     if (!["active", "inactive"].includes(status)) return res.status(400).json({ error: "status must be active or inactive" });
-    const person = await prisma.user.findFirst({
-      where: { id: req.params.id, role: { in: [...TEAM_ROLES, "DRIVER"] }, ...tenantScope(req) },
-      select: { id: true, companyId: true, status: true },
-    });
+    const person = await findMember(prisma, { userId: String(req.params.id), role: { in: [...TEAM_ROLES, "DRIVER"] }, ...tenantScope(req) }, { user: { email: true } });
     if (!person) return res.status(404).json({ error: "Person not found" });
     if (person.id === req.user.id) return res.status(400).json({ error: "You can't switch off your own account" });
     if (person.status === status) return res.json({ id: person.id, status });
-    await prisma.user.update({ where: { id: person.id }, data: { status } });
-    if (status === "inactive") await prisma.refreshToken.updateMany({ where: { userId: person.id, revoked: false }, data: { revoked: true } });
+    await prisma.membership.update({ where: { id: person.membershipId }, data: { status: status === "active" ? "active" : "disabled" } });
+    if (status === "inactive") {
+      const otherFleets = await prisma.membership.count({ where: { userId: person.id, status: "active" } });
+      if (!otherFleets) await prisma.refreshToken.updateMany({ where: { userId: person.id, revoked: false }, data: { revoked: true } });
+    }
     await enqueueStaffSyncSafely(prisma, person.id, person.companyId);
+    await teamAudit(prisma, {
+      companyId: person.companyId,
+      actorUserId: req.user.support ? null : req.user.id,
+      action: status === "active" ? "membership_enabled" : "membership_disabled",
+      targetUserId: person.id,
+      email: person.email,
+      details: { role: person.role },
+    });
     return res.json({ id: person.id, status });
   } catch (err) {
     console.error(err);

@@ -5,10 +5,12 @@
 // applies it.
 //
 // hr.employee.left  {employee_number, external_id (User.id), left_on}
-//   -> the person's Fleet account is deactivated (signed out at their next
-//      request, refresh tokens revoked). Not sent back to HR as
-//      fleet.staff.left. The company owner is never deactivated this way:
-//      logged and acknowledged ("owner_ignored").
+//   -> the person's membership in that company (the event's tenant) is
+//      disabled: signed out of that fleet at their next request; their other
+//      fleets are untouched (FLEET_MEMBERSHIPS_CONTRACT.md section 4). Their
+//      refresh tokens are revoked only when no fleet is left. Not sent back
+//      to HR as fleet.staff.left. The company owner is never disabled this
+//      way: logged and acknowledged ("owner_ignored").
 // hr.leave.approved / hr.leave.cancelled  {application_id, external_id,
 //   employee_number, leave_type, start_date, end_date, half_day, days, status}
 //   -> DriverUnavailability for that application: approved dates, or
@@ -56,13 +58,15 @@ async function personOf(tx, companyId, personId) {
   // "not_found", acknowledged and ignored by the webhook.
   const company = await tx.company.findUnique({ where: { id: String(companyId) }, select: { id: true } });
   if (!company) return { refused: "unknown_tenant" };
-  const user = await tx.user.findUnique({
-    where: { id: String(personId) },
-    select: { id: true, companyId: true, role: true, status: true, fullName: true },
+  const person = await tx.user.findUnique({ where: { id: String(personId) }, select: { id: true } });
+  if (!person) return { refused: "not_found" };
+  // the person as a member of that company: its role and status
+  const membership = await tx.membership.findUnique({
+    where: { userId_companyId: { userId: person.id, companyId: String(companyId) } },
+    select: { id: true, userId: true, companyId: true, role: true, status: true },
   });
-  if (!user || user.role === "PLATFORM_ADMIN") return { refused: "not_found" };
-  if (user.companyId !== companyId) return { refused: "tenant_mismatch" };
-  return { user };
+  if (!membership) return { refused: "tenant_mismatch" };
+  return { user: { id: person.id, companyId: membership.companyId, role: membership.role, status: membership.status, membershipId: membership.id } };
 }
 
 /** input: { deliveryId, eventId?, companyId, personId, employeeNumber?, leftOn? } */
@@ -72,10 +76,11 @@ export async function applyEmployeeLeft(db, input) {
     if (refused) return { outcome: refused };
     if (user.role === "COMPANY_OWNER") return { outcome: "owner_ignored" };
     // HR knows they left: nothing to tell it back (a queued change for them is skipped)
-    await tx.platformLink.deleteMany({ where: { kind: "staff", localId: user.id } });
+    await tx.platformLink.deleteMany({ where: { kind: "staff", localId: `${user.id}:${user.companyId}` } });
     if (user.status !== "active") return { outcome: "already_inactive" };
-    await tx.user.update({ where: { id: user.id }, data: { status: "inactive" } });
-    await tx.refreshToken.updateMany({ where: { userId: user.id, revoked: false }, data: { revoked: true } });
+    await tx.membership.update({ where: { id: user.membershipId }, data: { status: "disabled" } });
+    const otherFleets = await tx.membership.count({ where: { userId: user.id, status: "active" } });
+    if (!otherFleets) await tx.refreshToken.updateMany({ where: { userId: user.id, revoked: false }, data: { revoked: true } });
     return { outcome: "deactivated", role: user.role };
   });
 }

@@ -23,9 +23,9 @@ export async function setCompanyStatus(db, id, status) {
 // problem never blocks or undoes the change.
 export function notifyCompanyStatusChange(db, before, company) {
   if (before?.status === "pending" && company?.status === "active") {
-    db.user
-      .findMany({ where: { companyId: company.id, role: "COMPANY_OWNER" }, select: { email: true } })
-      .then((owners) => owners.length && sendCompanyApprovedEmail(owners.map((o) => o.email).join(", "), { companyName: company.name }))
+    db.membership
+      .findMany({ where: { companyId: company.id, role: "COMPANY_OWNER" }, select: { user: { select: { email: true } } } })
+      .then((owners) => owners.length && sendCompanyApprovedEmail(owners.map((o) => o.user.email).join(", "), { companyName: company.name }))
       .catch((err) => console.error(`[approval email] failed for ${company.name}:`, err.message));
   }
 }

@@ -241,8 +241,8 @@ async function findDemoCompany() {
   if (!company) return null;
   // Ours if it has the demo users, or nothing but owners (a run that stopped early).
   const [demoUsers, others, vehicles] = await Promise.all([
-    prisma.user.count({ where: { companyId: company.id, email: { endsWith: `@${DEMO_DOMAIN}` } } }),
-    prisma.user.count({ where: { companyId: company.id, role: { not: "COMPANY_OWNER" } } }),
+    prisma.membership.count({ where: { companyId: company.id, user: { email: { endsWith: `@${DEMO_DOMAIN}` } } } }),
+    prisma.membership.count({ where: { companyId: company.id, role: { not: "COMPANY_OWNER" } } }),
     prisma.vehicle.count({ where: { companyId: company.id } }),
   ]);
   const ours = demoUsers > 0 || (others === 0 && vehicles === 0);
@@ -263,22 +263,31 @@ async function wipe(tx, companyId, ownerEmail) {
   await tx.alert.deleteMany({ where: { companyId } });
   await tx.transaction.deleteMany({ where: { companyId } });
   await tx.upload.deleteMany({ where: { companyId } });
-  await tx.user.deleteMany({ where: { companyId, email: { not: ownerEmail } } });
+  // the demo people (only ever in this fleet: @demo addresses) and every other membership here
+  await tx.user.deleteMany({ where: { email: { endsWith: `@${DEMO_DOMAIN}` }, memberships: { some: { companyId } } } });
+  await tx.membership.deleteMany({ where: { companyId, user: { email: { not: ownerEmail } } } });
 }
 
 async function ensureOwner(tx, companyId, email) {
   const existing = await tx.user.findUnique({ where: { email } });
-  if (existing) return { user: existing, created: false };
-  const user = await tx.user.create({
-    data: {
-      email,
-      passwordHash: await bcrypt.hash(randomPassword(), 10),
-      fullName: "Demo Fleet Owner",
-      role: "COMPANY_OWNER",
-      companyId,
-    },
+  const user =
+    existing ??
+    (await tx.user.create({
+      data: { email, passwordHash: await bcrypt.hash(randomPassword(), 10), fullName: "Demo Fleet Owner" },
+    }));
+  await tx.membership.upsert({
+    where: { userId_companyId: { userId: user.id, companyId } },
+    create: { userId: user.id, companyId, role: "COMPANY_OWNER" },
+    update: {},
   });
-  return { user, created: true };
+  return { user, created: !existing };
+}
+
+// A demo person and their membership in the demo fleet.
+async function createMember(tx, companyId, role, data) {
+  const user = await tx.user.create({ data });
+  await tx.membership.create({ data: { userId: user.id, companyId, role, ...(role === "ADMIN" ? { adminAccess: "full" } : {}) } });
+  return user;
 }
 
 async function seedData(tx, company, owner, now) {
@@ -286,25 +295,24 @@ async function seedData(tx, company, owner, now) {
   const companyId = company.id;
 
   // People
-  const admin = await tx.user.create({
-    data: { email: ADMIN.email, passwordHash: await bcrypt.hash(randomPassword(), 10), fullName: ADMIN.fullName, role: "ADMIN", adminAccess: "full", companyId, phone: "+254700000009" },
+  const admin = await createMember(tx, companyId, "ADMIN", {
+    email: ADMIN.email,
+    passwordHash: await bcrypt.hash(randomPassword(), 10),
+    fullName: ADMIN.fullName,
+    phone: "+254700000009",
   });
   const drivers = [];
   for (const [i, d] of DRIVERS.entries()) {
     drivers.push(
-      await tx.user.create({
-        data: {
-          email: d.email,
-          passwordHash: await bcrypt.hash(randomPassword(), 10),
-          fullName: d.fullName,
-          role: "DRIVER",
-          companyId,
-          phone: d.phone,
-          licenseNumber: `DEMO-DL-000${i + 1}`,
-          licenseExpiry: `${new Date(now).getUTCFullYear() + 2}-06-30`,
-          consentAcceptedAt: new Date(now - 30 * DAY),
-          consentVersion: TRACKING_CONSENT_VERSION,
-        },
+      await createMember(tx, companyId, "DRIVER", {
+        email: d.email,
+        passwordHash: await bcrypt.hash(randomPassword(), 10),
+        fullName: d.fullName,
+        phone: d.phone,
+        licenseNumber: `DEMO-DL-000${i + 1}`,
+        licenseExpiry: `${new Date(now).getUTCFullYear() + 2}-06-30`,
+        consentAcceptedAt: new Date(now - 30 * DAY),
+        consentVersion: TRACKING_CONSENT_VERSION,
       })
     );
   }
@@ -632,9 +640,14 @@ async function run() {
     return usage(`A company with the slug "${DEMO_SLUG}" exists (${found.company.id}, "${found.company.name}") that this script did not create. Nothing changed.`);
   }
 
-  const existingOwner = await prisma.user.findUnique({ where: { email: ownerEmail }, select: { companyId: true, role: true } });
-  if (existingOwner && (existingOwner.companyId !== found?.company.id || existingOwner.role !== "COMPANY_OWNER")) {
-    return usage(`${ownerEmail} already has an account elsewhere (${existingOwner.role}). Use another address (for example a +demo alias). Nothing changed.`);
+  // With memberships an existing account can own the demo fleet too (as
+  // another membership); only someone already in it with another role is refused.
+  const existingOwner = await prisma.user.findUnique({ where: { email: ownerEmail }, select: { id: true } });
+  if (existingOwner && found) {
+    const here = await prisma.membership.findUnique({ where: { userId_companyId: { userId: existingOwner.id, companyId: found.company.id } } });
+    if (here && here.role !== "COMPANY_OWNER") {
+      return usage(`${ownerEmail} is already in the demo fleet as ${here.role}. Use another address (for example a +demo alias). Nothing changed.`);
+    }
   }
 
   // A fresh database gets the platform settings row with the Figbloom
@@ -687,8 +700,8 @@ async function run() {
   const vehicleIds = (await prisma.vehicle.findMany({ where, select: { id: true } })).map((x) => x.id);
   const [company, admins, drivers, pings, trips, drivingEvents, geofences, geofenceEvents, openAlerts, alerts, jobs, routes, expenses, inspections, maintenance, messages] = await Promise.all([
     prisma.company.findUnique({ where: { id: companyId }, select: { id: true, name: true, slug: true, status: true, subscriptionPlan: true } }),
-    prisma.user.count({ where: { ...where, role: "ADMIN" } }),
-    prisma.user.count({ where: { ...where, role: "DRIVER" } }),
+    prisma.membership.count({ where: { ...where, role: "ADMIN" } }),
+    prisma.membership.count({ where: { ...where, role: "DRIVER" } }),
     prisma.locationPing.count({ where: { vehicleId: { in: vehicleIds } } }),
     prisma.trip.count({ where: { vehicleId: { in: vehicleIds } } }),
     prisma.drivingEvent.count({ where }),

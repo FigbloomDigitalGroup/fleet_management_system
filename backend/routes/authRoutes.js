@@ -1,5 +1,5 @@
 import express from "express";
-import { authenticate, authorize } from "../middleware/auth.js";
+import { authenticate, authenticateIdentity, authorize } from "../middleware/auth.js";
 import { handleSpreadsheetUpload } from "../middleware/upload.js";
 import {
   loginLimiter,
@@ -16,6 +16,9 @@ import {
   logout,
   forgotPassword,
   resetPassword,
+  createFleetForMe,
+  myMemberships,
+  switchFleet,
 } from "../controllers/authController.js";
 
 const router = express.Router();
@@ -26,6 +29,12 @@ router.post("/refresh", refresh);
 router.post("/logout", logout);
 router.post("/forgot-password", forgotPasswordLimiter, forgotPassword);
 router.post("/reset-password", resetPasswordLimiter, resetPassword);
+
+// One account, many fleets (FLEET_MEMBERSHIPS_CONTRACT.md section 2): these
+// work from any fleet the person is signed into, or none.
+router.get("/memberships", authenticateIdentity, myMemberships);
+router.post("/switch-fleet", authenticateIdentity, switchFleet);
+router.post("/fleets", registerLimiter, authenticateIdentity, createFleetForMe);
 
 router.post(
   "/users",

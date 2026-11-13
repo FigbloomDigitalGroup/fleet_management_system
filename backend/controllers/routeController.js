@@ -112,7 +112,7 @@ export async function getRouteForVehicle(req, res) {
 // logged-in driver, or null if they have no vehicle or it has no active route.
 export async function getMyRoute(req, res) {
   try {
-    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id }, select: { id: true } });
+    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id, companyId: req.user.companyId }, select: { id: true } });
     if (!vehicle) return res.json(null);
 
     const route = await prisma.route.findFirst({ where: { vehicleId: vehicle.id, active: true }, orderBy: { createdAt: "asc" } });

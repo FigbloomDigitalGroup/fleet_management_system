@@ -123,8 +123,9 @@ export async function resolveSupportSession(db, decoded, now = new Date()) {
   ) {
     return null;
   }
-  const staff = await db.user.findUnique({ where: { id: session.staffUserId }, select: { id: true, role: true, status: true } });
-  if (!staff || staff.role !== "PLATFORM_ADMIN" || staff.status !== "active") return null;
+  // Figbloom staff are User.isPlatformAdmin (memberships: no fleet role of their own).
+  const staff = await db.user.findUnique({ where: { id: session.staffUserId }, select: { id: true, isPlatformAdmin: true, status: true } });
+  if (!staff || !staff.isPlatformAdmin || staff.status !== "active") return null;
   const company = await db.company.findUnique({ where: { id: session.companyId }, select: { id: true } });
   if (!company) return null;
 

@@ -59,10 +59,13 @@ export async function raiseAlert({ companyId, vehicleId, type, message, debounce
     const { emailTypes, emailRecipientIds } = settings.alertSettings;
     if (emailTypes.includes(type) && emailRecipientIds.length) {
       const [recipients, vehicle] = await Promise.all([
-        prisma.user.findMany({
-          where: { id: { in: emailRecipientIds.map(String) }, companyId: String(companyId) },
-          select: { email: true },
-        }),
+        // still in the company, switched on
+        prisma.membership
+          .findMany({
+            where: { userId: { in: emailRecipientIds.map(String) }, companyId: String(companyId), status: "active" },
+            select: { user: { select: { email: true } } },
+          })
+          .then((rows) => rows.map((r) => r.user)),
         prisma.vehicle.findUnique({ where: { id: String(vehicleId) }, select: { plateNumber: true } }),
       ]);
       sendAlertEmail(

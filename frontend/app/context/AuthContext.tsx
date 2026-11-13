@@ -4,8 +4,11 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { useRouter } from "next/navigation";
 import { apiRequest } from "../lib/api";
 import { isStaffRole } from "../lib/staffRoles";
-import { User, LoginResponse, SupportView } from "../types/auth";
+import { User, LoginResponse, SupportView, Membership } from "../types/auth";
 import { STAFF_SESSION_KEY, SUPPORT_VIEW_ENDED_EVENT, enterSupportSession, restoreStaffSession } from "../lib/supportView";
+import { MEMBERSHIPS_KEY, PENDING_FLEET_KEY, SESSION_CHANGED_EVENT, SessionChange, readMemberships, storeMemberships } from "../lib/fleetSession";
+import { redirectPathForRole, roleLabel } from "../lib/roleRedirect";
+import { notify } from "../lib/notify";
 
 interface RegisterPayload {
   companyName: string;
@@ -15,9 +18,26 @@ interface RegisterPayload {
   password: string;
 }
 
+// POST /api/auth/fleets: a new fleet for someone already signed in.
+export interface NewFleetResult {
+  company: { _id: string; name: string; status: string };
+  approval: "console" | "manual" | "auto";
+  supportEmail?: string;
+  // switched straight in (an active company)
+  switched: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  // The fleets this person can switch to (FLEET_MEMBERSHIPS_CONTRACT.md).
+  memberships: Membership[];
+  refreshMemberships: () => Promise<Membership[]>;
+  // New tokens for another fleet, then that fleet's home page.
+  switchFleet: (companyId: string) => Promise<void>;
+  // Figbloom staff with a fleet of their own: back to the staff area.
+  backToStaffArea: () => Promise<void>;
+  createFleet: (payload: { companyName: string; industry?: string }) => Promise<NewFleetResult>;
   login: (email: string, password: string) => Promise<User>;
   register: (payload: RegisterPayload) => Promise<RegisterResult>;
   // Starts a session from tokens already in hand (a pending registration
@@ -58,6 +78,7 @@ export function isSafeReturnPath(path: string | null | undefined): path is strin
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [memberships, setMemberships] = useState<Membership[]>([]);
   const [loading, setLoading] = useState(true);
   const [signedOut, setSignedOut] = useState(false);
   const router = useRouter();
@@ -68,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (savedUser && savedToken) {
       const parsed: User = JSON.parse(savedUser);
       setUser(parsed);
+      setMemberships(readMemberships());
       // The owner (or a full admin) can change a team member's role or an
       // admin's access level at any time, and the stored session only knows
       // them from login — re-read them so the UI matches what the server
@@ -87,6 +109,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setLoading(false);
   }, []);
+
+  // A token refresh moved the session to another fleet (switched off where
+  // they were) or to none: follow it, and say so plainly.
+  useEffect(() => {
+    function onChanged(e: Event) {
+      const { user: next, memberships: list } = (e as CustomEvent<SessionChange>).detail;
+      setUser(next);
+      setMemberships(list);
+      if (!next.role) {
+        router.push("/no-fleet");
+        return;
+      }
+      notify({
+        kind: "info",
+        title: "You were moved to another fleet",
+        message: `You no longer have access to the fleet you were in. You're now in ${next.companyName ?? "another fleet"} as ${roleLabel(next.role, next.adminAccess)}.`,
+      });
+      router.push(redirectPathForRole(next.role));
+    }
+    window.addEventListener(SESSION_CHANGED_EVENT, onChanged);
+    return () => window.removeEventListener(SESSION_CHANGED_EVENT, onChanged);
+  }, [router]);
 
   // The API ended the support view (its hour ran out): the staff session is
   // already back (lib/supportView.ts), so take them back to their area.
@@ -149,8 +193,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("accessToken", data.accessToken);
     localStorage.setItem("refreshToken", data.refreshToken);
     localStorage.setItem("user", JSON.stringify(data.user));
+    storeMemberships(data.memberships ?? []);
     setUser(data.user);
+    setMemberships(data.memberships ?? []);
     setSignedOut(false);
+  }
+
+  async function refreshMemberships(): Promise<Membership[]> {
+    const data = await apiRequest<{ memberships: Membership[] }>("/api/auth/memberships", { notifyErrors: false });
+    storeMemberships(data.memberships);
+    setMemberships(data.memberships);
+    return data.memberships;
+  }
+
+  async function switchFleet(companyId: string) {
+    const data = await apiRequest<LoginResponse>("/api/auth/switch-fleet", {
+      method: "POST",
+      body: JSON.stringify({ companyId, refreshToken: localStorage.getItem("refreshToken") }),
+    });
+    persistSession(data);
+    notify({
+      kind: "success",
+      title: `Now in ${data.user.companyName ?? "your other fleet"}`,
+      message: `You're working as ${roleLabel(data.user.role, data.user.adminAccess)}.`,
+    });
+    router.push(redirectPathForRole(data.user.role));
+  }
+
+  async function backToStaffArea() {
+    const data = await apiRequest<LoginResponse>("/api/auth/switch-fleet", {
+      method: "POST",
+      body: JSON.stringify({ staffArea: true, refreshToken: localStorage.getItem("refreshToken") }),
+    });
+    persistSession(data);
+    router.push(redirectPathForRole(data.user.role));
+  }
+
+  async function createFleet(payload: { companyName: string; industry?: string }): Promise<NewFleetResult> {
+    const data = await apiRequest<Partial<LoginResponse> & Omit<NewFleetResult, "switched">>("/api/auth/fleets", {
+      method: "POST",
+      body: JSON.stringify(payload),
+      notifyErrors: false,
+      successMessage: false,
+    });
+    if (data.accessToken && data.refreshToken && data.user) {
+      persistSession(data as LoginResponse);
+      try {
+        localStorage.removeItem(PENDING_FLEET_KEY);
+      } catch {}
+      return { company: data.company, approval: data.approval, supportEmail: data.supportEmail, switched: true };
+    }
+    // waiting for approval: the fleet switcher switches in once it's approved
+    try {
+      localStorage.setItem(PENDING_FLEET_KEY, data.company._id);
+    } catch {}
+    refreshMemberships().catch(() => {});
+    return { company: data.company, approval: data.approval, supportEmail: data.supportEmail, switched: false };
   }
 
   async function login(email: string, password: string): Promise<User> {
@@ -205,14 +303,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
+    localStorage.removeItem(MEMBERSHIPS_KEY);
+    localStorage.removeItem(PENDING_FLEET_KEY);
     setUser(null);
+    setMemberships([]);
     setSignedOut(true);
     const next = options?.returnTo && isSafeReturnPath(options.returnTo) ? `?next=${encodeURIComponent(options.returnTo)}` : "";
     router.push(`/login${next}`);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, adoptSession: persistSession, logout, signedOut, startSupportView, exitSupportView }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        memberships,
+        refreshMemberships,
+        switchFleet,
+        backToStaffArea,
+        createFleet,
+        login,
+        register,
+        adoptSession: persistSession,
+        logout,
+        signedOut,
+        startSupportView,
+        exitSupportView,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { staffRoleAllows, staffAccessDenial, canManageTeam, canOpenHr, hasMyHr } from "../lib/staffRoles.js";
-import { sendStaffRow, staffEventData, realEmail } from "../lib/platform/staffEvents.js";
+import { sendStaffRow, staffEventData, realEmail, parseStaffKey, staffKey } from "../lib/platform/staffEvents.js";
 import { makeHrHandlers } from "../lib/platform/hrAccess.js";
 
 // Staff roles (FLEET_HR_CONTRACT.md section 0) and Fleet's side of Figbloom
@@ -95,7 +95,8 @@ test("a person goes to HR as created, then updated, then left", async () => {
   person.status = "inactive";
   await send({ localId: "u1", companyId: "c1", version: 3 });
   assert.deepEqual(sent.map((e) => e.type), ["fleet.staff.created", "fleet.staff.updated", "fleet.staff.left"]);
-  assert.deepEqual(sent.map((e) => e.id), ["fleet-staff-u1-1", "fleet-staff-u1-2", "fleet-staff-u1-3"]);
+  // one outbox row per membership: the company is in the id (FLEET_MEMBERSHIPS_CONTRACT.md section 4)
+  assert.deepEqual(sent.map((e) => e.id), ["fleet-staff-u1-c1-1", "fleet-staff-u1-c1-2", "fleet-staff-u1-c1-3"]);
   assert.deepEqual(sent[0].data, { person_id: "u1", full_name: "Amina W", phone: "+254700000001", email: "amina@acme.co.ke", role: "mechanic", job_title: "Mechanic" });
   assert.equal(sent[0].tenant_local_id, "c1");
   assert.deepEqual(sent[2].data, { person_id: "u1", left_on: "2026-11-12" });
@@ -110,6 +111,39 @@ test("someone HR never heard of isn't sent as left; a deleted person still is", 
   delete people.u2; // deleted since; the row kept the company
   assert.deepEqual(await send({ localId: "u2", companyId: "c1", version: 2 }), { sent: true, type: "left" });
   assert.deepEqual(sent.map((e) => [e.type, e.tenant_local_id]), [["fleet.staff.created", "c1"], ["fleet.staff.left", "c1"]]);
+});
+
+test("someone in two fleets is one HR person in each fleet; leaving one fleet only leaves that one", async () => {
+  // loadPerson answers for the membership: the person in that company
+  const memberships = {
+    "x:c1": { id: "x", companyId: "c1", fullName: "Xavier", email: "x@acme.co.ke", role: "ACCOUNTANT", status: "active" },
+    "x:c2": { id: "x", companyId: "c2", fullName: "Xavier", email: "x@acme.co.ke", role: "SUPERVISOR", status: "active" },
+  };
+  const sent = [];
+  const linked = new Set();
+  const send = (row) =>
+    sendStaffRow(row, {
+      client: { postEvent: async (e) => sent.push(e) },
+      loadPerson: async (userId, companyId) => memberships[`${userId}:${companyId}`] ?? null,
+      links: { has: async (k) => linked.has(k), set: async (k) => linked.add(k), clear: async (k) => linked.delete(k) },
+      now: Date.parse("2026-11-13T10:00:00Z"),
+    });
+  await send({ localId: staffKey("x", "c1"), companyId: "c1", version: 1 });
+  await send({ localId: staffKey("x", "c2"), companyId: "c2", version: 1 });
+  memberships["x:c1"].status = "inactive"; // disabled in fleet c1
+  await send({ localId: staffKey("x", "c1"), companyId: "c1", version: 2 });
+  assert.deepEqual(
+    sent.map((e) => [e.type, e.tenant_local_id, e.data.person_id, e.data.role ?? null]),
+    [
+      ["fleet.staff.created", "c1", "x", "accountant"],
+      ["fleet.staff.created", "c2", "x", "supervisor"],
+      ["fleet.staff.left", "c1", "x", null],
+    ]
+  );
+  assert.deepEqual([...linked], ["x:c2"]);
+  // rows queued before memberships (localId = user id) still name their company
+  assert.deepEqual(parseStaffKey("u9", "c7"), { userId: "u9", companyId: "c7" });
+  assert.deepEqual(parseStaffKey("u9:c8", "c7"), { userId: "u9", companyId: "c8" });
 });
 
 test("made-up addresses are never sent as email", () => {
