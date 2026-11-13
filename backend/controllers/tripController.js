@@ -95,7 +95,7 @@ export async function getTripPath(req, res) {
 
 export async function listMyTrips(req, res) {
   try {
-    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id }, select: { id: true } });
+    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id, companyId: req.user.companyId }, select: { id: true } });
     if (!vehicle) return res.json([]);
 
     const trips = await prisma.trip.findMany({

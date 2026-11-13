@@ -57,8 +57,10 @@ export function makeHrHandlers({ db, getClient, env = process.env, fetch: fetchF
     const client = getClient();
     if (!client) return fail(res, 503, "platform_not_configured", "Figbloom HR can't be reached from Fleet yet.");
     try {
-      const person = await db.user.findUnique({ where: { id: req.user.id }, select: { id: true, fullName: true, email: true, role: true } });
-      if (!person) return fail(res, 401, "unauthorized", "Sign in again.");
+      const found = await db.user.findUnique({ where: { id: req.user.id }, select: { id: true, fullName: true, email: true } });
+      if (!found) return fail(res, 401, "unauthorized", "Sign in again.");
+      // their role in the fleet the session runs as (the active membership)
+      const person = { ...found, role: req.user.role };
       const returnTo = typeof req.body?.returnTo === "string" && RETURN_TO.test(req.body.returnTo) ? req.body.returnTo : undefined;
       const answer = await client.createHandoff({
         target: "hr",

@@ -22,6 +22,7 @@ const { default: supportRoutes } = await import("../routes/supportRoutes.js");
 const { default: messageRoutes } = await import("../routes/messageRoutes.js");
 const { registerDecidedCompany } = await import("../lib/platform/backfill.js");
 const { PlatformError } = await import("../lib/platform/client.js");
+const { installMembershipModels, migrateLegacyUsers } = await import("./helpers/memoryModel.js");
 
 const USERS = [
   { id: "staff-1", role: "PLATFORM_ADMIN", companyId: null, email: "staff@figbloom.test", fullName: "Staff One", status: "active" },
@@ -32,12 +33,14 @@ const USERS = [
 
 let db;
 function reset() {
+  const companies = [
+    { id: "co-a", name: "Amina's Fleet", slug: "aminas-fleet", status: "active", subscriptionPlan: "custom" },
+    { id: "co-b", name: "Other Fleet", slug: "other-fleet", status: "active", subscriptionPlan: "custom" },
+  ];
   db = {
-    users: USERS.map((u) => ({ ...u })),
-    companies: [
-      { id: "co-a", name: "Amina's Fleet", slug: "aminas-fleet", status: "active", subscriptionPlan: "custom" },
-      { id: "co-b", name: "Other Fleet", slug: "other-fleet", status: "active", subscriptionPlan: "custom" },
-    ],
+    // staff become isPlatformAdmin, everyone else a membership (as migrated)
+    ...migrateLegacyUsers(USERS, companies),
+    companies,
     vehicles: [
       { id: "veh-a", companyId: "co-a", plateNumber: "KAA 001A", status: "idle", driverId: null, createdAt: new Date() },
       { id: "veh-b", companyId: "co-b", plateNumber: "KBB 002B", status: "idle", driverId: null, createdAt: new Date() },
@@ -117,7 +120,7 @@ before(async () => {
   prisma.transaction = { findMany: async () => [{ id: "tx-1", companyId: "co-a", reference: "card-ref" }] };
   prisma.platformSettings = { findFirst: async () => ({ vehicleLimits: {}, defaultPlan: "trial", trialDays: 14 }) };
   prisma.locationPing = { findFirst: async () => null };
-  prisma.$transaction = async (fn) => fn(prisma);
+  installMembershipModels(prisma, saved, () => db);
   // enqueueCompanySync's raw INSERT: the localId is the second value
   prisma.$executeRaw = async (_strings, ...values) => {
     db.queued.push(values[1]);
@@ -306,7 +309,7 @@ test("a support token is bound to its staff member and company", async () => {
 
 test("a support view stops working if the staff member loses the staff role", async () => {
   const { token } = await openFleet();
-  db.users.find((u) => u.id === "staff-1").role = "COMPANY_OWNER";
+  db.users.find((u) => u.id === "staff-1").isPlatformAdmin = false;
   assert.equal((await call(token, "GET", "/api/vehicles")).status, 401);
 });
 
@@ -348,8 +351,7 @@ test("staff create a fleet: active company, owner with a random password, emaile
   assert.equal(company.subscriptionPlan, "trial");
 
   const owner = db.users.find((u) => u.email === "juma@example.com");
-  assert.equal(owner.role, "COMPANY_OWNER");
-  assert.equal(owner.companyId, company.id);
+  assert.deepEqual(db.memberships.filter((m) => m.userId === owner.id).map((m) => [m.companyId, m.role]), [[company.id, "COMPANY_OWNER"]]);
   assert.ok(owner.passwordHash && owner.passwordHash.startsWith("$2"), "a hashed random password");
   assert.equal(res.body.owner.passwordHash, undefined);
 
@@ -400,7 +402,7 @@ function platformDb(company) {
   return {
     links,
     queued,
-    company: { findUnique: async () => ({ ...company, slug: "juma-transport", users: [{ email: "o@x.test" }] }) },
+    company: { findUnique: async () => ({ ...company, slug: "juma-transport", memberships: [{ user: { email: "o@x.test" } }] }) },
     user: { findFirst: async () => ({ email: "o@x.test" }) },
     platformLink: { upsert: async ({ create }) => links.push(create) },
     $executeRaw: async (_s, ...values) => queued.push(values[1]),

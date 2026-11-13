@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma.js";
+import { findMembers } from "../lib/memberships.js";
 import { toApi } from "../lib/serialize.js";
 import { isInsideGeofence } from "../lib/geo.js";
 import { PLAN_PRICING_KES } from "../config/pricing.js";
@@ -18,11 +19,11 @@ export async function listCompanies(req, res) {
   try {
     const companies = await prisma.company.findMany({
       orderBy: { createdAt: "desc" },
-      include: { _count: { select: { users: true } } },
+      include: { _count: { select: { memberships: true } } },
     });
 
     // attach a quick user count per company (useful for the dashboard table)
-    return res.json(companies.map(({ _count, ...company }) => ({ ...toApi(company), userCount: _count.users })));
+    return res.json(companies.map(({ _count, ...company }) => ({ ...toApi(company), userCount: _count.memberships })));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch companies" });
@@ -32,10 +33,11 @@ export async function listCompanies(req, res) {
 // PLATFORM_ADMIN only — get one company's full detail
 export async function getCompany(req, res) {
   try {
-    const company = await prisma.company.findUnique({ where: { id: req.params.id }, include: { users: true } });
+    const company = await prisma.company.findUnique({ where: { id: req.params.id } });
     if (!company) return res.status(404).json({ error: "Company not found" });
 
-    const { users, ...rest } = company;
+    const users = await findMembers(prisma, { companyId: company.id }, { orderBy: { createdAt: "asc" } });
+    const rest = company;
     // Once on, approval and suspension are decided in the Figbloom console
     // (the page shows a note and a link there instead of its buttons).
     const platformDecisions = { enabled: platformDecisionsEnabled(), consoleUrl: platformConsoleUrl() };

@@ -33,7 +33,7 @@ export function getInspectionTemplate(req, res) {
 // raises an inspection_failed alert listing what's wrong.
 export async function createInspection(req, res) {
   try {
-    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id }, select: { id: true, companyId: true } });
+    const vehicle = await prisma.vehicle.findFirst({ where: { driverId: req.user.id, companyId: req.user.companyId }, select: { id: true, companyId: true } });
     if (!vehicle) return res.status(400).json({ error: "No vehicle is assigned to you yet" });
 
     const submitted = Array.isArray(req.body.items) ? req.body.items : [];
@@ -94,7 +94,7 @@ export async function createInspection(req, res) {
 export async function listMyInspections(req, res) {
   try {
     const inspections = await prisma.inspection.findMany({
-      where: { driverId: req.user.id },
+      where: { driverId: req.user.id, companyId: req.user.companyId },
       include: { vehicle: { select: { id: true, plateNumber: true } } },
       orderBy: { createdAt: "desc" },
       take: 30,

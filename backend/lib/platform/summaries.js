@@ -22,13 +22,18 @@ export async function companySummaries(db, { id, now = new Date() } = {}) {
       subscriptionPlan: true,
       trialEndsAt: true,
       createdAt: true,
-      users: { where: { role: "COMPANY_OWNER" }, orderBy: { createdAt: "asc" }, take: 1, select: { fullName: true, email: true } },
+      memberships: {
+        where: { role: "COMPANY_OWNER" },
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: { user: { select: { fullName: true, email: true } } },
+      },
     },
   });
   if (!companies.length) return [];
 
   const [userCounts, vehicles, recentTrips, links] = await Promise.all([
-    db.user.groupBy({ by: ["companyId", "role"], where: { ...scoped, role: { in: ["DRIVER", "ADMIN"] } }, _count: { _all: true } }),
+    db.membership.groupBy({ by: ["companyId", "role"], where: { ...scoped, role: { in: ["DRIVER", "ADMIN"] } }, _count: { _all: true } }),
     // one row per vehicle with its newest ping (the vehicleId+recordedAt index)
     db.vehicle.findMany({
       where: scoped,
@@ -69,7 +74,7 @@ export async function companySummaries(db, { id, now = new Date() } = {}) {
 
   return companies.map((c) => {
     const p = per.get(c.id);
-    const owner = c.users[0];
+    const owner = c.memberships[0]?.user;
     return {
       id: c.id,
       name: c.name,

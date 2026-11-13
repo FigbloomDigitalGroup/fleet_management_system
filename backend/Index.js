@@ -26,6 +26,7 @@ import publicRoutes from "./routes/publicRoutes.js";
 import platformRoutes from "./routes/platformRoutes.js";
 import hrRoutes from "./routes/hrRoutes.js";
 import supportRoutes from "./routes/supportRoutes.js";
+import invitationRoutes from "./routes/invitationRoutes.js";
 import { runAiAnomalyScan } from "./services/aiAnomalyDetector.js";
 import { closeStaleTrips, sweepOfflineDevices } from "./controllers/trackingController.js";
 import { sweepMaintenanceReminders } from "./controllers/maintenanceController.js";
@@ -107,6 +108,7 @@ app.use("/api/public", publicRoutes);
 app.use("/api/platform", platformRoutes);
 app.use("/api/hr", hrRoutes);
 app.use("/api/support", supportRoutes);
+app.use("/api/invitations", invitationRoutes);
 
 
 

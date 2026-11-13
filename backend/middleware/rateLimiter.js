@@ -66,3 +66,34 @@ export const registerLimiter = rateLimit({
 
 
 
+
+// Invitations (FLEET_MEMBERSHIPS_CONTRACT.md section 3).
+// Sending (invite and resend): max 30 per hour per person and address, so a
+// mistake or a stolen session can't turn Fleet into a spam cannon.
+export const inviteLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  keyGenerator: (req) => `${ipKeyGenerator(req.ip)}|${req.user?.id ?? ""}`,
+  message: { error: "Too many invitations sent. Please try again in an hour." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Opening and accepting an invitation link (guards against token guessing
+// and password guessing on the "sign in to join" step): max 20 per 15
+// minutes per address for accepting, 60 for just looking.
+export const invitationAcceptLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: "Too many attempts. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export const invitationViewLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  message: { error: "Too many attempts. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});

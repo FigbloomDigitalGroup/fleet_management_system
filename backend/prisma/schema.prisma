@@ -257,7 +257,8 @@ model Company {
   updatedAt         DateTime       @updatedAt
 
   logo             Upload?             @relation("CompanyLogo", fields: [logoUploadId], references: [id], onDelete: SetNull)
-  users            User[]
+  memberships      Membership[]
+  invitations      Invitation[]
   vehicles         Vehicle[]
   alerts           Alert[]
   drivingEvents    DrivingEvent[]
@@ -275,18 +276,27 @@ model Company {
   uploads          Upload[]            @relation("CompanyUploads")
 }
 
+// A person's identity (FLEET_MEMBERSHIPS_CONTRACT.md section 1): one email,
+// one account, one password. Where they belong, and as what, is their
+// Memberships (one per fleet). role, companyId and adminAccess are the
+// pre-memberships columns, kept (nullable, never read) for one release and
+// then dropped; status is only used for Figbloom staff (isPlatformAdmin).
 model User {
-  id                     String      @id @default(cuid())
-  email                  String      @unique // stored lowercase, trimmed
+  id                     String       @id @default(cuid())
+  email                  String       @unique // stored lowercase, trimmed
   passwordHash           String
   fullName               String
-  role                   Role
-  companyId              String?
-  adminAccess            AdminAccess @default(full)
+  // Figbloom staff (was the PLATFORM_ADMIN role): no fleet of their own.
+  isPlatformAdmin        Boolean      @default(false)
+  // The future single Figbloom sign-in's subject (Cognito sub). Unused now.
+  identitySub            String?      @unique
+  role                   Role? // legacy, not read (see Membership.role)
+  companyId              String? // legacy, not read (see Membership.companyId)
+  adminAccess            AdminAccess? // legacy, not read (see Membership.adminAccess)
   // Driver's tracking consent (Kenya Data Protection Act).
   consentAcceptedAt      DateTime?
   consentVersion         String?
-  status                 String      @default("active")
+  status                 String       @default("active")
   resetPasswordTokenHash String?
   resetPasswordExpires   DateTime?
   phone                  String?
@@ -298,10 +308,10 @@ model User {
   emergencyName          String?
   emergencyPhone         String?
   avatarUploadId         String?
-  createdAt              DateTime    @default(now())
-  updatedAt              DateTime    @updatedAt
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
 
-  company          Company?          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  memberships      Membership[]
   avatar           Upload?           @relation("UserAvatar", fields: [avatarUploadId], references: [id], onDelete: SetNull)
   refreshTokens    RefreshToken[]
   drivenVehicles   Vehicle[]         @relation("VehicleDriver")
@@ -319,6 +329,79 @@ model User {
   uploads          Upload[]          @relation("UserUploads")
 
   @@index([companyId])
+}
+
+enum MembershipStatus {
+  active
+  disabled
+}
+
+// One person in one fleet (FLEET_MEMBERSHIPS_CONTRACT.md section 1): their
+// role there, an ADMIN's access level, and whether it is switched on. A
+// session runs as one membership at a time (the fleet switcher picks it);
+// disabling it signs them out of that fleet only.
+model Membership {
+  id          String           @id @default(cuid())
+  userId      String
+  companyId   String
+  role        Role
+  // ADMIN only: full | dispatcher | viewer
+  adminAccess AdminAccess?
+  status      MembershipStatus @default(active)
+  invitedById String?
+  // When this fleet was last opened (sign-in picks the most recent one).
+  lastUsedAt  DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([companyId, role])
+}
+
+// An invitation by email to join a fleet with a role (section 3). Only the
+// sha256 of the token is kept; the token itself is only in the email link.
+// Single use, 7 days. One open invitation per (company, email): inviting
+// again revokes the open one and makes a new one.
+model Invitation {
+  id           String       @id @default(cuid())
+  companyId    String
+  email        String // lower-cased
+  role         Role
+  adminAccess  AdminAccess?
+  tokenHash    String       @unique
+  expiresAt    DateTime
+  invitedById  String?
+  acceptedAt   DateTime?
+  acceptedById String?
+  revokedAt    DateTime?
+  lastSentAt   DateTime     @default(now())
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, email])
+}
+
+// What owners and admins did to their team: invited, invitation revoked,
+// invitation accepted, membership disabled / enabled. Append-only. No
+// relations, so the record outlives the people in it.
+model TeamAuditLog {
+  id           String   @id @default(cuid())
+  companyId    String
+  actorUserId  String?
+  // invited | invitation_resent | invitation_revoked | invitation_accepted |
+  // membership_disabled | membership_enabled
+  action       String
+  targetUserId String?
+  email        String?
+  details      Json?
+  createdAt    DateTime @default(now())
+
+  @@index([companyId, createdAt])
 }
 
 model RefreshToken {

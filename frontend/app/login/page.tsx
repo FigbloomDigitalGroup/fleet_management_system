@@ -22,10 +22,13 @@ const STEPS = [
 
 // After a session timeout (or a link opened while signed out) the sign-in
 // page carries ?next=<page>; go back there if it's in this person's area.
-function returnPathFor(role: Role): string | null {
+// Starting a new fleet and invitation links work for everyone.
+function returnPathFor(role: Role | null): string | null {
   if (typeof window === "undefined") return null;
   const next = new URLSearchParams(window.location.search).get("next");
   if (!isSafeReturnPath(next)) return null;
+  if (next.startsWith("/new-fleet") || next.startsWith("/invite/")) return next;
+  if (!role) return null;
   const area = redirectPathForRole(role).split("/")[1];
   return next === `/${area}` || next.startsWith(`/${area}/`) || next.startsWith("/help") ? next : null;
 }
@@ -68,7 +71,8 @@ export default function LoginPage() {
       const greeting = firstSignInHere(user.id) ? "Welcome" : "Welcome back";
       const welcome = firstName ? `${greeting}, ${firstName}.` : `${greeting}.`;
       const staffNote = "This is a Figbloom staff account: you see every customer fleet and can open any of them read-only.";
-      notifySuccess(user.role === "PLATFORM_ADMIN" ? `${welcome} ${staffNote}` : welcome, `Signed in as ${signedInAs}`);
+      const where = user.companyName ? ` in ${user.companyName}` : "";
+      if (user.role) notifySuccess(user.role === "PLATFORM_ADMIN" ? `${welcome} ${staffNote}` : welcome, `Signed in as ${signedInAs}${where}`);
       router.push(returnPathFor(user.role) ?? redirectPathForRole(user.role));
     } catch (err) {
       const e = err as ApiError;

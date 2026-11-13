@@ -284,8 +284,8 @@ export async function updateVehicle(req, res) {
     if (driverId !== undefined) {
       // Mongo accepted any id here; Postgres enforces the link, so check it.
       if (driverId) {
-        const driver = await prisma.user.findFirst({
-          where: { id: String(driverId), companyId: existing.companyId, role: "DRIVER" },
+        const driver = await prisma.membership.findFirst({
+          where: { userId: String(driverId), companyId: existing.companyId, role: "DRIVER" },
           select: { id: true },
         });
         if (!driver) return res.status(400).json({ error: "That driver doesn't belong to this vehicle's company" });
@@ -368,7 +368,7 @@ export async function regenerateTrackerToken(req, res) {
 export async function getMyVehicle(req, res) {
   try {
     const vehicle = await prisma.vehicle.findFirst({
-      where: { driverId: req.user.id },
+      where: { driverId: req.user.id, companyId: req.user.companyId },
       include: { driver: VEHICLE_INCLUDE.driver },
     });
     return res.json(vehicle ? toApi(vehicle) : null);

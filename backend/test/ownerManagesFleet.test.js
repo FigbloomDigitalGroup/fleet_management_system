@@ -16,6 +16,7 @@ const { default: vehicleRoutes } = await import("../routes/vehicleRoutes.js");
 const { default: authRoutes } = await import("../routes/authRoutes.js");
 const { default: geofenceRoutes } = await import("../routes/geofenceRoutes.js");
 const { defaultFleetName } = await import("../controllers/authController.js");
+const { installMembershipModels, migrateLegacyUsers } = await import("./helpers/memoryModel.js");
 
 const USERS = [
   { id: "owner-a", role: "COMPANY_OWNER", companyId: "co-a", email: "owner@a.test" },
@@ -28,12 +29,13 @@ const USERS = [
 
 let db;
 function reset() {
+  const companies = [
+    { id: "co-a", name: "Amina's Fleet", subscriptionPlan: "custom" },
+    { id: "co-b", name: "Other Fleet", subscriptionPlan: "custom" },
+  ];
   db = {
-    users: USERS.map((u) => ({ ...u })),
-    companies: [
-      { id: "co-a", name: "Amina's Fleet", subscriptionPlan: "custom" },
-      { id: "co-b", name: "Other Fleet", subscriptionPlan: "custom" },
-    ],
+    ...migrateLegacyUsers(USERS, companies),
+    companies,
     vehicles: [{ id: "veh-a", companyId: "co-a", plateNumber: "KAA 001A", status: "idle", driverId: null }],
     geofences: [{ id: "geo-a", companyId: "co-a", name: "Depot", type: "circle" }],
   };
@@ -86,6 +88,7 @@ before(async () => {
     },
   };
   prisma.company = table("companies");
+  installMembershipModels(prisma, saved, () => db);
   prisma.vehicle = table("vehicles");
   prisma.geofence = table("geofences");
   prisma.platformSettings = { findFirst: async () => ({ vehicleLimits: {} }) };
@@ -165,7 +168,8 @@ test("an owner adds a driver into their own company", async () => {
   });
   assert.equal(res.status, 201);
   assert.equal(res.body.user.companyId, "co-a");
-  assert.equal(db.users.find((u) => u.email === "juma@a.test").companyId, "co-a");
+  const juma = db.users.find((u) => u.email === "juma@a.test");
+  assert.deepEqual(db.memberships.filter((m) => m.userId === juma.id).map((m) => [m.companyId, m.role]), [["co-a", "DRIVER"]]);
 });
 
 test("drivers and restricted admins can't add drivers", async () => {
@@ -176,7 +180,8 @@ test("drivers and restricted admins can't add drivers", async () => {
 });
 
 test("an owner can assign only their own company's drivers to their vehicles", async () => {
-  db.users.push({ id: "driver-b", role: "DRIVER", companyId: "co-b", email: "driver@b.test" });
+  db.users.push({ id: "driver-b", email: "driver@b.test" });
+  db.memberships.push({ id: "mbr_driver-b", userId: "driver-b", companyId: "co-b", role: "DRIVER", status: "active" });
   assert.equal((await call("owner-a", "PUT", "/api/vehicles/veh-a", { driverId: "driver-b" })).status, 400);
   assert.equal((await call("owner-a", "PUT", "/api/vehicles/veh-a", { driverId: "driver-a" })).status, 200);
   assert.equal(db.vehicles[0].driverId, "driver-a");

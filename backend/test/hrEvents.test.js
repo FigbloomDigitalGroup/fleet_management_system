@@ -3,22 +3,26 @@ import assert from "node:assert/strict";
 import { makeEventWebhookHandler } from "../lib/platform/eventWebhook.js";
 import { applyEmployeeLeft, applyLeaveEvent, leaveWarning } from "../lib/platform/hrEvents.js";
 import { signFigbloomWebhook } from "../lib/platform/signature.js";
+import { migrateLegacyUsers } from "./helpers/memoryModel.js";
 
 // POST /api/platform/events (FLEET_HR_CONTRACT.md section 3): Figbloom HR's
 // hr.employee.left and hr.leave.* through the platform relay, over an
 // in-memory database.
 
-function hrDb() {
+function hrDb({ extraMemberships = [] } = {}) {
+  // people as the memberships migration leaves them (one membership each)
+  const { users, memberships } = migrateLegacyUsers([
+    { id: "owner", companyId: "c1", role: "COMPANY_OWNER", status: "active" },
+    { id: "drv", companyId: "c1", role: "DRIVER", status: "active" },
+    { id: "mech", companyId: "c1", role: "MECHANIC", status: "active" },
+    { id: "other", companyId: "c2", role: "DRIVER", status: "active" },
+  ]);
   let state = {
     companies: [{ id: "c1" }, { id: "c2" }],
-    users: [
-      { id: "owner", companyId: "c1", role: "COMPANY_OWNER", status: "active" },
-      { id: "drv", companyId: "c1", role: "DRIVER", status: "active" },
-      { id: "mech", companyId: "c1", role: "MECHANIC", status: "active" },
-      { id: "other", companyId: "c2", role: "DRIVER", status: "active" },
-    ],
+    users,
+    memberships: [...memberships, ...extraMemberships],
     tokens: [{ userId: "drv", revoked: false }],
-    links: [{ kind: "staff", localId: "drv" }],
+    links: [{ kind: "staff", localId: "drv:c1" }],
     deliveries: [],
     leave: [],
   };
@@ -41,6 +45,15 @@ function hrDb() {
         return u ? { ...u } : null;
       },
       update: async ({ where, data }) => Object.assign(state.users.find((x) => x.id === where.id), data),
+    },
+    membership: {
+      findUnique: async ({ where }) => {
+        const k = where.userId_companyId;
+        const m = state.memberships.find((x) => x.userId === k.userId && x.companyId === k.companyId);
+        return m ? { ...m } : null;
+      },
+      update: async ({ where, data }) => Object.assign(state.memberships.find((x) => x.id === where.id), data),
+      count: async ({ where }) => state.memberships.filter((x) => x.userId === where.userId && x.status === where.status).length,
     },
     refreshToken: {
       updateMany: async ({ where, data }) => {
@@ -101,8 +114,10 @@ function response() {
   return res;
 }
 
-function setup(env = ON) {
-  const db = hrDb();
+const membershipOf = (state, userId, companyId = "c1") => state.memberships.find((m) => m.userId === userId && m.companyId === companyId);
+
+function setup(env = ON, opts) {
+  const db = hrDb(opts);
   const logs = { debug: [], warn: [], error: [] };
   const log = { debug: (m) => logs.debug.push(m), log: (m) => logs.debug.push(m), warn: (m) => logs.warn.push(m), error: (m) => logs.error.push(m) };
   const handle = makeEventWebhookHandler({ db, applyEmployeeLeft, applyLeaveEvent, env, log });
@@ -126,7 +141,7 @@ test("hr.employee.left deactivates the person once and revokes their sessions", 
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.outcome, "deactivated");
   const s = db.state();
-  assert.equal(s.users.find((u) => u.id === "drv").status, "inactive");
+  assert.equal(membershipOf(s, "drv").status, "disabled");
   assert.equal(s.tokens[0].revoked, true);
   assert.equal(s.links.length, 0, "not reported back to HR as fleet.staff.left");
   const again = await send(left("drv"));
@@ -139,7 +154,7 @@ test("the company owner is never deactivated from HR: acknowledged and logged", 
   const res = await send(left("owner"));
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.outcome, "owner_ignored");
-  assert.equal(db.state().users.find((u) => u.id === "owner").status, "active");
+  assert.equal(membershipOf(db.state(), "owner").status, "active");
   assert.equal(logs.warn.length, 1);
 });
 
@@ -159,7 +174,7 @@ test("events about a tenant or person Fleet doesn't know are acknowledged 2xx an
     assert.equal(res.body.applied, false);
     assert.equal(res.body.ignored, true);
   }
-  assert.equal(db.state().users.find((u) => u.id === "drv").status, "active");
+  assert.equal(membershipOf(db.state(), "drv").status, "active");
   assert.equal(db.state().leave.length, 0);
   assert.equal(logs.debug.length, cases.length, "each logged at debug level");
   assert.equal(logs.warn.length + logs.error.length, 0);
@@ -172,7 +187,7 @@ test("a known person of another Fleet company is refused, not applied", async ()
   const { db, send } = setup();
   const res = await send(left("other", "c1"));
   assert.equal(res.statusCode, 422);
-  assert.equal(db.state().users.find((u) => u.id === "other").status, "active");
+  assert.equal(membershipOf(db.state(), "other", "c2").status, "active");
 });
 
 test("approved leave marks the driver unavailable; dispatch gets a warning", async () => {
@@ -206,7 +221,31 @@ test("signature, switch and body checks", async () => {
   const res = await off.send(left("drv"));
   assert.equal(res.statusCode, 503);
   assert.equal(res.headers["Retry-After"], "3600");
-  assert.equal(off.db.state().users.find((u) => u.id === "drv").status, "active");
+  assert.equal(membershipOf(off.db.state(), "drv").status, "active");
   assert.equal((await send({ ...left("drv"), type: "schools.staff.created" })).statusCode, 202);
   assert.equal((await send(leave("hr.leave.approved", { start: "2026-11-22", end: "2026-11-20" }))).statusCode, 400);
+});
+
+// ---- memberships (FLEET_MEMBERSHIPS_CONTRACT.md section 4): someone in two fleets
+
+const inBothFleets = { extraMemberships: [{ id: "mbr_drv_c2", userId: "drv", companyId: "c2", role: "SUPERVISOR", status: "active" }] };
+
+test("an HR exit in one fleet disables only that fleet's membership; the other fleet and the sign-in stay", async () => {
+  const { db, send } = setup(ON, inBothFleets);
+  const res = await send(left("drv", "c1"));
+  assert.equal(res.body.outcome, "deactivated");
+  const s = db.state();
+  assert.equal(membershipOf(s, "drv", "c1").status, "disabled");
+  assert.equal(membershipOf(s, "drv", "c2").status, "active", "fleet c2 is untouched");
+  assert.equal(s.tokens[0].revoked, false, "still signed in: they have another fleet");
+  assert.equal(s.users.find((u) => u.id === "drv").status, "active", "the account itself is not switched off");
+});
+
+test("HR leave in one fleet is recorded for that fleet only", async () => {
+  const { db, send } = setup(ON, inBothFleets);
+  const event = { ...leave("hr.leave.approved"), tenant_local_id: "c2" };
+  assert.equal((await send(event)).body.outcome, "approved");
+  assert.deepEqual(db.state().leave.map((l) => [l.companyId, l.userId]), [["c2", "drv"]]);
+  assert.ok(await leaveWarning(db, { companyId: "c2", userId: "drv", date: "2026-11-21" }));
+  assert.equal(await leaveWarning(db, { companyId: "c1", userId: "drv", date: "2026-11-21" }), null);
 });

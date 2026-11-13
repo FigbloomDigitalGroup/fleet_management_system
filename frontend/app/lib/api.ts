@@ -1,4 +1,5 @@
 import { emitSessionExpired } from "./sessionEvents";
+import { SESSION_CHANGED_EVENT, SessionChange, storeMemberships } from "./fleetSession";
 import { STAFF_SESSION_KEY, SUPPORT_READ_ONLY_MESSAGE, inSupportView, supportViewExpired } from "./supportView";
 import { OFFLINE_MESSAGE, UNREACHABLE_MESSAGE, friendlyStatusMessage, isOffline, notify, notifyError, notifySuccess } from "./notify";
 
@@ -57,6 +58,19 @@ async function refreshAccessToken(): Promise<string | null> {
       if (data.refreshToken) {
         localStorage.setItem("refreshToken", data.refreshToken);
       }
+      // The refresh stays in the same fleet, unless the person was switched
+      // off there meanwhile: then the API moved them to another fleet (or to
+      // none), and the app has to follow.
+      if (data.user) {
+        const previous = JSON.parse(localStorage.getItem("user") || "null");
+        localStorage.setItem("user", JSON.stringify({ ...(previous ?? {}), ...data.user }));
+        storeMemberships(data.memberships);
+        const previousCompanyId = previous?.companyId ?? null;
+        if (previousCompanyId !== (data.user.companyId ?? null) || previous?.role !== data.user.role) {
+          const detail: SessionChange = { user: data.user, memberships: data.memberships ?? [], previousCompanyId };
+          window.dispatchEvent(new CustomEvent(SESSION_CHANGED_EVENT, { detail }));
+        }
+      }
       return data.accessToken;
     } catch {
       return null;
@@ -82,7 +96,7 @@ function failed(message: string, status?: number, data?: Record<string, unknown>
 
 // Requests whose success needs no popup: signing in has its own welcome,
 // the rest happen in the background or are followed by a save that shows one.
-const QUIET_SUCCESS = ["/api/auth/login", "/api/auth/logout", "/api/auth/refresh", "/api/agent/ask", "/api/messages", "/api/uploads"];
+const QUIET_SUCCESS = ["/api/auth/login", "/api/auth/logout", "/api/auth/refresh", "/api/auth/switch-fleet", "/api/invitations/token/", "/api/agent/ask", "/api/messages", "/api/uploads"];
 
 const RESOURCE_NAMES: Record<string, string> = {
   vehicles: "Vehicle",

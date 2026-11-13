@@ -21,6 +21,7 @@ import { roleLabel } from "../lib/roleRedirect";
 import AlertToastStack from "./AlertToast";
 import AgentChatWidget from "./AgentChatWidget";
 import SessionExpiredModal from "./SessionExpiredModal";
+import FleetSwitcher from "./FleetSwitcher";
 
 // The portals' shell: one flat menu with every page of the role's area,
 // always visible on desktop. On phones the same menu opens as a drawer from
@@ -255,7 +256,10 @@ export default function AppShell({ children, portal }: { children: ReactNode; po
             {/* On phones the header only has room for the page title, so the
                 fleet and role live here. */}
             <div className="border-b border-teal-900 px-4 py-2.5 sm:hidden">
-              <SignedInAs companyName={headerCompany} roleName={roleName} compact tone="dark" />
+              <span className="flex items-center justify-between gap-2">
+                <SignedInAs companyName={headerCompany} roleName={roleName} compact tone="dark" />
+                <FleetSwitcher tone="dark" />
+              </span>
             </div>
 
             <nav className="no-scrollbar flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
@@ -352,8 +356,10 @@ export default function AppShell({ children, portal }: { children: ReactNode; po
                 </h1>
                 {header?.subtitle && <p className="hidden truncate text-xs text-gray-500 sm:block">{header.subtitle}</p>}
               </div>
-              <span className="hidden min-w-0 sm:inline-flex">
+              <span className="hidden min-w-0 items-center gap-2 sm:inline-flex">
                 <SignedInAs companyName={headerCompany} roleName={roleName} />
+                {/* the fleets this person is in, and "Create a new fleet" */}
+                <FleetSwitcher />
               </span>
               {zoneCounts && (
                 <div className="hidden items-center gap-2 lg:flex">

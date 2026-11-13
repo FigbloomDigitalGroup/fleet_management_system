@@ -23,7 +23,7 @@ const RELATION_FIELD = {
 const RENAMED = { createdById: "createdBy", uploadedById: "uploadedBy" };
 // roadPath (a trip's cached road-snapped path) is large and only served by
 // GET /api/trips/:id/path.
-const HIDDEN = new Set(["passwordHash", "resetPasswordTokenHash", "resetPasswordExpires", "trackerToken", "data", "roadPath"]);
+const HIDDEN = new Set(["passwordHash", "resetPasswordTokenHash", "resetPasswordExpires", "trackerToken", "data", "roadPath", "identitySub", "tokenHash"]);
 
 function isRow(value) {
   return value !== null && typeof value === "object" && !(value instanceof Date) && !Buffer.isBuffer(value);

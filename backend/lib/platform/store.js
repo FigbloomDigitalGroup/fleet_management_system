@@ -97,10 +97,15 @@ export async function loadCompanyForSync(db, id) {
       slug: true,
       status: true,
       createdAt: true,
-      users: { where: { role: "COMPANY_OWNER" }, orderBy: { createdAt: "asc" }, take: 1, select: { email: true } },
+      memberships: {
+        where: { role: "COMPANY_OWNER" },
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: { user: { select: { email: true } } },
+      },
     },
   });
   if (!company) return null;
-  const { users, ...rest } = company;
-  return { ...rest, ownerEmail: users[0]?.email ?? null };
+  const { memberships, ...rest } = company;
+  return { ...rest, ownerEmail: memberships[0]?.user?.email ?? null };
 }

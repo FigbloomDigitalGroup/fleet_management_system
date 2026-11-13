@@ -28,7 +28,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
 
     // Someone signed in to a different role's area (an old bookmark, a
     // shared link) goes to their own dashboard rather than a dead end.
-    if (!allowedRoles.includes(user.role)) {
+    if (!user.role || !allowedRoles.includes(user.role)) {
       router.replace(redirectPathForRole(user.role));
     }
   }, [user, loading, signedOut, allowedRoles, router]);
@@ -36,7 +36,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   // While checking auth state, or redirecting, show the loader rather than
   // any protected content — the same one pages show while their data loads,
   // so the two read as one continuous loading screen.
-  if (loading || !user || !allowedRoles.includes(user.role)) {
+  if (loading || !user || !user.role || !allowedRoles.includes(user.role)) {
     return <FullPageLoading />;
   }
 

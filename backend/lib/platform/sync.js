@@ -32,7 +32,7 @@ export async function runPlatformSync({ db = prisma, client = sharedPlatformClie
       adoptStatus: async (company, answer) =>
         (await applyPlatformDecision(db, { companyId: company.id, status: answer.status, source: "registration" })).outcome,
       // fleet.staff.* for Figbloom HR (queued only while HR_INTEGRATION_ENABLED is on)
-      sendStaff: (row) => sendStaffRow(row, { client, loadPerson: (id) => loadPersonForSync(db, id), links: prismaStaffLinks(db) }),
+      sendStaff: (row) => sendStaffRow(row, { client, loadPerson: (userId, companyId) => loadPersonForSync(db, userId, companyId), links: prismaStaffLinks(db) }),
       limit,
     });
   } finally {

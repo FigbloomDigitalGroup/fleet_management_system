@@ -17,6 +17,7 @@ const { default: authRoutes } = await import("../routes/authRoutes.js");
 const { default: userRoutes } = await import("../routes/userRoutes.js");
 const { default: vehicleRoutes } = await import("../routes/vehicleRoutes.js");
 const { default: alertRoutes } = await import("../routes/alertRoutes.js");
+const { membershipModels, migrateLegacyUsers } = await import("./helpers/memoryModel.js");
 
 const USERS = [
   { id: "owner-a", role: "COMPANY_OWNER", companyId: "co-a", email: "owner@a.test" },
@@ -32,9 +33,13 @@ const USERS = [
 
 let db;
 function reset() {
+  const companies = [{ id: "co-a", name: "A" }, { id: "co-b", name: "B" }];
+  // the people as the memberships migration leaves them
+  const { users, memberships } = migrateLegacyUsers(USERS.map((u) => ({ status: "active", createdAt: new Date(), ...u })), companies);
   db = {
-    users: USERS.map((u) => ({ status: "active", createdAt: new Date(), ...u })),
-    companies: [{ id: "co-a", name: "A" }, { id: "co-b", name: "B" }],
+    users,
+    memberships,
+    companies,
     vehicles: [{ id: "veh-a", companyId: "co-a", plateNumber: "KAA 001A", status: "idle", driverId: null }],
     alerts: [
       { id: "al-maint", companyId: "co-a", vehicleId: "veh-a", type: "maintenance_due", resolved: false, createdAt: new Date() },
@@ -79,7 +84,7 @@ let baseUrl;
 const saved = {};
 
 before(async () => {
-  for (const key of ["user", "company", "vehicle", "alert", "refreshToken", "platformSettings", "locationPing"]) saved[key] = prisma[key];
+  for (const key of ["user", "company", "vehicle", "alert", "refreshToken", "platformSettings", "locationPing", "membership", "invitation", "teamAuditLog", "$transaction"]) saved[key] = prisma[key];
   const users = table("users");
   prisma.user = {
     ...users,
@@ -90,6 +95,11 @@ before(async () => {
     },
   };
   prisma.company = table("companies");
+  const m = membershipModels(() => db);
+  prisma.membership = m.membership;
+  prisma.invitation = m.invitation;
+  prisma.teamAuditLog = m.teamAuditLog;
+  prisma.$transaction = async (fn) => fn(prisma);
   prisma.vehicle = table("vehicles");
   prisma.alert = table("alerts");
   prisma.refreshToken = table("tokens");
@@ -128,13 +138,22 @@ async function call(userId, method, path, body) {
 
 const newMember = (role) => ({ email: `${role.toLowerCase()}@new.test`, password: "long enough pw", fullName: `New ${role}`, role });
 
-test("the owner and full admins add staff roles; others can't", async () => {
-  assert.equal((await call("owner-a", "POST", "/api/auth/users", newMember("ACCOUNTANT"))).status, 201);
-  assert.equal(db.users.find((u) => u.email === "accountant@new.test").companyId, "co-a");
-  assert.equal((await call("admin-a", "POST", "/api/auth/users", newMember("MECHANIC"))).status, 201);
+const membershipOf = (userId, companyId = "co-a") => db.memberships.find((m) => m.userId === userId && m.companyId === companyId);
+
+test("team members are invited by email now; a typed password is for drivers only", async () => {
+  // owner/full admin: told to invite instead (FLEET_MEMBERSHIPS_CONTRACT.md section 3)
+  const typed = await call("owner-a", "POST", "/api/auth/users", newMember("ACCOUNTANT"));
+  assert.equal(typed.status, 400);
+  assert.equal(typed.body.code, "invite_instead");
+  assert.equal((await call("admin-a", "POST", "/api/auth/users", newMember("MECHANIC"))).status, 400);
   assert.equal((await call("viewer-a", "POST", "/api/auth/users", newMember("OPERATOR"))).status, 403);
   assert.equal((await call("op-a", "POST", "/api/auth/users", newMember("SUPERVISOR"))).status, 403);
   assert.equal((await call("owner-a", "POST", "/api/auth/users", newMember("COMPANY_OWNER"))).status, 400);
+  // a driver with a typed password: account + membership in the owner's fleet
+  assert.equal((await call("owner-a", "POST", "/api/auth/users", newMember("DRIVER"))).status, 201);
+  const driver = db.users.find((u) => u.email === "driver@new.test");
+  assert.equal(membershipOf(driver.id).role, "DRIVER");
+  assert.equal(driver.role, undefined, "the old User.role column is not written");
 });
 
 test("Team lists the team (not drivers) and changes roles; only owner and full admins", async () => {
@@ -147,7 +166,7 @@ test("Team lists the team (not drivers) and changes roles; only owner and full a
 
   const changed = await call("admin-a", "PATCH", "/api/users/team/op-a", { role: "SUPERVISOR" });
   assert.equal(changed.status, 200);
-  assert.equal(db.users.find((u) => u.id === "op-a").role, "SUPERVISOR");
+  assert.equal(membershipOf("op-a").role, "SUPERVISOR");
   assert.equal((await call("owner-a", "PATCH", "/api/users/team/driver-a", { role: "OPERATOR" })).status, 404, "drivers aren't team members");
   assert.equal((await call("owner-a", "PATCH", "/api/users/team/owner-a", { role: "OPERATOR" })).status, 404, "nor is the owner");
   assert.equal((await call("owner-b", "PATCH", "/api/users/team/mech-a", { role: "OPERATOR" })).status, 404, "nor another company's people");

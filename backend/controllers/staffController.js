@@ -18,7 +18,7 @@ const PLANS = ["trial", "basic", "pro", "enterprise"];
 
 // Who the staff member is, for the audit rows.
 async function staffOf(req) {
-  return prisma.user.findUnique({ where: { id: req.user.id }, select: { id: true, email: true, fullName: true, role: true } });
+  return prisma.user.findUnique({ where: { id: req.user.id }, select: { id: true, email: true, fullName: true, isPlatformAdmin: true } });
 }
 
 // POST /api/support/sessions { companyId } — start a read-only support view.
@@ -125,9 +125,9 @@ export async function createFleet(req, res) {
       const company = await tx.company.create({
         data: { name: fleetName, slug, status: "active", industry, subscriptionPlan, trialEndsAt },
       });
-      const owner = await tx.user.create({
-        data: { email: ownerEmail, passwordHash, fullName: ownerName, role: "COMPANY_OWNER", companyId: company.id },
-      });
+      const user = await tx.user.create({ data: { email: ownerEmail, passwordHash, fullName: ownerName } });
+      await tx.membership.create({ data: { userId: user.id, companyId: company.id, role: "COMPANY_OWNER", invitedById: staff.id } });
+      const owner = { ...user, role: "COMPANY_OWNER", companyId: company.id };
       await tx.staffAuditLog.create({
         data: {
           staffUserId: staff.id,

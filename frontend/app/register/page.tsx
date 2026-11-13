@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { redirectPathForRole } from "../lib/roleRedirect";
@@ -24,8 +25,15 @@ const inputClass = (invalid: boolean) =>
 type Field = "fullName" | "companyName" | "email" | "password";
 
 export default function RegisterPage() {
-  const { register, adoptSession } = useAuth();
+  const { register, adoptSession, user, loading } = useAuth();
   const router = useRouter();
+
+  // Already signed in: a new fleet is added to the account they have (no
+  // second account, no password step). Checked once, when the page opens.
+  useEffect(() => {
+    if (!loading && user && !user.support) router.replace("/new-fleet");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   const [companyName, setCompanyName] = useState("");
   // Once the owner edits the fleet name themselves, stop filling it in.
@@ -39,6 +47,8 @@ export default function RegisterPage() {
   // What's wrong, next to the field it's about (or above the button).
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<Field, string>>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  // The email already has an account: sign in, then add this fleet to it.
+  const [existingAccount, setExistingAccount] = useState<string | null>(null);
   // Set once the company is registered: "active" when it can be used right
   // away, "pending" while it waits for approval.
   const [done, setDone] = useState<{ email: string; status: "active" | "pending"; approval: Approval; supportEmail?: string } | null>(
@@ -90,6 +100,7 @@ export default function RegisterPage() {
   function clearError(field: Field) {
     setFieldErrors((f) => ({ ...f, [field]: undefined }));
     setFormError(null);
+    if (field === "email") setExistingAccount(null);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -118,6 +129,11 @@ export default function RegisterPage() {
     } catch (err) {
       const apiErr = err as ApiError;
       const message = apiErr.message || "We couldn't create your account. Please try again.";
+      if (apiErr.data?.code === "account_exists") {
+        setExistingAccount(email.trim().toLowerCase());
+        setIsSubmitting(false);
+        return;
+      }
       // Put the server's answer next to the field it's about.
       if (apiErr.status === 409 || /email/i.test(message)) setFieldErrors({ email: message });
       else if (/password/i.test(message)) setFieldErrors({ password: message });
@@ -324,6 +340,23 @@ export default function RegisterPage() {
 
               <RobotCheckbox checked={isHuman} onChange={setIsHuman} />
 
+              {existingAccount && (
+                <div className="rounded border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
+                  <p className="font-medium">You already have a FIGBLOOM FLEET account with {existingAccount}.</p>
+                  <p className="mt-1 text-xs text-teal-800">
+                    Sign in with it, and we&apos;ll add {companyName.trim() || "your new fleet"} to your account. You keep one sign-in for all your
+                    fleets, and you can move between them from the menu at the top.
+                  </p>
+                  <Link
+                    href={`/login?next=${encodeURIComponent(
+                      `/new-fleet?${new URLSearchParams({ name: companyName.trim(), ...(industry ? { industry } : {}) })}`
+                    )}`}
+                    className="mt-3 inline-block rounded bg-orange-500 px-4 py-2 text-xs font-medium text-white hover:bg-orange-600"
+                  >
+                    Sign in to add this fleet
+                  </Link>
+                </div>
+              )}
               {formError && (
                 <p role="alert" className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                   {formError}

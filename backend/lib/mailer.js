@@ -164,3 +164,27 @@ export function sendPasswordResetEmail(email, resetLink) {
 If you didn't ask for this, ignore this email.`,
   });
 }
+
+// An invitation to join a fleet (POST /api/invitations), valid `validDays`.
+// The link carries the one-time token; the page it opens says what happens
+// next (set a password, or sign in with the account they already have).
+export function sendInvitationEmail(to, { companyName, roleTitle, invitedByName, inviteLink, validDays, isDriver }) {
+  const who = invitedByName ? `${escapeHtml(invitedByName)} has invited you` : "You have been invited";
+  const role = roleTitle ? ` as ${/^[aeiou]/i.test(roleTitle) ? "an" : "a"} ${escapeHtml(roleTitle.toLowerCase())}` : "";
+  const app = `${frontendUrl()}/downloads/fig-fleet-driver.apk`;
+  return send({
+    to,
+    subject: `Join ${companyName} on FIGBLOOM FLEET`,
+    heading: `You're invited to ${companyName}`,
+    paragraphs: [
+      `${who} to join <strong>${escapeHtml(companyName)}</strong> on FIGBLOOM FLEET${role}.`,
+      `Open the link to accept. If you already use FIGBLOOM FLEET with this email, you just sign in; if not, you choose your own password. The link works for ${validDays} days and only once.`,
+    ],
+    button: { label: "Accept the invitation", href: inviteLink },
+    after: [
+      ...(isDriver ? [`Drivers then use the app on an Android phone: <a href="${app}">download the FIGBLOOM FLEET app</a>.`] : []),
+      "If you weren't expecting this, you can ignore this email.",
+    ],
+    text: `${invitedByName ? `${invitedByName} has invited you` : "You have been invited"} to join ${companyName} on FIGBLOOM FLEET${roleTitle ? ` as ${roleTitle.toLowerCase()}` : ""}. Accept (link valid ${validDays} days, once): ${inviteLink}${isDriver ? ` Then install the driver app: ${app}` : ""}`,
+  });
+}

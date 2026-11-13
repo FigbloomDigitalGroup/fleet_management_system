@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma.js";
+import { findMembers } from "../lib/memberships.js";
 import { resolveSettings, invalidateCompanySettings } from "../lib/companySettings.js";
 import { ALERT_TYPE_LABELS } from "../lib/alerts.js";
 
@@ -22,10 +23,11 @@ export async function getMySettings(req, res) {
       select: { alertSettings: true, trackingHours: true, dataRetentionDays: true },
     });
     if (!company) return res.status(404).json({ error: "Company not found" });
-    const recipients = await prisma.user.findMany({
-      where: { companyId: req.user.companyId, role: { in: ["COMPANY_OWNER", "ADMIN"] } },
-      select: { id: true, fullName: true, email: true, role: true },
-    });
+    const recipients = await findMembers(
+      prisma,
+      { companyId: req.user.companyId, role: { in: ["COMPANY_OWNER", "ADMIN"] }, status: "active" },
+      { user: { fullName: true, email: true }, orderBy: { createdAt: "asc" } }
+    );
     return res.json({
       ...resolveSettings(company),
       alertTypes: ALERT_TYPES.map((key) => ({ key, label: ALERT_TYPE_LABELS[key] })),
@@ -58,15 +60,15 @@ export async function updateMySettings(req, res) {
       nextAlert[key] = alertSettings[key].filter((t) => ALERT_TYPES.includes(t));
     }
     if ("emailRecipientIds" in alertSettings) {
-      const valid = await prisma.user.findMany({
+      const valid = await prisma.membership.findMany({
         where: {
-          id: { in: (alertSettings.emailRecipientIds || []).filter(Boolean).map(String) },
+          userId: { in: (alertSettings.emailRecipientIds || []).filter(Boolean).map(String) },
           companyId: company.id,
           role: { in: ["COMPANY_OWNER", "ADMIN"] },
         },
-        select: { id: true },
+        select: { userId: true },
       });
-      nextAlert.emailRecipientIds = valid.map((u) => u.id);
+      nextAlert.emailRecipientIds = valid.map((m) => m.userId);
     }
 
     const nextHours = { ...current.trackingHours };

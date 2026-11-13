@@ -23,6 +23,7 @@ const { default: authRoutes } = await import("../routes/authRoutes.js");
 const { default: alertRoutes } = await import("../routes/alertRoutes.js");
 const { default: vehicleRoutes } = await import("../routes/vehicleRoutes.js");
 const { approvalMode } = await import("../controllers/authController.js");
+const { installMembershipModels, migrateLegacyUsers } = await import("./helpers/memoryModel.js");
 const { purgeExpiredRecords, resolvedAlertRetentionDays, RESOLVED_ALERT_MIN_RETENTION_DAYS } = await import("../lib/cleanup.js");
 
 const DAY = 86400000;
@@ -32,12 +33,14 @@ let db;
 
 function reset() {
   const now = Date.now();
-  db = {
-    users: [
+  const legacy = [
       { id: "owner-p", role: "COMPANY_OWNER", companyId: "co-pending", email: "owner@pending.test", status: "active", fullName: "Wanjiru" },
       { id: "owner-s", role: "COMPANY_OWNER", companyId: "co-suspended", email: "owner@suspended.test", status: "active", fullName: "Otieno" },
       { id: "owner-a", role: "COMPANY_OWNER", companyId: "co-a", email: "owner@a.test", status: "active", fullName: "Amina" },
-    ].map((u) => ({ ...u, passwordHash: hash })),
+    ].map((u) => ({ ...u, passwordHash: hash }));
+  db = {
+    // as the memberships migration leaves them
+    ...migrateLegacyUsers(legacy),
     companies: [
       { id: "co-pending", name: "Kilimo Haulage", status: "pending", subscriptionPlan: "trial", createdAt: new Date(now - 3600000), dataRetentionDays: 180 },
       { id: "co-suspended", name: "Paused Fleet", status: "suspended", subscriptionPlan: "basic", createdAt: new Date(now - 30 * DAY), dataRetentionDays: 180 },
@@ -118,6 +121,7 @@ before(async () => {
     saved[model] = prisma[model];
     prisma[model] = table(name);
   }
+  installMembershipModels(prisma, saved, () => db);
   const app = express();
   app.use(express.json());
   app.use("/api/auth", authRoutes);

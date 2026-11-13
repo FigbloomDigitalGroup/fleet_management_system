@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import prisma from "../lib/prisma.js";
+import { findMembers } from "../lib/memberships.js";
 import { tenantScope } from "../middleware/auth.js";
 import { analyzePings } from "../lib/stops.js";
 import { computeDriverScores } from "../lib/driverScore.js";
@@ -42,7 +43,7 @@ async function buildReport(req, { from, to }, groupBy) {
   const byDriver = groupBy === "driver";
   const asc = { orderBy: { createdAt: "asc" } };
   const subjects = byDriver
-    ? await prisma.user.findMany({ where: { role: "DRIVER", ...scope }, select: { id: true, fullName: true }, ...asc })
+    ? await findMembers(prisma, { role: "DRIVER", ...scope }, { user: { fullName: true }, ...asc })
     : await prisma.vehicle.findMany({ where: scope, select: { id: true, plateNumber: true }, ...asc });
   const rows = new Map(subjects.map((s) => [s.id, emptyRow(s.id, byDriver ? s.fullName : s.plateNumber)]));
   const vehicleIds = byDriver
