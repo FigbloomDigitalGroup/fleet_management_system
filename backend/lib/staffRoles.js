@@ -7,8 +7,9 @@
 // - OPERATOR runs the day: jobs, routes, dispatch, messages, alerts. Reads
 //   vehicles and drivers (to dispatch them) but can't change them, nor
 //   settings or billing.
-// - ACCOUNTANT: expenses (fuel, tolls...), billing and reports; the rest of
-//   the fleet read-only. Opens HR & Payroll.
+// - ACCOUNTANT: expenses (fuel, tolls...: adds, corrects, deletes and checks
+//   them), billing and reports; the rest of the fleet read-only. Opens HR &
+//   Payroll.
 // - MECHANIC: vehicles' maintenance, inspections and defects (maintenance
 //   and failed-inspection alerts); the rest read-only.
 // - SUPERVISOR: reads everything in the fleet, closes alerts and signs off
@@ -87,6 +88,10 @@ export const STAFF_PERMISSIONS = {
   ACCOUNTANT: {
     read: ["/api/expenses", "/api/reports", "/api/billing/transactions/mine", "/api/billing/verify"],
     write: [
+      // office expenses: add, correct, delete, mark a driver's as checked
+      ["POST", /^\/api\/expenses$/],
+      [["PATCH", "DELETE"], new RegExp(`^/api/expenses/(?!mine$)${ID}$`)],
+      ["PATCH", new RegExp(`^/api/expenses/${ID}/review$`)],
       ["POST", /^\/api\/billing\/checkout$/],
       ["POST", /^\/api\/hr\/handoff$/],
     ],

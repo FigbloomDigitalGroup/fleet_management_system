@@ -125,8 +125,28 @@ export interface ExpenseRecord {
   amount: number;
   note: string | null;
   receiptUrl?: string | null;
+  receiptUploadId?: string | null;
   incurredAt: string;
   createdAt: string;
+  // Logged by the driver from the app (false: entered in the office)
+  fromDriverApp?: boolean;
+  enteredBy?: { id: string; fullName: string } | null;
+  // The office checked a driver's expense
+  reviewedAt?: string | null;
+  reviewNote?: string | null;
+  checkedBy?: { id: string; fullName: string } | null;
+}
+
+// GET /api/expenses
+export interface ExpenseList {
+  expenses: ExpenseRecord[];
+  totalKes: number;
+  count: number;
+  byCategory: Record<ExpenseRecord["category"], number>;
+  // drivers' expenses nobody has checked yet (whole fleet, not filtered)
+  needsChecking: number;
+  // at most this many rows are listed; the totals cover them all
+  limit: number;
 }
 
 export interface CompanyStats {

@@ -1,13 +1,17 @@
 import { apiRequest } from "./api";
 
-const MAX_SIDE = 512;
+type UploadKind = "avatar" | "logo" | "receipt";
 
-// Shrinks a picked photo to at most 512 px on its longest side and re-encodes
-// it as JPEG, so profile pictures and logos stay well under the server's
+// Longest side in px: small for pictures and logos, bigger for a receipt so
+// its figures stay readable.
+const MAX_SIDE: Record<UploadKind, number> = { avatar: 512, logo: 512, receipt: 1600 };
+
+// Shrinks a picked photo (to at most 512 px on its longest side, 1600 for a
+// receipt) and re-encodes it as JPEG, so it stays well under the server's
 // 2 MB image limit no matter what the user picks.
-async function toSmallJpeg(file: File): Promise<string> {
+async function toSmallJpeg(file: File, maxSide: number): Promise<string> {
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
@@ -21,10 +25,10 @@ async function toSmallJpeg(file: File): Promise<string> {
 }
 
 // Uploads a picked image and returns its id, ready to attach as a profile
-// picture ("avatar") or company logo ("logo").
-export async function uploadImage(file: File, kind: "avatar" | "logo"): Promise<string> {
+// picture ("avatar"), company logo ("logo") or an expense's receipt.
+export async function uploadImage(file: File, kind: UploadKind): Promise<string> {
   if (!file.type.startsWith("image/")) throw new Error("Please choose an image file");
-  const dataBase64 = await toSmallJpeg(file);
+  const dataBase64 = await toSmallJpeg(file, MAX_SIDE[kind]);
   const upload = await apiRequest<{ id: string }>("/api/uploads", {
     method: "POST",
     body: JSON.stringify({ kind, contentType: "image/jpeg", dataBase64 }),

@@ -140,6 +140,11 @@ enum ExpenseCategory {
   other
 }
 
+enum ExpenseSource {
+  driver_app
+  office
+}
+
 enum GeofenceType {
   circle
   polygon
@@ -751,6 +756,14 @@ model Expense {
   note            String?
   incurredAt      DateTime        @default(now())
   receiptUploadId String?
+  // Logged by the driver from the app (POST /api/expenses/mine), or entered
+  // in the office (POST /api/expenses) by createdById.
+  source          ExpenseSource   @default(driver_app)
+  createdById     String?
+  // The office checked a driver's expense (PATCH /api/expenses/:id/review).
+  reviewedAt      DateTime?
+  reviewedById    String?
+  reviewNote      String?         @db.VarChar(500)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 

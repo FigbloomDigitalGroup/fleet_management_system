@@ -47,7 +47,17 @@ function fieldMatches(value, cond) {
   });
 }
 
-export function memoryModel(getRows, { relations = {}, defaults = () => ({}), prefix = "row" } = {}) {
+// Prisma's _sum: null when no row has a value
+function sumOf(rows, fields) {
+  return Object.fromEntries(
+    Object.keys(fields).map((k) => {
+      const values = rows.map((r) => r[k]).filter((v) => typeof v === "number");
+      return [k, values.length ? values.reduce((a, b) => a + b, 0) : null];
+    })
+  );
+}
+
+export function memoryModel(getRows,{ relations = {}, defaults = () => ({}), prefix = "row" } = {}) {
   function related(row, name) {
     const rel = relations[name];
     const all = rel.rows();
@@ -210,14 +220,27 @@ export function memoryModel(getRows, { relations = {}, defaults = () => ({}), pr
       for (let i = rows.length - 1; i >= 0; i--) if (doomed.has(rows[i])) rows.splice(i, 1);
       return { count: doomed.size };
     },
-    async groupBy({ by, where, _count }) {
+    async groupBy({ by, where, _count, _sum }) {
       const groups = new Map();
       for (const r of findAll(where)) {
         const key = JSON.stringify(by.map((k) => r[k]));
-        if (!groups.has(key)) groups.set(key, { ...Object.fromEntries(by.map((k) => [k, r[k]])), _count: { _all: 0 } });
+        if (!groups.has(key)) groups.set(key, { ...Object.fromEntries(by.map((k) => [k, r[k]])), _count: { _all: 0 }, rows: [] });
         groups.get(key)._count._all++;
+        groups.get(key).rows.push(r);
       }
-      return [...groups.values()].map((g) => (_count ? g : { ...g, _count: undefined }));
+      return [...groups.values()].map(({ rows, ...g }) => ({
+        ...g,
+        _count: _count ? g._count : undefined,
+        ...(_sum ? { _sum: sumOf(rows, _sum) } : {}),
+      }));
+    },
+    // _sum and _count ({ _all: true } or true) over the matching rows
+    async aggregate({ where, _sum, _count }) {
+      const rows = findAll(where);
+      const out = {};
+      if (_sum) out._sum = sumOf(rows, _sum);
+      if (_count) out._count = _count === true ? rows.length : { _all: rows.length };
+      return out;
     },
   };
   return model;

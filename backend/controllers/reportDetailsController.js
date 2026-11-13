@@ -1,4 +1,3 @@
-import ExcelJS from "exceljs";
 import prisma from "../lib/prisma.js";
 import { findMembers } from "../lib/memberships.js";
 import { tenantScope } from "../middleware/auth.js";
@@ -6,6 +5,7 @@ import { toApi } from "../lib/serialize.js";
 import { computeDriverScores, gradeFor } from "../lib/driverScore.js";
 import { currentOdometerKm, reminderState } from "./maintenanceController.js";
 import { parseRange, dateKey } from "./reportController.js";
+import { sendSheetDownload } from "../lib/excelDownload.js";
 
 // The Reports page beyond the summary table: headline metrics with daily
 // graphs, the top drivers, and five detail reports (fuel, safety,
@@ -561,21 +561,7 @@ export function downloadDetailReport(kind) {
       const range = parseRange(req);
       if (range.error) return res.status(400).json({ error: range.error });
       const sheetDef = SHEETS[kind](await BUILDERS[kind](req, range, req.query.groupBy));
-
-      const workbook = new ExcelJS.Workbook();
-      workbook.creator = "FIGBLOOM FLEET";
-      const sheet = workbook.addWorksheet(sheetDef.title);
-      sheet.columns = sheetDef.columns.map(([header, key, width]) => ({ header, key, width: width ?? 16 }));
-      sheet.getRow(1).font = { bold: true };
-      sheetDef.rows.forEach((r) => sheet.addRow(r));
-      if (sheetDef.total) sheet.addRow(sheetDef.total).font = { bold: true };
-      sheet.views = [{ state: "frozen", ySplit: 1 }];
-
-      const name = `fleet-${kind}-report-${dateKey(range.from)}-to-${dateKey(range.to)}.xlsx`;
-      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", `attachment; filename="${name}"`);
-      await workbook.xlsx.write(res);
-      res.end();
+      await sendSheetDownload(res, sheetDef, `fleet-${kind}-report-${dateKey(range.from)}-to-${dateKey(range.to)}.xlsx`);
     } catch (err) {
       console.error(`[report:${kind}.xlsx]`, err);
       return res.status(500).json({ error: "Failed to build report" });
