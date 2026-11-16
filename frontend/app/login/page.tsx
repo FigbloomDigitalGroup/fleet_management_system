@@ -2,17 +2,16 @@
 
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { isSafeReturnPath, useAuth } from "../context/AuthContext";
-import { redirectPathForRole, roleLabel } from "../lib/roleRedirect";
+import { useAuth } from "../context/AuthContext";
 import AuthHeroPanel from "../components/AuthHeroPanel";
 import RobotCheckbox from "../components/RobotCheckbox";
 import BrandIcon from "../components/BrandIcon";
 import PasswordInput from "../components/PasswordInput";
 import DriverAppBadge from "../components/DriverAppBadge";
 import AccountStatus, { AccountStatusInfo, isAccountStatusCode } from "../components/AccountStatus";
-import { notifySuccess } from "../lib/notify";
 import { ApiError } from "../lib/api";
-import { Role } from "../types/auth";
+import { landAfterSignIn } from "../lib/signInLanding";
+import { FigbloomPool, figbloomSignInEnabled, startFigbloomSignIn } from "../lib/figbloomSignIn";
 
 const STEPS = [
   { n: 1, title: "Register your fleet", text: "Create your account in minutes, as a business or just for your own vehicles." },
@@ -21,29 +20,10 @@ const STEPS = [
 ];
 
 // After a session timeout (or a link opened while signed out) the sign-in
-// page carries ?next=<page>; go back there if it's in this person's area.
-// Starting a new fleet and invitation links work for everyone.
-function returnPathFor(role: Role | null): string | null {
+// page carries ?next=<page>.
+function nextParam(): string | null {
   if (typeof window === "undefined") return null;
-  const next = new URLSearchParams(window.location.search).get("next");
-  if (!isSafeReturnPath(next)) return null;
-  if (next.startsWith("/new-fleet") || next.startsWith("/invite/")) return next;
-  if (!role) return null;
-  const area = redirectPathForRole(role).split("/")[1];
-  return next === `/${area}` || next.startsWith(`/${area}/`) || next.startsWith("/help") ? next : null;
-}
-
-// "Welcome" the first time someone signs in on this browser, "Welcome back"
-// after that.
-function firstSignInHere(userId: string) {
-  try {
-    const key = `fleet:signed-in-before:${userId}`;
-    if (localStorage.getItem(key)) return false;
-    localStorage.setItem(key, "1");
-    return true;
-  } catch {
-    return false;
-  }
+  return new URLSearchParams(window.location.search).get("next");
 }
 
 export default function LoginPage() {
@@ -64,16 +44,8 @@ export default function LoginPage() {
     setFormError(null);
     try {
       const user = await login(email, password);
-
       // The account decides where it lands; the welcome says which area.
-      const signedInAs = roleLabel(user.role, user.adminAccess);
-      const firstName = user.fullName?.split(" ")[0];
-      const greeting = firstSignInHere(user.id) ? "Welcome" : "Welcome back";
-      const welcome = firstName ? `${greeting}, ${firstName}.` : `${greeting}.`;
-      const staffNote = "This is a Figbloom staff account: you see every customer fleet and can open any of them read-only.";
-      const where = user.companyName ? ` in ${user.companyName}` : "";
-      if (user.role) notifySuccess(user.role === "PLATFORM_ADMIN" ? `${welcome} ${staffNote}` : welcome, `Signed in as ${signedInAs}${where}`);
-      router.push(returnPathFor(user.role) ?? redirectPathForRole(user.role));
+      router.push(landAfterSignIn(user, nextParam()));
     } catch (err) {
       const e = err as ApiError;
       const code = e.data?.code;
@@ -88,6 +60,18 @@ export default function LoginPage() {
       } else if (!e.notified) {
         setFormError(e.message || "We couldn't sign you in. Check your details and try again.");
       }
+      setIsSubmitting(false);
+    }
+  }
+
+  // Figbloom sign-in: off to Figbloom's sign-in page, back at /auth/callback.
+  async function signInWithFigbloom(pool: FigbloomPool) {
+    setIsSubmitting(true);
+    setFormError(null);
+    try {
+      await startFigbloomSignIn(pool, nextParam());
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Figbloom sign-in isn't available right now.");
       setIsSubmitting(false);
     }
   }
@@ -164,6 +148,33 @@ export default function LoginPage() {
               use the mobile app.
             </p>
 
+            {figbloomSignInEnabled() ? (
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => signInWithFigbloom("customers")}
+                  disabled={isSubmitting}
+                  className="w-full py-2.5 rounded text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-60"
+                >
+                  {isSubmitting ? "Opening Figbloom sign-in…" : "Sign in with Figbloom"}
+                </button>
+                <p className="text-xs text-gray-500">
+                  You sign in on Figbloom&apos;s sign-in page with your email and password: one account for every Figbloom product.
+                  Forgotten your password? Use &quot;Forgot password&quot; there.
+                </p>
+                {formError && (
+                  <p role="alert" className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {formError}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500">
+                  Figbloom staff?{" "}
+                  <button type="button" onClick={() => signInWithFigbloom("staff")} disabled={isSubmitting} className="text-teal-600 font-medium hover:underline">
+                    Staff sign-in
+                  </button>
+                </p>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -231,6 +242,7 @@ export default function LoginPage() {
                 )}
               </div>
             </form>
+            )}
 
             <p className="text-sm text-gray-500 mt-8">
               Registering a new company?{" "}

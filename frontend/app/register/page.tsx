@@ -15,8 +15,19 @@ import { API_URL, ApiError } from "../lib/api";
 import { LoginResponse } from "../types/auth";
 import RegistrationDone, { Approval } from "./RegistrationDone";
 import { defaultFleetName } from "../lib/fleetName";
+import { FIGBLOOM_PASSWORD_RULE, figbloomPasswordProblem, figbloomSignInEnabled } from "../lib/figbloomSignIn";
 
 const MIN_PASSWORD = 8;
+// With Figbloom sign-in, the password is the person's Figbloom account's,
+// and its rule is the pool's.
+const FIGBLOOM = figbloomSignInEnabled();
+const passwordProblem = (password: string) =>
+  FIGBLOOM
+    ? figbloomPasswordProblem(password)
+    : password.length < MIN_PASSWORD
+      ? `Use at least ${MIN_PASSWORD} characters (you've typed ${password.length}).`
+      : null;
+const PASSWORD_RULE = FIGBLOOM ? `${FIGBLOOM_PASSWORD_RULE[0].toUpperCase()}${FIGBLOOM_PASSWORD_RULE.slice(1)}.` : `At least ${MIN_PASSWORD} characters.`;
 const inputClass = (invalid: boolean) =>
   `w-full px-3.5 py-2.5 rounded text-sm border outline-none focus:ring-1 ${
     invalid ? "border-red-400 focus:border-red-500 focus:ring-red-500" : "border-gray-300 focus:border-teal-600 focus:ring-teal-600"
@@ -47,7 +58,8 @@ export default function RegisterPage() {
   // What's wrong, next to the field it's about (or above the button).
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<Field, string>>>({});
   const [formError, setFormError] = useState<string | null>(null);
-  // The email already has an account: sign in, then add this fleet to it.
+  // The email already has an account (Fleet's, or with Figbloom sign-in a
+  // Figbloom account from any product): sign in, then add this fleet to it.
   const [existingAccount, setExistingAccount] = useState<string | null>(null);
   // Set once the company is registered: "active" when it can be used right
   // away, "pending" while it waits for approval.
@@ -109,9 +121,8 @@ export default function RegisterPage() {
     if (!fullName.trim()) errors.fullName = "Enter your name.";
     if (!companyName.trim()) errors.companyName = "Give your fleet a name (your own name is fine).";
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) errors.email = "Enter an email address like name@example.com.";
-    if (password.length < MIN_PASSWORD) {
-      errors.password = `Use at least ${MIN_PASSWORD} characters (you've typed ${password.length}).`;
-    }
+    const weak = passwordProblem(password);
+    if (weak) errors.password = weak;
     setFieldErrors(errors);
     setFormError(null);
     if (Object.keys(errors).length) return;
@@ -129,7 +140,7 @@ export default function RegisterPage() {
     } catch (err) {
       const apiErr = err as ApiError;
       const message = apiErr.message || "We couldn't create your account. Please try again.";
-      if (apiErr.data?.code === "account_exists") {
+      if (apiErr.data?.code === "account_exists" || apiErr.data?.code === "figbloom_account_exists") {
         setExistingAccount(email.trim().toLowerCase());
         setIsSubmitting(false);
         return;
@@ -321,7 +332,7 @@ export default function RegisterPage() {
                     setPassword(e.target.value);
                     clearError("password");
                   }}
-                  placeholder={`At least ${MIN_PASSWORD} characters`}
+                  placeholder={FIGBLOOM ? "At least 12 characters" : `At least ${MIN_PASSWORD} characters`}
                   aria-invalid={!!fieldErrors.password}
                   aria-describedby="password-hint"
                   className={inputClass(!!fieldErrors.password)}
@@ -330,11 +341,11 @@ export default function RegisterPage() {
                 <p
                   id="password-hint"
                   className={`mt-1.5 text-xs ${
-                    fieldErrors.password ? "text-red-600" : password.length >= MIN_PASSWORD ? "text-teal-700" : "text-gray-500"
+                    fieldErrors.password ? "text-red-600" : password && !passwordProblem(password) ? "text-teal-700" : "text-gray-500"
                   }`}
                 >
-                  {fieldErrors.password ??
-                    (password.length >= MIN_PASSWORD ? `✓ At least ${MIN_PASSWORD} characters` : `At least ${MIN_PASSWORD} characters.`)}
+                  {fieldErrors.password ?? (password && !passwordProblem(password) ? `✓ ${PASSWORD_RULE}` : PASSWORD_RULE)}
+                  {FIGBLOOM && !fieldErrors.password && " This is your Figbloom password, for every Figbloom product."}
                 </p>
               </div>
 
@@ -342,7 +353,9 @@ export default function RegisterPage() {
 
               {existingAccount && (
                 <div className="rounded border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
-                  <p className="font-medium">You already have a FIGBLOOM FLEET account with {existingAccount}.</p>
+                  <p className="font-medium">
+                    You already have a {FIGBLOOM ? "Figbloom" : "FIGBLOOM FLEET"} account with {existingAccount}.
+                  </p>
                   <p className="mt-1 text-xs text-teal-800">
                     Sign in with it, and we&apos;ll add {companyName.trim() || "your new fleet"} to your account. You keep one sign-in for all your
                     fleets, and you can move between them from the menu at the top.

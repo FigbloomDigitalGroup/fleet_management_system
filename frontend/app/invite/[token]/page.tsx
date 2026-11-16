@@ -11,6 +11,7 @@ import { AdminAccess, LoginResponse, Role } from "../../types/auth";
 import CenteredCard from "../../components/CenteredCard";
 import PasswordInput from "../../components/PasswordInput";
 import DriverAppBadge from "../../components/DriverAppBadge";
+import { FIGBLOOM_PASSWORD_RULE, figbloomPasswordProblem, figbloomSignInEnabled, startFigbloomSignIn } from "../../lib/figbloomSignIn";
 
 const INPUT = "w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600";
 const BUTTON = "w-full rounded bg-orange-500 py-2.5 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-60";
@@ -55,6 +56,9 @@ export default function InvitePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [joinedNote, setJoinedNote] = useState<{ title: string; message: string; driver: boolean } | null>(null);
+  // With Figbloom sign-in, someone who already has an account signs in
+  // first (Figbloom's page), then comes back here to join.
+  const [mustSignIn, setMustSignIn] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +78,18 @@ export default function InvitePage() {
 
   const signedInAs = user && !user.support ? user.email : null;
   const sameAccount = !!signedInAs && !!invitation && signedInAs.toLowerCase() === invitation.email;
+  // Team invitations use Figbloom accounts; drivers keep the app's own password.
+  const figbloom = figbloomSignInEnabled() && invitation?.role !== "DRIVER";
+
+  async function signInFirst() {
+    setBusy(true);
+    try {
+      await startFigbloomSignIn("customers", `/invite/${token}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Figbloom sign-in isn't available right now.");
+      setBusy(false);
+    }
+  }
 
   async function accept(e?: FormEvent) {
     e?.preventDefault();
@@ -81,7 +97,10 @@ export default function InvitePage() {
     setError(null);
     if (!sameAccount) {
       if (!invitation.accountExists && !fullName.trim()) return setError("Please enter your name.");
-      if (!invitation.accountExists && password.length < 8) return setError(`Your password needs at least 8 characters (you've typed ${password.length}).`);
+      if (!invitation.accountExists) {
+        const weak = figbloom ? figbloomPasswordProblem(password) : password.length < 8 ? `Your password needs at least 8 characters (you've typed ${password.length}).` : null;
+        if (weak) return setError(weak);
+      }
       if (invitation.accountExists && !password) return setError("Please enter your password.");
     }
     setBusy(true);
@@ -105,7 +124,8 @@ export default function InvitePage() {
     } catch (err) {
       const apiErr = err as ApiError;
       const state = apiErr.data?.state as Dead["state"] | undefined;
-      if (state && state in DEAD_TITLES) setDead({ state, companyName: apiErr.data?.companyName as string, error: apiErr.message });
+      if (apiErr.data?.code === "sign_in_first") setMustSignIn(true);
+      else if (state && state in DEAD_TITLES) setDead({ state, companyName: apiErr.data?.companyName as string, error: apiErr.message });
       else setError(apiErr.message || "Something went wrong. Please try again.");
     } finally {
       setBusy(false);
@@ -189,6 +209,23 @@ export default function InvitePage() {
     );
   }
 
+  // not signed in, with an account already: Figbloom sign-in, then back here
+  if (figbloom && (invitation.accountExists || mustSignIn)) {
+    return (
+      <CenteredCard title={`Join ${invitation.companyName}`}>
+        {intro}
+        <p className="text-sm text-gray-700">
+          You already have a Figbloom account with {invitation.email}. Sign in with it, and you&apos;ll come back here to join. Your other fleets stay
+          as they are.
+        </p>
+        {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
+        <button type="button" onClick={signInFirst} disabled={busy} className={`${BUTTON} mt-5`}>
+          {busy ? "Opening Figbloom sign-in…" : "Sign in with Figbloom to join"}
+        </button>
+      </CenteredCard>
+    );
+  }
+
   // not signed in
   return (
     <CenteredCard title={`Join ${invitation.companyName}`}>
@@ -213,7 +250,10 @@ export default function InvitePage() {
           </>
         ) : (
           <>
-            <p className="text-sm text-gray-700">Set up your account: you&apos;ll sign in with {invitation.email} and the password you choose here.</p>
+            <p className="text-sm text-gray-700">
+              Set up your account: you&apos;ll sign in with {invitation.email} and the password you choose here
+              {figbloom ? ". It's your Figbloom account, for every Figbloom product." : "."}
+            </p>
             <div>
               <label htmlFor="invite-name" className="mb-1 block text-xs font-medium text-gray-600">Your name</label>
               <input id="invite-name" value={fullName} onChange={(e) => setFullName(e.target.value)} className={INPUT} autoComplete="name" />
@@ -225,7 +265,9 @@ export default function InvitePage() {
               <input id="invite-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={INPUT} autoComplete="tel" />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Choose a password (at least 8 characters)</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">
+                Choose a password ({figbloom ? FIGBLOOM_PASSWORD_RULE : "at least 8 characters"})
+              </label>
               <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} className={INPUT} autoComplete="new-password" />
             </div>
           </>
