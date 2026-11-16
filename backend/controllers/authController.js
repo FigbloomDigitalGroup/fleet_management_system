@@ -13,6 +13,7 @@ import { STAFF_ROLES, canManageTeam } from "../lib/staffRoles.js";
 import { companyRefusal, chooseMembership, membershipsOf, usableMemberships, usableOn, NO_FLEET_MESSAGE } from "../lib/memberships.js";
 import { actsAsStaff, hashToken, sessionResponse } from "../lib/session.js";
 import { cognitoSignInEnabled } from "../lib/cognito.js";
+import { FigbloomAccountError, figbloomAccounts, sendAccountError } from "../lib/figbloomAccounts.js";
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const WELCOME_LINK_DAYS = 3; // "Set your password" link in the welcome email
@@ -31,24 +32,27 @@ function hashResetToken(token) {
 // in. Runs in the background — a slow or failed email never fails the
 // request that created the user.
 export function sendWelcomeInBackground(user, companyName) {
-  (async () => {
-    const token = crypto.randomBytes(32).toString("hex");
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        resetPasswordTokenHash: hashResetToken(token),
-        resetPasswordExpires: new Date(Date.now() + WELCOME_LINK_DAYS * 86400000),
-      },
-    });
-    const setPasswordLink = `${frontendUrl()}/reset-password?email=${encodeURIComponent(user.email)}&token=${token}`;
-    await sendUserWelcomeEmail(user.email, {
-      fullName: user.fullName,
-      companyName,
-      role: user.role,
-      setPasswordLink,
-      validDays: WELCOME_LINK_DAYS,
-    });
-  })().catch((err) => console.error(`[welcome email] failed for ${user.email}:`, err.message));
+  sendWelcome(user, companyName).catch((err) => console.error(`[welcome email] failed for ${user.email}:`, err.message));
+}
+
+// The same, awaited (scripts/cognitoBackfill.js).
+export async function sendWelcome(user, companyName) {
+  const token = crypto.randomBytes(32).toString("hex");
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      resetPasswordTokenHash: hashResetToken(token),
+      resetPasswordExpires: new Date(Date.now() + WELCOME_LINK_DAYS * 86400000),
+    },
+  });
+  const setPasswordLink = `${frontendUrl()}/reset-password?email=${encodeURIComponent(user.email)}&token=${token}`;
+  await sendUserWelcomeEmail(user.email, {
+    fullName: user.fullName,
+    companyName,
+    role: user.role,
+    setPasswordLink,
+    validDays: WELCOME_LINK_DAYS,
+  });
 }
 
 const companyNameOf = async (companyId) =>
@@ -82,6 +86,12 @@ export const INDUSTRIES = [
 const ACCOUNT_EXISTS = {
   code: "account_exists",
   error: "You already have a Figbloom Fleet account with this email. Sign in first, then you can add this new fleet to your account.",
+};
+// Figbloom sign-in: the email has a Figbloom account (from Fleet or another
+// Figbloom product) but no Fleet user yet.
+const FIGBLOOM_ACCOUNT_EXISTS = {
+  code: "figbloom_account_exists",
+  error: "You already have a Figbloom account with this email. Sign in with it, then start your fleet from there.",
 };
 
 function validateFleetDetails(body) {
@@ -132,7 +142,10 @@ export async function registerCompany(req, res) {
     if (!companyName || !ownerName || !normalizedEmail || !password) {
       return res.status(400).json({ error: "ownerName, email, and password are required" });
     }
-    if (password.length < 8) {
+    // With Figbloom sign-in on, the Figbloom account's own rule applies (the
+    // platform checks it, below).
+    const figbloom = cognitoSignInEnabled();
+    if (!figbloom && password.length < 8) {
       return res.status(400).json({ error: "Password must be at least 8 characters" });
     }
     const invalid = validateFleetDetails(req.body);
@@ -148,11 +161,23 @@ export async function registerCompany(req, res) {
       return res.status(500).json({ error: "Registration is unavailable right now — the server is missing its sign-in settings" });
     }
 
+    // Figbloom sign-in (FLEET_COGNITO_CONTRACT.md section 2): the password goes
+    // to the person's new Figbloom account, never into Fleet. Someone who
+    // already has a Figbloom account signs in with it and starts their fleet
+    // from there: creating an account must never prove who someone is.
+    let identitySub = null;
+    if (figbloom) {
+      const account = await figbloomAccounts.ensure({ email: normalizedEmail, name: ownerName, password });
+      if (!account.created) return res.status(409).json(FIGBLOOM_ACCOUNT_EXISTS);
+      identitySub = account.sub;
+    }
+
     const settings = await getPlatformSettings();
-    const passwordHash = await bcrypt.hash(password, 10);
+    // With Figbloom sign-in, Fleet's own password is random and never used.
+    const passwordHash = await bcrypt.hash(figbloom ? crypto.randomBytes(32).toString("base64url") : password, 10);
     // Company, owner and membership together, so a failure can't leave an ownerless company.
     const { company, membership, approval, user } = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({ data: { email: normalizedEmail, passwordHash, fullName: ownerName } });
+      const user = await tx.user.create({ data: { email: normalizedEmail, passwordHash, fullName: ownerName, identitySub } });
       const created = await createCompanyForOwner(tx, { companyName, industry, ownerId: user.id, settings });
       return { ...created, user };
     });
@@ -165,7 +190,7 @@ export async function registerCompany(req, res) {
       pending: company.status === "pending",
     }).catch((err) => console.error(`[welcome email] failed for ${user.email}:`, err.message));
 
-    const session = await sessionResponse(prisma, user, membership, { app: "web" });
+    const session = await sessionResponse(prisma, user, membership, { app: "web", via: figbloom ? "customers" : "password" });
     return res.status(201).json({
       message: "Company and owner account created",
       company: toApi(company),
@@ -178,6 +203,7 @@ export async function registerCompany(req, res) {
       ...session,
     });
   } catch (err) {
+    if (err instanceof FigbloomAccountError) return sendAccountError(res, err);
     console.error("[register-company]", err);
     // Two sign-ups racing for the same email.
     if (isUniqueViolation(err) && String(err.meta?.target ?? "").includes("email")) {
@@ -702,6 +728,9 @@ export async function forgotPassword(req, res) {
   }
 }
 
+const isDriverSomewhere = async (userId) =>
+  !!(await prisma.membership.findFirst({ where: { userId, role: "DRIVER", status: "active" }, select: { id: true } }));
+
 // Completes a password reset from a token issued by forgotPassword.
 export async function resetPassword(req, res) {
   try {
@@ -711,8 +740,8 @@ export async function resetPassword(req, res) {
     if (!email || !token || !newPassword) {
       return res.status(400).json({ error: "email, token, and newPassword are required" });
     }
-    if (newPassword.length < 8) {
-      return res.status(400).json({ error: "Password must be at least 8 characters" });
+    if (typeof newPassword !== "string" || newPassword.length > 256) {
+      return res.status(400).json({ error: "That password can't be used" });
     }
 
     const user = await prisma.user.findUnique({ where: { email } });
@@ -726,6 +755,24 @@ export async function resetPassword(req, res) {
       return res.status(400).json({ error: "This reset link is invalid or has expired" });
     }
 
+    // Figbloom sign-in (FLEET_COGNITO_CONTRACT.md section 2): someone with a
+    // Figbloom account sets its first password here (the "Set your password"
+    // email). Once it has one, it changes on the Figbloom sign-in page, except
+    // that a driver keeps resetting Fleet's own password, for the app.
+    if (cognitoSignInEnabled() && user.identitySub) {
+      try {
+        await figbloomAccounts.setInitialPassword(user.identitySub, newPassword);
+        await prisma.user.update({ where: { id: user.id }, data: { resetPasswordTokenHash: null, resetPasswordExpires: null } });
+        return res.json({ message: "Password set. Sign in with Figbloom.", figbloom: true });
+      } catch (err) {
+        const appPassword = err instanceof FigbloomAccountError && err.code === "use_figbloom_reset" && (await isDriverSomewhere(user.id));
+        if (!appPassword) throw err;
+      }
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: "Password must be at least 8 characters" });
+    }
     await prisma.user.update({
       where: { id: user.id },
       data: { passwordHash: await bcrypt.hash(newPassword, 10), resetPasswordTokenHash: null, resetPasswordExpires: null },
@@ -737,6 +784,7 @@ export async function resetPassword(req, res) {
 
     return res.json({ message: "Password updated. You can now sign in." });
   } catch (err) {
+    if (err instanceof FigbloomAccountError) return sendAccountError(res, err);
     console.error(err);
     return res.status(500).json({ error: "Failed to reset password" });
   }

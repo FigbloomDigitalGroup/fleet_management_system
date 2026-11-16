@@ -12,6 +12,9 @@ import { platformDecisionsEnabled } from "../lib/platform/settings.js";
 import { getPlatformSettings } from "./settingsController.js";
 import { enqueueStaffSyncSafely } from "../lib/platform/staffEvents.js";
 import { INDUSTRIES, uniqueCompanySlug, sendWelcomeInBackground } from "./authController.js";
+import { sendCompanyWelcomeEmail } from "../lib/mailer.js";
+import { cognitoSignInEnabled } from "../lib/cognito.js";
+import { FigbloomAccountError, figbloomAccounts, sendAccountError } from "../lib/figbloomAccounts.js";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PLANS = ["trial", "basic", "pro", "enterprise"];
@@ -121,11 +124,17 @@ export async function createFleet(req, res) {
     const slug = await uniqueCompanySlug(fleetName);
     const passwordHash = await bcrypt.hash(crypto.randomBytes(32).toString("base64url"), 10);
 
+    // Figbloom sign-in (FLEET_COGNITO_CONTRACT.md section 2): the owner's
+    // Figbloom account, made without a password; they set it from the email.
+    // If they already have one (another Figbloom product), they sign in with it.
+    let account = null;
+    if (cognitoSignInEnabled()) account = await figbloomAccounts.ensure({ email: ownerEmail, name: ownerName });
+
     const [company, owner] = await prisma.$transaction(async (tx) => {
       const company = await tx.company.create({
         data: { name: fleetName, slug, status: "active", industry, subscriptionPlan, trialEndsAt },
       });
-      const user = await tx.user.create({ data: { email: ownerEmail, passwordHash, fullName: ownerName } });
+      const user = await tx.user.create({ data: { email: ownerEmail, passwordHash, fullName: ownerName, identitySub: account?.sub ?? null } });
       await tx.membership.create({ data: { userId: user.id, companyId: company.id, role: "COMPANY_OWNER", invitedById: staff.id } });
       const owner = { ...user, role: "COMPANY_OWNER", companyId: company.id };
       await tx.staffAuditLog.create({
@@ -141,8 +150,16 @@ export async function createFleet(req, res) {
     });
     await enqueueStaffSyncSafely(prisma, owner.id, company.id);
 
-    // The owner sets their own password from the email (as for admins and drivers).
-    sendWelcomeInBackground(owner, company.name);
+    // The owner sets their own password from the email (as for admins and
+    // drivers); someone who already has a Figbloom password just signs in.
+    const hasPassword = account && !account.created;
+    if (hasPassword) {
+      sendCompanyWelcomeEmail(owner.email, { ownerName: owner.fullName, companyName: company.name, pending: false }).catch((err) =>
+        console.error(`[welcome email] failed for ${owner.email}:`, err.message)
+      );
+    } else {
+      sendWelcomeInBackground(owner, company.name);
+    }
 
     // Never fails the request: the result tells staff whether it reached the console.
     let platform;
@@ -158,12 +175,15 @@ export async function createFleet(req, res) {
     console.log(`[staff] ${staff.email} created fleet ${company.name} (${company.id}) for ${ownerEmail}; platform: ${platform.result ?? (platform.queued ? "queued" : "not configured")}`);
 
     return res.status(201).json({
-      message: `${company.name} created. ${owner.email} has been emailed a link to set their password.`,
+      message: hasPassword
+        ? `${company.name} created. ${owner.email} already has a Figbloom account and can sign in with it.`
+        : `${company.name} created. ${owner.email} has been emailed a link to set their password.`,
       company: toApi(company),
       owner: { id: owner.id, email: owner.email, fullName: owner.fullName, role: owner.role },
       platform,
     });
   } catch (err) {
+    if (err instanceof FigbloomAccountError) return sendAccountError(res, err);
     if (isUniqueViolation(err) && String(err.meta?.target ?? "").includes("email")) {
       return res.status(409).json({ error: "An account with this email already exists" });
     }

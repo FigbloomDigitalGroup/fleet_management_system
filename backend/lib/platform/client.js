@@ -84,6 +84,20 @@ export class PlatformClient {
     return this.call("POST", "/handoffs", body);
   }
 
+  // POST /users: the person's Figbloom account (ERP/FLEET_COGNITO_CONTRACT.md
+  // section 1). { email, name, password?, email_proven? } ->
+  // { user_sub, created }. An existing account comes back unchanged
+  // (created: false) and the password is ignored. 400 invalid_password.
+  createUser(body) {
+    return this.call("POST", "/users", body);
+  }
+
+  // The first password of an account Fleet created without one. 409
+  // password_already_set once the person has one; 400 invalid_password.
+  setInitialPassword(sub, password) {
+    return this.call("POST", `/users/${encodeURIComponent(sub)}/initial-password`, { password });
+  }
+
   async accessToken() {
     if (this.token && this.now() < this.token.expiresAt - EXPIRY_MARGIN_MS) return this.token.value;
     const basic = Buffer.from(`${this.config.clientId}:${this.config.clientSecret}`).toString("base64");
