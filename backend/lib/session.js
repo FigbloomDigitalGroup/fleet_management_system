@@ -25,7 +25,18 @@ export function hashToken(token) {
 
 const appClaim = (app) => (app === "web" || app === "mobile" ? { app } : {});
 
-// session: { companyId, role, adminAccess, isPlatformAdmin, app }
+// Which sign-in a session came from (FLEET_COGNITO_CONTRACT.md section 2):
+// "customers" (Cognito's customers pool), "staff" (Cognito's staff pool) or
+// "password" (Fleet's own). Tokens from before this have none.
+export const VIA = ["customers", "staff", "password"];
+const viaClaim = (via) => (VIA.includes(via) ? { via } : {});
+
+// A customers-pool sign-in is never Figbloom staff, even for a person who is:
+// staff reach the staff area only through the staff pool (or Fleet's own
+// password while Cognito sign-in is off).
+export const actsAsStaff = (isPlatformAdmin, via) => !!isPlatformAdmin && via !== "customers";
+
+// session: { companyId, role, adminAccess, isPlatformAdmin, app, via }
 export function signAccessToken(userId, session) {
   return jwt.sign(
     {
@@ -35,6 +46,7 @@ export function signAccessToken(userId, session) {
       adminAccess: session.adminAccess ?? null,
       isPlatformAdmin: !!session.isPlatformAdmin,
       ...appClaim(session.app),
+      ...viaClaim(session.via),
     },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || "1h" }
@@ -44,7 +56,7 @@ export function signAccessToken(userId, session) {
 // The random jwtid makes every token unique — without it, two tokens issued
 // to the same user within one second were identical and clashed on tokenHash.
 function signRefreshToken(userId, session) {
-  return jwt.sign({ id: userId, companyId: session.companyId ?? null, ...appClaim(session.app) }, process.env.REFRESH_TOKEN_SECRET, {
+  return jwt.sign({ id: userId, companyId: session.companyId ?? null, ...appClaim(session.app), ...viaClaim(session.via) }, process.env.REFRESH_TOKEN_SECRET, {
     expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d",
     jwtid: crypto.randomUUID(),
   });
@@ -66,17 +78,19 @@ export async function issueRefreshToken(db, userId, session) {
  * no-fleet web session) and the sign-in response: the same `user` fields as
  * before memberships, plus `memberships` (the fleets this app can switch to).
  * user: { id, email, fullName, isPlatformAdmin }
+ * via: which sign-in this is (VIA); "customers" is never a staff session.
  */
-export async function sessionResponse(db, user, membership, { app = null, now = new Date() } = {}) {
+export async function sessionResponse(db, user, membership, { app = null, via = null, now = new Date() } = {}) {
+  const staff = actsAsStaff(user.isPlatformAdmin, via);
   if (membership) {
     await db.membership.update({ where: { id: membership.id }, data: { lastUsedAt: now } });
   }
   const session = membership
     ? { companyId: membership.companyId, role: membership.role, adminAccess: adminAccessOf(membership) }
-    : user.isPlatformAdmin
+    : staff
       ? { companyId: null, role: "PLATFORM_ADMIN", adminAccess: null }
       : { companyId: null, role: null, adminAccess: null };
-  const full = { ...session, isPlatformAdmin: !!user.isPlatformAdmin, app };
+  const full = { ...session, isPlatformAdmin: staff, app, via };
   const accessToken = signAccessToken(user.id, full);
   const refreshToken = await issueRefreshToken(db, user.id, full);
   const memberships = usableMemberships(await membershipsOf(db, user.id), app);
@@ -88,7 +102,7 @@ export async function sessionResponse(db, user, membership, { app = null, now = 
       role: session.role,
       companyId: session.companyId,
       adminAccess: session.adminAccess,
-      isPlatformAdmin: !!user.isPlatformAdmin,
+      isPlatformAdmin: staff,
       ...(membership?.company?.name ? { companyName: membership.company.name } : {}),
     },
     memberships: memberships.map((m) => membershipSummary(m, session.companyId)),
@@ -113,10 +127,11 @@ export async function resolveAccess(db, decoded) {
   if (!user) return failure(401, "User account no longer exists");
 
   const wanted = decoded.companyId;
+  const staff = actsAsStaff(user.isPlatformAdmin, decoded.via);
   // companyId null: Figbloom staff, or a no-fleet session. Absent (a token
   // without the claim): the most recently used fleet, as a refresh would pick.
-  if (wanted === null || (wanted === undefined && user.isPlatformAdmin)) {
-    if (user.isPlatformAdmin) {
+  if (wanted === null || (wanted === undefined && staff)) {
+    if (staff) {
       if (user.status && user.status !== "active") return failure(401, "This account has been deactivated", "account_inactive");
       return { user: { id: user.id, role: "PLATFORM_ADMIN", companyId: null, adminAccess: null, isPlatformAdmin: true, app: decoded.app ?? null } };
     }
@@ -143,7 +158,7 @@ export async function resolveAccess(db, decoded) {
       role: membership.role,
       companyId: membership.companyId,
       adminAccess: adminAccessOf(membership),
-      isPlatformAdmin: !!user.isPlatformAdmin,
+      isPlatformAdmin: staff,
       app: decoded.app ?? null,
     },
   };

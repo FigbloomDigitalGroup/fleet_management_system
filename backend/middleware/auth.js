@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma.js";
 import { SUPPORT_TOKEN_TYPE, resolveSupportSession, supportModeDenial } from "../lib/supportSession.js";
 import { isStaffRole, staffAccessDenial } from "../lib/staffRoles.js";
-import { resolveAccess, NO_FLEET_MESSAGE } from "../lib/session.js";
+import { actsAsStaff, resolveAccess, NO_FLEET_MESSAGE } from "../lib/session.js";
 
 // Verifies the JWT and attaches who the request runs as to req.user:
 // { id (the person), role, companyId, adminAccess (the active membership,
@@ -115,8 +115,9 @@ export function authorize(...allowedRoles) {
 // The person behind a token, whatever fleet (or none) it runs as: for the
 // account routes that work across fleets (switch fleet, accept an
 // invitation, start another fleet). Sets req.identity = { id, email,
-// fullName, isPlatformAdmin, companyId (the token's fleet or null), app }.
-// Never a support view.
+// fullName, isPlatformAdmin, companyId (the token's fleet or null), app,
+// via }. isPlatformAdmin is false for a customers-pool sign-in (lib/session.js
+// actsAsStaff). Never a support view.
 export async function authenticateIdentity(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith("Bearer ")) {
@@ -144,9 +145,10 @@ export async function authenticateIdentity(req, res, next) {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
-      isPlatformAdmin: !!user.isPlatformAdmin,
+      isPlatformAdmin: actsAsStaff(user.isPlatformAdmin, decoded.via),
       companyId: decoded.companyId ?? null,
       app: decoded.app ?? null,
+      via: decoded.via ?? null,
     };
     next();
   } catch (err) {

@@ -11,7 +11,8 @@ import { enqueueCompanySync } from "../lib/platform/store.js";
 import { enqueueStaffSyncSafely } from "../lib/platform/staffEvents.js";
 import { STAFF_ROLES, canManageTeam } from "../lib/staffRoles.js";
 import { companyRefusal, chooseMembership, membershipsOf, usableMemberships, usableOn, NO_FLEET_MESSAGE } from "../lib/memberships.js";
-import { hashToken, sessionResponse } from "../lib/session.js";
+import { actsAsStaff, hashToken, sessionResponse } from "../lib/session.js";
+import { cognitoSignInEnabled } from "../lib/cognito.js";
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const WELCOME_LINK_DAYS = 3; // "Set your password" link in the welcome email
@@ -217,7 +218,7 @@ export async function createFleetForMe(req, res) {
 
     const user = { id: me.id, email: me.email, fullName: me.fullName, isPlatformAdmin: me.isPlatformAdmin };
     const switchNow = company.status === "active" && me.app !== "mobile";
-    const session = switchNow ? await sessionResponse(prisma, user, membership, { app: me.app ?? "web" }) : {};
+    const session = switchNow ? await sessionResponse(prisma, user, membership, { app: me.app ?? "web", via: me.via }) : {};
     return res.status(201).json({
       message: `${company.name} has been added to your account`,
       company: toApi(company),
@@ -448,6 +449,11 @@ const DRIVERS_USE_THE_APP = "Driver accounts sign in from the FIGBLOOM FLEET mob
 export async function login(req, res) {
   try {
     const { email, password, platform } = req.body;
+    // The web dashboard signs in through Figbloom (Cognito) once the switch is
+    // on (FLEET_COGNITO_CONTRACT.md section 2); the driver app keeps this.
+    if (cognitoSignInEnabled() && platform !== "mobile") {
+      return res.status(410).json({ code: "use_figbloom_sign_in", error: "Sign in with your Figbloom account instead." });
+    }
     if (!email || !password) {
       return res.status(400).json({ error: "email and password are required" });
     }
@@ -472,37 +478,47 @@ export async function login(req, res) {
     // in each app's UI *after* a token had already been issued, which didn't
     // actually stop that token from being used.
     const app = platform === "web" || platform === "mobile" ? platform : null;
-
-    if (user.isPlatformAdmin) {
-      if (app === "mobile") return res.status(403).json({ error: NOT_A_DRIVER });
-      if (user.status !== "active") return res.status(403).json({ error: "This account has been suspended" });
-      return res.json(await sessionResponse(prisma, user, null, { app }));
-    }
-
-    const all = await membershipsOf(prisma, user.id);
-    const active = all.filter((m) => m.status === "active");
-    if (!active.length) {
-      // On the web: signed in, to a plain "You're not part of any fleet
-      // right now" page (they can still accept an invitation or start a
-      // fleet). The app just shows the message.
-      if (app === "web") return res.json(await sessionResponse(prisma, user, null, { app }));
-      return res.status(403).json({ error: NO_FLEET_MESSAGE, code: "no_fleet" });
-    }
-    const usable = usableMemberships(all, app);
-    if (!usable.length) {
-      return res.status(403).json({ error: app === "mobile" ? NOT_A_DRIVER : DRIVERS_USE_THE_APP });
-    }
-
-    // Block login based on the chosen company's state.
-    const chosen = chooseMembership(usable, req.body.companyId);
-    const refusal = companyRefusal(chosen.company);
-    if (refusal) return refuseCompany(res, chosen.company, refusal);
-
-    return res.json(await sessionResponse(prisma, user, chosen, { app }));
+    const { passwordHash: _h, ...person } = user;
+    return await finishSignIn(res, person, { app, via: "password", companyId: req.body.companyId });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Login failed" });
   }
+}
+
+/**
+ * The rest of a sign-in once Fleet knows who the person is (their password,
+ * or a Figbloom sign-in): which session they get, or why not.
+ * user: { id, email, fullName, isPlatformAdmin, status }
+ * via: lib/session.js VIA. A "customers" sign-in is never Figbloom staff.
+ */
+export async function finishSignIn(res, user, { app, via, companyId }) {
+  if (actsAsStaff(user.isPlatformAdmin, via)) {
+    if (app === "mobile") return res.status(403).json({ error: NOT_A_DRIVER });
+    if (user.status !== "active") return res.status(403).json({ error: "This account has been suspended" });
+    return res.json(await sessionResponse(prisma, user, null, { app, via }));
+  }
+
+  const all = await membershipsOf(prisma, user.id);
+  const active = all.filter((m) => m.status === "active");
+  if (!active.length) {
+    // On the web: signed in, to a plain "You're not part of any fleet
+    // right now" page (they can still accept an invitation or start a
+    // fleet). The app just shows the message.
+    if (app === "web") return res.json(await sessionResponse(prisma, user, null, { app, via }));
+    return res.status(403).json({ error: NO_FLEET_MESSAGE, code: "no_fleet" });
+  }
+  const usable = usableMemberships(all, app);
+  if (!usable.length) {
+    return res.status(403).json({ error: app === "mobile" ? NOT_A_DRIVER : DRIVERS_USE_THE_APP });
+  }
+
+  // Block login based on the chosen company's state.
+  const chosen = chooseMembership(usable, companyId);
+  const refusal = companyRefusal(chosen.company);
+  if (refusal) return refuseCompany(res, chosen.company, refusal);
+
+  return res.json(await sessionResponse(prisma, user, chosen, { app, via }));
 }
 
 // Issues a new access token (and rotates the refresh token) from a valid
@@ -539,8 +555,9 @@ export async function refresh(req, res) {
     if (!user) return res.status(401).json({ error: "Invalid refresh token" });
 
     const app = decoded.app ?? null;
+    const via = decoded.via ?? null;
     let membership = null;
-    if (user.isPlatformAdmin && !decoded.companyId) {
+    if (actsAsStaff(user.isPlatformAdmin, via) && !decoded.companyId) {
       if (user.status && user.status !== "active") {
         return res.status(401).json({ error: "This account has been deactivated", code: "account_inactive" });
       }
@@ -555,7 +572,7 @@ export async function refresh(req, res) {
     }
 
     await prisma.refreshToken.update({ where: { id: stored.id }, data: { revoked: true } });
-    return res.json(await sessionResponse(prisma, user, membership, { app }));
+    return res.json(await sessionResponse(prisma, user, membership, { app, via }));
   } catch (err) {
     return res.status(401).json({ error: "Invalid or expired refresh token" });
   }
@@ -605,7 +622,7 @@ export async function switchFleet(req, res) {
     if (req.body?.staffArea === true) {
       if (!me.isPlatformAdmin) return res.status(403).json({ error: "Only Figbloom staff have a staff area" });
       await revokeOld();
-      return res.json(await sessionResponse(prisma, user, null, { app: me.app }));
+      return res.json(await sessionResponse(prisma, user, null, { app: me.app, via: me.via }));
     }
     const companyId = String(req.body?.companyId ?? "").trim();
     if (!companyId) return res.status(400).json({ error: "Choose a fleet to switch to" });
@@ -624,7 +641,7 @@ export async function switchFleet(req, res) {
     if (refusal) return refuseCompany(res, membership.company, refusal);
 
     await revokeOld();
-    return res.json(await sessionResponse(prisma, user, membership, { app: me.app }));
+    return res.json(await sessionResponse(prisma, user, membership, { app: me.app, via: me.via }));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Could not switch fleet. Please try again." });

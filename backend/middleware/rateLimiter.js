@@ -29,6 +29,21 @@ const addressLoginLimiter = rateLimit({
 
 export const loginLimiter = [addressLoginLimiter, accountLoginLimiter];
 
+// Figbloom sign-in's code exchange (POST /api/auth/cognito/exchange). There is
+// no password to guess here: Cognito checks passwords, and its codes are long
+// and single-use. The request has no email either, so loginLimiter's
+// per-account key would put everyone behind one office address in a single
+// bucket of 5. This only stops one address hammering the endpoint: 30 failed
+// exchanges per 15 minutes per IP.
+export const cognitoExchangeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  skipSuccessfulRequests: true,
+  message: { error: "Too many failed sign-ins from this network. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Limits password reset requests: max 5 tries per 15 minutes, per IP address
 export const forgotPasswordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
