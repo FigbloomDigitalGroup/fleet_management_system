@@ -27,6 +27,7 @@ const { invitationMailer } = await import("../controllers/invitationController.j
 const { figbloomAccounts } = await import("../lib/figbloomAccounts.js");
 const { PlatformError } = await import("../lib/platform/client.js");
 const { backfillFigbloomAccounts } = await import("../lib/cognitoBackfill.js");
+const { confirmEmailToken, confirmEmailLink } = await import("../lib/emailConfirm.js");
 const { memoryModel, membershipModels, migrateLegacyUsers } = await import("./helpers/memoryModel.js");
 
 const PASSWORD = "correct horse battery";
@@ -53,13 +54,21 @@ const fakeClient = {
     accounts.set(email, { sub, password: password ?? null, createdByFleet: true });
     return { user_sub: sub, created: true };
   },
-  async setInitialPassword(sub, password) {
-    platformCalls.push({ call: "setInitialPassword", sub, password });
+  async setInitialPassword(sub, password, { emailProven = false } = {}) {
+    platformCalls.push({ call: "setInitialPassword", sub, password, emailProven });
     const account = [...accounts.values()].find((a) => a.sub === sub);
     if (!account || !account.createdByFleet || account.password) throw new PlatformError("set", 409, "password_already_set");
     if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(password)) throw new PlatformError("weak", 400, "invalid_password");
     account.password = password;
+    if (emailProven) account.emailVerified = true;
     return { ok: true };
+  },
+  async markEmailVerified(sub) {
+    platformCalls.push({ call: "markEmailVerified", sub });
+    const account = [...accounts.values()].find((a) => a.sub === sub);
+    if (!account || !account.createdByFleet) throw new PlatformError("not yours", 403, "forbidden");
+    account.emailVerified = true;
+    return { user_sub: sub, email_verified: true };
   },
 };
 
@@ -227,6 +236,7 @@ test("a linked person's reset link sets their first Figbloom password, not Fleet
   assert.equal(res.status, 200, JSON.stringify(res.body));
   assert.equal(res.body.figbloom, true);
   assert.equal(accounts.get("ann@a.test").password, STRONG);
+  assert.equal(accounts.get("ann@a.test").emailVerified, true, "the link came to this inbox: the email is proven");
   const ann = userByEmail("ann@a.test");
   assert.equal(ann.passwordHash, hash, "Fleet's password unchanged");
   assert.equal(ann.resetPasswordTokenHash, null, "the link is used up");
@@ -364,3 +374,42 @@ test("the backfill carries on past one failure and counts it", async () => {
     figbloomAccounts.client = () => fakeClient;
   }
 });
+
+// ---- "Confirm your email" after signing up
+
+test("sign-up's confirm link marks the new Figbloom account's email verified; using it again is harmless", async () => {
+  const res = await call("POST", "/api/auth/register-company", { body: { ownerName: "Juma", email: "juma@x.test", password: STRONG } });
+  assert.equal(res.status, 201);
+  const user = userByEmail("juma@x.test");
+  assert.equal(accounts.get("juma@x.test").emailVerified, undefined);
+  const link = confirmEmailLink(user);
+  assert.match(link, /\/confirm-email\?token=/);
+  const token = decodeURIComponent(link.split("token=")[1]);
+  const first = await call("POST", "/api/auth/confirm-email", { body: { token } });
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  assert.deepEqual(first.body, { confirmed: true, email: "juma@x.test" });
+  assert.equal(accounts.get("juma@x.test").emailVerified, true);
+  assert.equal((await call("POST", "/api/auth/confirm-email", { body: { token } })).status, 200);
+});
+
+test("a forged, expired or unrelated token confirms nothing", async () => {
+  accounts.set("ann@a.test", { sub: "sub-ann", password: "x", createdByFleet: true });
+  const ann = userByEmail("ann@a.test");
+  ann.identitySub = "sub-ann";
+  const bad = async (token) => {
+    const r = await call("POST", "/api/auth/confirm-email", { body: { token } });
+    assert.equal(r.status, 400);
+    assert.equal(r.body.code, "confirm_link_invalid");
+  };
+  // signed with JWT_SECRET itself (a sign-in token's key), or the right shape forged
+  await bad(jwt.sign({ typ: "confirm_email", uid: ann.id, sub: "sub-ann" }, process.env.JWT_SECRET));
+  // a sign-in token is never a confirm token
+  await bad(jwt.sign({ id: ann.id }, process.env.JWT_SECRET));
+  await bad("not a token");
+  // made for an account that has since been linked to another Figbloom account
+  const stale = confirmEmailToken({ id: ann.id, identitySub: "sub-old" });
+  await bad(stale);
+  assert.equal(accounts.get("ann@a.test").emailVerified, undefined);
+  assert.ok(!platformCalls.some((c) => c.call === "markEmailVerified"));
+});
+

@@ -4,6 +4,8 @@ import prisma from "../lib/prisma.js";
 import { isUniqueViolation } from "../lib/serialize.js";
 import { CognitoError, POOLS, cognito, cognitoSignInEnabled, poolConfig } from "../lib/cognito.js";
 import { finishSignIn } from "./authController.js";
+import { readConfirmEmailToken } from "../lib/emailConfirm.js";
+import { FigbloomAccountError, figbloomAccounts, sendAccountError } from "../lib/figbloomAccounts.js";
 
 // POST /api/auth/cognito/exchange { pool, code, codeVerifier, redirectUri }
 // (ERP/FLEET_COGNITO_CONTRACT.md section 2): the web dashboard's callback page
@@ -109,5 +111,27 @@ export async function cognitoExchange(req, res) {
     if (err instanceof CognitoError) return refuse(res, err.status, err.code, err.message);
     console.error("[cognito] sign-in failed:", err);
     return res.status(500).json({ error: "Sign-in failed. Please try again." });
+  }
+}
+
+// POST /api/auth/confirm-email { token }: the "Confirm your email" link from
+// the welcome email after signing up (lib/emailConfirm.js). The Figbloom
+// account's email becomes verified, so Figbloom's "Forgot password" can
+// reach it. Using the link again is harmless.
+export async function confirmEmail(req, res) {
+  const claims = readConfirmEmailToken(req.body?.token);
+  if (!claims) return refuse(res, 400, "confirm_link_invalid", "This link is invalid or has expired. Sign in, and ask Figbloom support to confirm your email.");
+  try {
+    const user = await prisma.user.findUnique({ where: { id: claims.uid }, select: { email: true, identitySub: true } });
+    // the account must still be the one the link was made for
+    if (!user || user.identitySub !== claims.sub) {
+      return refuse(res, 400, "confirm_link_invalid", "This link is no longer valid for this account.");
+    }
+    await figbloomAccounts.markEmailVerified(claims.sub);
+    return res.json({ confirmed: true, email: user.email });
+  } catch (err) {
+    if (err instanceof FigbloomAccountError) return sendAccountError(res, err);
+    console.error("[confirm email] failed:", err);
+    return res.status(500).json({ error: "Could not confirm your email. Please try again." });
   }
 }

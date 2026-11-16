@@ -21,7 +21,7 @@ import {
   myMemberships,
   switchFleet,
 } from "../controllers/authController.js";
-import { cognitoExchange } from "../controllers/cognitoController.js";
+import { cognitoExchange, confirmEmail } from "../controllers/cognitoController.js";
 
 const router = express.Router();
 
@@ -30,6 +30,7 @@ router.post("/login", loginLimiter, login);
 // Figbloom sign-in (ERP/FLEET_COGNITO_CONTRACT.md): the web dashboard's
 // callback page hands over the code from Cognito's hosted login.
 router.post("/cognito/exchange", cognitoExchangeLimiter, cognitoExchange);
+router.post("/confirm-email", cognitoExchangeLimiter, confirmEmail);
 router.post("/refresh", refresh);
 router.post("/logout", logout);
 router.post("/forgot-password", forgotPasswordLimiter, forgotPassword);

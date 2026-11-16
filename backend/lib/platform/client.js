@@ -94,8 +94,16 @@ export class PlatformClient {
 
   // The first password of an account Fleet created without one. 409
   // password_already_set once the person has one; 400 invalid_password.
-  setInitialPassword(sub, password) {
-    return this.call("POST", `/users/${encodeURIComponent(sub)}/initial-password`, { password });
+  // emailProven: the password came through a link Fleet emailed to this
+  // address, so the platform marks the email verified as well.
+  setInitialPassword(sub, password, { emailProven = false } = {}) {
+    return this.call("POST", `/users/${encodeURIComponent(sub)}/initial-password`, { password, email_proven: emailProven });
+  }
+
+  // The person used a link Fleet emailed them ("Confirm your email"): the
+  // account's email becomes verified, so Cognito's "Forgot password" reaches them.
+  markEmailVerified(sub) {
+    return this.call("POST", `/users/${encodeURIComponent(sub)}/email-verified`, {});
   }
 
   async accessToken() {
