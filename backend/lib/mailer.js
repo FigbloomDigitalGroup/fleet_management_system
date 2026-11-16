@@ -94,18 +94,25 @@ async function send({ to, subject, heading, paragraphs, button, after, text }) {
 
 // New company registered — to its owner. `pending` when the platform
 // requires manual approval before anyone can sign in.
-export function sendCompanyWelcomeEmail(to, { ownerName, companyName, pending }) {
+// confirmEmailLink (Figbloom sign-in, a new Figbloom account): confirming the
+// address lets Figbloom's "Forgot password" reach them (routes: /confirm-email).
+export function sendCompanyWelcomeEmail(to, { ownerName, companyName, pending, confirmEmailLink = null }) {
   const login = `${frontendUrl()}/login`;
   const next = pending
     ? "Your account is now waiting for approval by the FIGBLOOM FLEET team. We'll email you as soon as it's approved — usually within one working day."
     : "Your account is ready. Sign in to add your vehicles and drivers and start tracking.";
+  const confirm = confirmEmailLink
+    ? "Please confirm your email address with the button below. Until you do, Figbloom can't send you a code if you ever forget your password."
+    : null;
   return send({
     to,
     subject: `Welcome to FIGBLOOM FLEET, ${companyName}`,
     heading: `Welcome, ${ownerName}!`,
-    paragraphs: [`Thanks for registering <strong>${escapeHtml(companyName)}</strong> on FIGBLOOM FLEET.`, next],
-    button: pending ? null : { label: "Sign in", href: login },
-    text: `Welcome to FIGBLOOM FLEET, ${ownerName}. ${next}${pending ? "" : ` Sign in: ${login}`}`,
+    paragraphs: [`Thanks for registering <strong>${escapeHtml(companyName)}</strong> on FIGBLOOM FLEET.`, next, ...(confirm ? [confirm] : [])],
+    button: confirmEmailLink ? { label: "Confirm your email", href: confirmEmailLink } : pending ? null : { label: "Sign in", href: login },
+    text:
+      `Welcome to FIGBLOOM FLEET, ${ownerName}. ${next}${pending ? "" : ` Sign in: ${login}`}` +
+      (confirmEmailLink ? ` Confirm your email: ${confirmEmailLink}` : ""),
   });
 }
 

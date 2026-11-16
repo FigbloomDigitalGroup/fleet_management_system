@@ -14,6 +14,7 @@ import { companyRefusal, chooseMembership, membershipsOf, usableMemberships, usa
 import { actsAsStaff, hashToken, sessionResponse } from "../lib/session.js";
 import { cognitoSignInEnabled } from "../lib/cognito.js";
 import { FigbloomAccountError, figbloomAccounts, sendAccountError } from "../lib/figbloomAccounts.js";
+import { confirmEmailLink } from "../lib/emailConfirm.js";
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const WELCOME_LINK_DAYS = 3; // "Set your password" link in the welcome email
@@ -188,6 +189,8 @@ export async function registerCompany(req, res) {
       ownerName: user.fullName,
       companyName: company.name,
       pending: company.status === "pending",
+      // nothing has proven this email yet: the link does (lib/emailConfirm.js)
+      confirmEmailLink: identitySub ? confirmEmailLink(user) : null,
     }).catch((err) => console.error(`[welcome email] failed for ${user.email}:`, err.message));
 
     const session = await sessionResponse(prisma, user, membership, { app: "web", via: figbloom ? "customers" : "password" });
@@ -761,7 +764,8 @@ export async function resetPassword(req, res) {
     // that a driver keeps resetting Fleet's own password, for the app.
     if (cognitoSignInEnabled() && user.identitySub) {
       try {
-        await figbloomAccounts.setInitialPassword(user.identitySub, newPassword);
+        // the link came to this inbox: the email is proven too
+        await figbloomAccounts.setInitialPassword(user.identitySub, newPassword, { emailProven: true });
         await prisma.user.update({ where: { id: user.id }, data: { resetPasswordTokenHash: null, resetPasswordExpires: null } });
         return res.json({ message: "Password set. Sign in with Figbloom.", figbloom: true });
       } catch (err) {

@@ -62,12 +62,24 @@ export const figbloomAccounts = {
     }
   },
 
-  // The first password of an account Fleet made without one.
-  async setInitialPassword(sub, password) {
+  // The first password of an account Fleet made without one. emailProven:
+  // it came through a link emailed to them (the "Set your password" page).
+  async setInitialPassword(sub, password, { emailProven = false } = {}) {
     const client = this.client();
     if (!client) throw unavailable();
     try {
-      await client.setInitialPassword(sub, password);
+      await client.setInitialPassword(sub, password, { emailProven });
+    } catch (err) {
+      throw translate(err);
+    }
+  },
+
+  // The email is proven ("Confirm your email" after signing up).
+  async markEmailVerified(sub) {
+    const client = this.client();
+    if (!client) throw unavailable();
+    try {
+      await client.markEmailVerified(sub);
     } catch (err) {
       throw translate(err);
     }
