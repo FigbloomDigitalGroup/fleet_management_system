@@ -6,6 +6,7 @@ import RobotCheckbox from "../components/RobotCheckbox";
 import BrandIcon from "../components/BrandIcon";
 import { apiRequest } from "../lib/api";
 import { showError } from "../lib/notify";
+import { figbloomSignInEnabled } from "../lib/figbloomSignIn";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -68,6 +69,15 @@ export default function ForgotPasswordPage() {
           <p className="text-sm text-gray-500 mb-8">
             We&apos;ll send instructions to reset your password.
           </p>
+          {figbloomSignInEnabled() && (
+            <p className="-mt-5 mb-8 rounded border border-teal-200 bg-teal-50 px-3 py-2 text-xs text-teal-900">
+              Signing in to the dashboard with Figbloom? Choose &quot;Sign in with Figbloom&quot; on the{" "}
+              <a href="/login" className="font-medium underline">
+                sign-in page
+              </a>
+              , then &quot;Forgot password&quot;. This page resets the driver app&apos;s password.
+            </p>
+          )}
 
           {sent ? (
             <div className="text-sm px-3.5 py-2.5 rounded bg-teal-50 text-teal-600 border border-teal-200">

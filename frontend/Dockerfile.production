@@ -9,6 +9,13 @@
 #     --build-arg NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=<browser key> -t fleet-frontend .
 # The Maps key is the browser key (restricted by website address), which
 # every visitor's browser receives anyway; it is not a server secret.
+#
+# Figbloom sign-in (app/lib/figbloomSignIn.ts) stays off unless these are given:
+#   --build-arg NEXT_PUBLIC_FIGBLOOM_SIGN_IN=on
+#   --build-arg NEXT_PUBLIC_COGNITO_CUSTOMERS_DOMAIN=https://<prefix>.auth.eu-west-1.amazoncognito.com
+#   --build-arg NEXT_PUBLIC_FLEET_WEB_CLIENT_ID=<FleetWebClientId output>
+#   --build-arg NEXT_PUBLIC_COGNITO_STAFF_DOMAIN=...  NEXT_PUBLIC_FLEET_STAFF_CLIENT_ID=<FleetStaffClientId output>
+# App client ids and sign-in domains are public; the client secrets stay on the API.
 
 FROM node:20-alpine AS build
 WORKDIR /app
@@ -17,8 +24,18 @@ RUN npm ci
 COPY . .
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+ARG NEXT_PUBLIC_FIGBLOOM_SIGN_IN
+ARG NEXT_PUBLIC_COGNITO_CUSTOMERS_DOMAIN
+ARG NEXT_PUBLIC_FLEET_WEB_CLIENT_ID
+ARG NEXT_PUBLIC_COGNITO_STAFF_DOMAIN
+ARG NEXT_PUBLIC_FLEET_STAFF_CLIENT_ID
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY \
+    NEXT_PUBLIC_FIGBLOOM_SIGN_IN=$NEXT_PUBLIC_FIGBLOOM_SIGN_IN \
+    NEXT_PUBLIC_COGNITO_CUSTOMERS_DOMAIN=$NEXT_PUBLIC_COGNITO_CUSTOMERS_DOMAIN \
+    NEXT_PUBLIC_FLEET_WEB_CLIENT_ID=$NEXT_PUBLIC_FLEET_WEB_CLIENT_ID \
+    NEXT_PUBLIC_COGNITO_STAFF_DOMAIN=$NEXT_PUBLIC_COGNITO_STAFF_DOMAIN \
+    NEXT_PUBLIC_FLEET_STAFF_CLIENT_ID=$NEXT_PUBLIC_FLEET_STAFF_CLIENT_ID \
     NEXT_TELEMETRY_DISABLED=1
 RUN test -n "$NEXT_PUBLIC_API_URL" || (echo "Set --build-arg NEXT_PUBLIC_API_URL" >&2; exit 1)
 RUN npm run build && npm prune --omit=dev

@@ -9,6 +9,7 @@ import { STAFF_SESSION_KEY, SUPPORT_VIEW_ENDED_EVENT, enterSupportSession, resto
 import { MEMBERSHIPS_KEY, PENDING_FLEET_KEY, SESSION_CHANGED_EVENT, SessionChange, readMemberships, storeMemberships } from "../lib/fleetSession";
 import { redirectPathForRole, roleLabel } from "../lib/roleRedirect";
 import { notify } from "../lib/notify";
+import { FigbloomPool, FigbloomReturn, figbloomLogoutUrl, sessionPool } from "../lib/figbloomSignIn";
 
 interface RegisterPayload {
   companyName: string;
@@ -39,6 +40,8 @@ interface AuthContextType {
   backToStaffArea: () => Promise<void>;
   createFleet: (payload: { companyName: string; industry?: string }) => Promise<NewFleetResult>;
   login: (email: string, password: string) => Promise<User>;
+  // The callback page: Figbloom's code -> Fleet's session (lib/figbloomSignIn.ts).
+  completeFigbloomSignIn: (back: FigbloomReturn) => Promise<User>;
   register: (payload: RegisterPayload) => Promise<RegisterResult>;
   // Starts a session from tokens already in hand (a pending registration
   // that was switched on while its owner waited on the "received" screen).
@@ -73,7 +76,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 // signing in (no "//evil.example" or full URLs), and never the sign-in pages.
 export function isSafeReturnPath(path: string | null | undefined): path is string {
   if (!path || !path.startsWith("/") || path.startsWith("//") || path.startsWith("/\\")) return false;
-  return !/^\/(login|register|forgot-password|reset-password)(\/|\?|$)/.test(path);
+  return !/^\/(login|register|forgot-password|reset-password|auth)(\/|\?|$)/.test(path);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -263,6 +266,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.user;
   }
 
+  async function completeFigbloomSignIn(back: FigbloomReturn): Promise<User> {
+    const data = await apiRequest<LoginResponse>("/api/auth/cognito/exchange", {
+      method: "POST",
+      body: JSON.stringify({ pool: back.pool, code: back.code, codeVerifier: back.codeVerifier, redirectUri: back.redirectUri }),
+      notifyErrors: false,
+    });
+    persistSession(data);
+    return data.user;
+  }
+
   // A company that needs platform approval first comes back "pending": no
   // session is kept (every request would be refused until it's approved),
   // and the caller shows the "awaiting approval" message instead.
@@ -291,6 +304,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       restoreStaffSession();
       if (sessionId) apiRequest(`/api/support/sessions/${sessionId}/end`, { method: "POST", successMessage: false }).catch(() => {});
     }
+    // A session from Figbloom sign-in also ends Figbloom's own (Cognito's
+    // cookie), unless this is a timeout: then signing in again is one click.
+    const pool: FigbloomPool | null = options?.returnTo ? null : sessionPool(localStorage.getItem("accessToken"));
     const refreshToken = localStorage.getItem("refreshToken");
     if (refreshToken) {
       // Best-effort — revoke the refresh token server-side so it can't be
@@ -298,6 +314,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       apiRequest("/api/auth/logout", {
         method: "POST",
         body: JSON.stringify({ refreshToken }),
+        keepalive: true, // still sent when the page goes to Figbloom's sign-out
       }).catch(() => {});
     }
     localStorage.removeItem("accessToken");
@@ -308,6 +325,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setMemberships([]);
     setSignedOut(true);
+    const figbloomLogout = pool ? figbloomLogoutUrl(pool) : null;
+    if (figbloomLogout) {
+      window.location.assign(figbloomLogout); // back to /login from there
+      return;
+    }
     const next = options?.returnTo && isSafeReturnPath(options.returnTo) ? `?next=${encodeURIComponent(options.returnTo)}` : "";
     router.push(`/login${next}`);
   }
@@ -323,6 +345,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         backToStaffArea,
         createFleet,
         login,
+        completeFigbloomSignIn,
         register,
         adoptSession: persistSession,
         logout,
