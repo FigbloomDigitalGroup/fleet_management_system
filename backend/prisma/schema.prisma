@@ -293,8 +293,12 @@ model User {
   fullName               String
   // Figbloom staff (was the PLATFORM_ADMIN role): no fleet of their own.
   isPlatformAdmin        Boolean      @default(false)
-  // The future single Figbloom sign-in's subject (Cognito sub). Unused now.
+  // The person's Figbloom account: their sub in Cognito's customers pool
+  // (ERP/FLEET_COGNITO_CONTRACT.md). The web dashboard signs in with it.
   identitySub            String?      @unique
+  // Figbloom staff only: their sub in Cognito's staff pool, for the staff
+  // area. Separate from identitySub: one staff member can also own a fleet.
+  staffIdentitySub       String?      @unique
   role                   Role? // legacy, not read (see Membership.role)
   companyId              String? // legacy, not read (see Membership.companyId)
   adminAccess            AdminAccess? // legacy, not read (see Membership.adminAccess)

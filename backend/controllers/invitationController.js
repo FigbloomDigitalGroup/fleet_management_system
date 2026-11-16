@@ -18,6 +18,13 @@ import { ADMIN_ACCESS_LEVELS, companyRefusal, teamAudit } from "../lib/membershi
 import { hashToken, sessionResponse } from "../lib/session.js";
 import { SUPPORT_TOKEN_TYPE } from "../lib/supportSession.js";
 import { enqueueStaffSyncSafely } from "../lib/platform/staffEvents.js";
+import { cognitoSignInEnabled } from "../lib/cognito.js";
+import { FigbloomAccountError, figbloomAccounts, sendAccountError } from "../lib/figbloomAccounts.js";
+
+const SIGN_IN_FIRST = {
+  code: "sign_in_first",
+  error: "You already have a Figbloom account with this email. Sign in with it, then open this invitation again to join.",
+};
 
 export const INVITE_DAYS = 7;
 // The email sender (tests swap it to read the link instead of sending mail).
@@ -295,7 +302,7 @@ async function bearerUser(req) {
     where: { id: String(decoded.id) },
     select: { id: true, email: true, fullName: true, isPlatformAdmin: true },
   });
-  return user ? { user } : { invalid: true };
+  return user ? { user, via: decoded.via } : { invalid: true };
 }
 
 /**
@@ -316,6 +323,7 @@ export async function acceptInvitation(req, res) {
     const signedIn = await bearerUser(req);
     let user;
     let created = false;
+    let via; // of the session it answers with (lib/session.js)
     if (signedIn && !signedIn.invalid) {
       if (signedIn.user.email !== inv.email) {
         return res.status(409).json({
@@ -326,13 +334,35 @@ export async function acceptInvitation(req, res) {
         });
       }
       user = signedIn.user;
+      via = signedIn.via;
     } else {
       const password = String(req.body?.password ?? "");
       const existing = await prisma.user.findUnique({
         where: { email: inv.email },
         select: { id: true, email: true, fullName: true, isPlatformAdmin: true, passwordHash: true },
       });
-      if (existing) {
+      // Figbloom sign-in (FLEET_COGNITO_CONTRACT.md section 2): a team
+      // invitation is accepted with a Figbloom account. Anyone who already has
+      // one (or a Fleet user) signs in first and accepts while signed in; a new
+      // person's password goes to their new Figbloom account, never into Fleet.
+      // Driver invitations are unchanged: drivers use the app, with Fleet's password.
+      const figbloom = cognitoSignInEnabled() && inv.role !== "DRIVER";
+      if (figbloom && existing) return res.status(409).json(SIGN_IN_FIRST);
+      if (figbloom) {
+        const fullName = String(req.body?.fullName ?? "").trim();
+        const phone = String(req.body?.phone ?? "").trim();
+        if (!fullName) return res.status(400).json({ error: "Please enter your name" });
+        if (fullName.length > 120) return res.status(400).json({ error: "Your name must be 120 characters or fewer" });
+        if (phone.length > 40) return res.status(400).json({ error: "That phone number is too long" });
+        if (!password) return res.status(400).json({ error: "Please choose a password" });
+        // the invitation link came to this inbox, so the email is proven
+        const account = await figbloomAccounts.ensure({ email: inv.email, name: fullName, password, emailProven: true });
+        if (!account.created) return res.status(409).json(SIGN_IN_FIRST);
+        const passwordHash = await bcrypt.hash(crypto.randomBytes(32).toString("base64url"), 10);
+        user = { email: inv.email, fullName, phone: phone || null, passwordHash, identitySub: account.sub };
+        created = true;
+        via = "customers";
+      } else if (existing) {
         if (!password || !(await bcrypt.compare(password, existing.passwordHash))) {
           return res.status(401).json({ code: "bad_password", error: "That password isn't right. Try again, or use \"Forgot password\" on the sign-in page." });
         }
@@ -404,9 +434,10 @@ export async function acceptInvitation(req, res) {
     if (companyRefusal(inv.company)) {
       return res.json({ ...joined, message: `You've joined ${inv.company.name}. You can open it once the fleet is switched on.` });
     }
-    const session = await sessionResponse(prisma, user, { ...result.membership, company: inv.company }, { app: "web", now });
+    const session = await sessionResponse(prisma, user, { ...result.membership, company: inv.company }, { app: "web", now, via });
     return res.json({ ...joined, ...session });
   } catch (err) {
+    if (err instanceof FigbloomAccountError) return sendAccountError(res, err);
     console.error("[invitation] accept failed:", err);
     return res.status(500).json({ error: "Could not accept the invitation. Please try again." });
   }

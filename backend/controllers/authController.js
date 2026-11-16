@@ -11,7 +11,9 @@ import { enqueueCompanySync } from "../lib/platform/store.js";
 import { enqueueStaffSyncSafely } from "../lib/platform/staffEvents.js";
 import { STAFF_ROLES, canManageTeam } from "../lib/staffRoles.js";
 import { companyRefusal, chooseMembership, membershipsOf, usableMemberships, usableOn, NO_FLEET_MESSAGE } from "../lib/memberships.js";
-import { hashToken, sessionResponse } from "../lib/session.js";
+import { actsAsStaff, hashToken, sessionResponse } from "../lib/session.js";
+import { cognitoSignInEnabled } from "../lib/cognito.js";
+import { FigbloomAccountError, figbloomAccounts, sendAccountError } from "../lib/figbloomAccounts.js";
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
 const WELCOME_LINK_DAYS = 3; // "Set your password" link in the welcome email
@@ -30,24 +32,27 @@ function hashResetToken(token) {
 // in. Runs in the background — a slow or failed email never fails the
 // request that created the user.
 export function sendWelcomeInBackground(user, companyName) {
-  (async () => {
-    const token = crypto.randomBytes(32).toString("hex");
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        resetPasswordTokenHash: hashResetToken(token),
-        resetPasswordExpires: new Date(Date.now() + WELCOME_LINK_DAYS * 86400000),
-      },
-    });
-    const setPasswordLink = `${frontendUrl()}/reset-password?email=${encodeURIComponent(user.email)}&token=${token}`;
-    await sendUserWelcomeEmail(user.email, {
-      fullName: user.fullName,
-      companyName,
-      role: user.role,
-      setPasswordLink,
-      validDays: WELCOME_LINK_DAYS,
-    });
-  })().catch((err) => console.error(`[welcome email] failed for ${user.email}:`, err.message));
+  sendWelcome(user, companyName).catch((err) => console.error(`[welcome email] failed for ${user.email}:`, err.message));
+}
+
+// The same, awaited (scripts/cognitoBackfill.js).
+export async function sendWelcome(user, companyName) {
+  const token = crypto.randomBytes(32).toString("hex");
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      resetPasswordTokenHash: hashResetToken(token),
+      resetPasswordExpires: new Date(Date.now() + WELCOME_LINK_DAYS * 86400000),
+    },
+  });
+  const setPasswordLink = `${frontendUrl()}/reset-password?email=${encodeURIComponent(user.email)}&token=${token}`;
+  await sendUserWelcomeEmail(user.email, {
+    fullName: user.fullName,
+    companyName,
+    role: user.role,
+    setPasswordLink,
+    validDays: WELCOME_LINK_DAYS,
+  });
 }
 
 const companyNameOf = async (companyId) =>
@@ -81,6 +86,12 @@ export const INDUSTRIES = [
 const ACCOUNT_EXISTS = {
   code: "account_exists",
   error: "You already have a Figbloom Fleet account with this email. Sign in first, then you can add this new fleet to your account.",
+};
+// Figbloom sign-in: the email has a Figbloom account (from Fleet or another
+// Figbloom product) but no Fleet user yet.
+const FIGBLOOM_ACCOUNT_EXISTS = {
+  code: "figbloom_account_exists",
+  error: "You already have a Figbloom account with this email. Sign in with it, then start your fleet from there.",
 };
 
 function validateFleetDetails(body) {
@@ -131,7 +142,10 @@ export async function registerCompany(req, res) {
     if (!companyName || !ownerName || !normalizedEmail || !password) {
       return res.status(400).json({ error: "ownerName, email, and password are required" });
     }
-    if (password.length < 8) {
+    // With Figbloom sign-in on, the Figbloom account's own rule applies (the
+    // platform checks it, below).
+    const figbloom = cognitoSignInEnabled();
+    if (!figbloom && password.length < 8) {
       return res.status(400).json({ error: "Password must be at least 8 characters" });
     }
     const invalid = validateFleetDetails(req.body);
@@ -147,11 +161,23 @@ export async function registerCompany(req, res) {
       return res.status(500).json({ error: "Registration is unavailable right now — the server is missing its sign-in settings" });
     }
 
+    // Figbloom sign-in (FLEET_COGNITO_CONTRACT.md section 2): the password goes
+    // to the person's new Figbloom account, never into Fleet. Someone who
+    // already has a Figbloom account signs in with it and starts their fleet
+    // from there: creating an account must never prove who someone is.
+    let identitySub = null;
+    if (figbloom) {
+      const account = await figbloomAccounts.ensure({ email: normalizedEmail, name: ownerName, password });
+      if (!account.created) return res.status(409).json(FIGBLOOM_ACCOUNT_EXISTS);
+      identitySub = account.sub;
+    }
+
     const settings = await getPlatformSettings();
-    const passwordHash = await bcrypt.hash(password, 10);
+    // With Figbloom sign-in, Fleet's own password is random and never used.
+    const passwordHash = await bcrypt.hash(figbloom ? crypto.randomBytes(32).toString("base64url") : password, 10);
     // Company, owner and membership together, so a failure can't leave an ownerless company.
     const { company, membership, approval, user } = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({ data: { email: normalizedEmail, passwordHash, fullName: ownerName } });
+      const user = await tx.user.create({ data: { email: normalizedEmail, passwordHash, fullName: ownerName, identitySub } });
       const created = await createCompanyForOwner(tx, { companyName, industry, ownerId: user.id, settings });
       return { ...created, user };
     });
@@ -164,7 +190,7 @@ export async function registerCompany(req, res) {
       pending: company.status === "pending",
     }).catch((err) => console.error(`[welcome email] failed for ${user.email}:`, err.message));
 
-    const session = await sessionResponse(prisma, user, membership, { app: "web" });
+    const session = await sessionResponse(prisma, user, membership, { app: "web", via: figbloom ? "customers" : "password" });
     return res.status(201).json({
       message: "Company and owner account created",
       company: toApi(company),
@@ -177,6 +203,7 @@ export async function registerCompany(req, res) {
       ...session,
     });
   } catch (err) {
+    if (err instanceof FigbloomAccountError) return sendAccountError(res, err);
     console.error("[register-company]", err);
     // Two sign-ups racing for the same email.
     if (isUniqueViolation(err) && String(err.meta?.target ?? "").includes("email")) {
@@ -217,7 +244,7 @@ export async function createFleetForMe(req, res) {
 
     const user = { id: me.id, email: me.email, fullName: me.fullName, isPlatformAdmin: me.isPlatformAdmin };
     const switchNow = company.status === "active" && me.app !== "mobile";
-    const session = switchNow ? await sessionResponse(prisma, user, membership, { app: me.app ?? "web" }) : {};
+    const session = switchNow ? await sessionResponse(prisma, user, membership, { app: me.app ?? "web", via: me.via }) : {};
     return res.status(201).json({
       message: `${company.name} has been added to your account`,
       company: toApi(company),
@@ -448,6 +475,11 @@ const DRIVERS_USE_THE_APP = "Driver accounts sign in from the FIGBLOOM FLEET mob
 export async function login(req, res) {
   try {
     const { email, password, platform } = req.body;
+    // The web dashboard signs in through Figbloom (Cognito) once the switch is
+    // on (FLEET_COGNITO_CONTRACT.md section 2); the driver app keeps this.
+    if (cognitoSignInEnabled() && platform !== "mobile") {
+      return res.status(410).json({ code: "use_figbloom_sign_in", error: "Sign in with your Figbloom account instead." });
+    }
     if (!email || !password) {
       return res.status(400).json({ error: "email and password are required" });
     }
@@ -472,37 +504,47 @@ export async function login(req, res) {
     // in each app's UI *after* a token had already been issued, which didn't
     // actually stop that token from being used.
     const app = platform === "web" || platform === "mobile" ? platform : null;
-
-    if (user.isPlatformAdmin) {
-      if (app === "mobile") return res.status(403).json({ error: NOT_A_DRIVER });
-      if (user.status !== "active") return res.status(403).json({ error: "This account has been suspended" });
-      return res.json(await sessionResponse(prisma, user, null, { app }));
-    }
-
-    const all = await membershipsOf(prisma, user.id);
-    const active = all.filter((m) => m.status === "active");
-    if (!active.length) {
-      // On the web: signed in, to a plain "You're not part of any fleet
-      // right now" page (they can still accept an invitation or start a
-      // fleet). The app just shows the message.
-      if (app === "web") return res.json(await sessionResponse(prisma, user, null, { app }));
-      return res.status(403).json({ error: NO_FLEET_MESSAGE, code: "no_fleet" });
-    }
-    const usable = usableMemberships(all, app);
-    if (!usable.length) {
-      return res.status(403).json({ error: app === "mobile" ? NOT_A_DRIVER : DRIVERS_USE_THE_APP });
-    }
-
-    // Block login based on the chosen company's state.
-    const chosen = chooseMembership(usable, req.body.companyId);
-    const refusal = companyRefusal(chosen.company);
-    if (refusal) return refuseCompany(res, chosen.company, refusal);
-
-    return res.json(await sessionResponse(prisma, user, chosen, { app }));
+    const { passwordHash: _h, ...person } = user;
+    return await finishSignIn(res, person, { app, via: "password", companyId: req.body.companyId });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Login failed" });
   }
+}
+
+/**
+ * The rest of a sign-in once Fleet knows who the person is (their password,
+ * or a Figbloom sign-in): which session they get, or why not.
+ * user: { id, email, fullName, isPlatformAdmin, status }
+ * via: lib/session.js VIA. A "customers" sign-in is never Figbloom staff.
+ */
+export async function finishSignIn(res, user, { app, via, companyId }) {
+  if (actsAsStaff(user.isPlatformAdmin, via)) {
+    if (app === "mobile") return res.status(403).json({ error: NOT_A_DRIVER });
+    if (user.status !== "active") return res.status(403).json({ error: "This account has been suspended" });
+    return res.json(await sessionResponse(prisma, user, null, { app, via }));
+  }
+
+  const all = await membershipsOf(prisma, user.id);
+  const active = all.filter((m) => m.status === "active");
+  if (!active.length) {
+    // On the web: signed in, to a plain "You're not part of any fleet
+    // right now" page (they can still accept an invitation or start a
+    // fleet). The app just shows the message.
+    if (app === "web") return res.json(await sessionResponse(prisma, user, null, { app, via }));
+    return res.status(403).json({ error: NO_FLEET_MESSAGE, code: "no_fleet" });
+  }
+  const usable = usableMemberships(all, app);
+  if (!usable.length) {
+    return res.status(403).json({ error: app === "mobile" ? NOT_A_DRIVER : DRIVERS_USE_THE_APP });
+  }
+
+  // Block login based on the chosen company's state.
+  const chosen = chooseMembership(usable, companyId);
+  const refusal = companyRefusal(chosen.company);
+  if (refusal) return refuseCompany(res, chosen.company, refusal);
+
+  return res.json(await sessionResponse(prisma, user, chosen, { app, via }));
 }
 
 // Issues a new access token (and rotates the refresh token) from a valid
@@ -539,8 +581,9 @@ export async function refresh(req, res) {
     if (!user) return res.status(401).json({ error: "Invalid refresh token" });
 
     const app = decoded.app ?? null;
+    const via = decoded.via ?? null;
     let membership = null;
-    if (user.isPlatformAdmin && !decoded.companyId) {
+    if (actsAsStaff(user.isPlatformAdmin, via) && !decoded.companyId) {
       if (user.status && user.status !== "active") {
         return res.status(401).json({ error: "This account has been deactivated", code: "account_inactive" });
       }
@@ -555,7 +598,7 @@ export async function refresh(req, res) {
     }
 
     await prisma.refreshToken.update({ where: { id: stored.id }, data: { revoked: true } });
-    return res.json(await sessionResponse(prisma, user, membership, { app }));
+    return res.json(await sessionResponse(prisma, user, membership, { app, via }));
   } catch (err) {
     return res.status(401).json({ error: "Invalid or expired refresh token" });
   }
@@ -605,7 +648,7 @@ export async function switchFleet(req, res) {
     if (req.body?.staffArea === true) {
       if (!me.isPlatformAdmin) return res.status(403).json({ error: "Only Figbloom staff have a staff area" });
       await revokeOld();
-      return res.json(await sessionResponse(prisma, user, null, { app: me.app }));
+      return res.json(await sessionResponse(prisma, user, null, { app: me.app, via: me.via }));
     }
     const companyId = String(req.body?.companyId ?? "").trim();
     if (!companyId) return res.status(400).json({ error: "Choose a fleet to switch to" });
@@ -624,7 +667,7 @@ export async function switchFleet(req, res) {
     if (refusal) return refuseCompany(res, membership.company, refusal);
 
     await revokeOld();
-    return res.json(await sessionResponse(prisma, user, membership, { app: me.app }));
+    return res.json(await sessionResponse(prisma, user, membership, { app: me.app, via: me.via }));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Could not switch fleet. Please try again." });
@@ -685,6 +728,9 @@ export async function forgotPassword(req, res) {
   }
 }
 
+const isDriverSomewhere = async (userId) =>
+  !!(await prisma.membership.findFirst({ where: { userId, role: "DRIVER", status: "active" }, select: { id: true } }));
+
 // Completes a password reset from a token issued by forgotPassword.
 export async function resetPassword(req, res) {
   try {
@@ -694,8 +740,8 @@ export async function resetPassword(req, res) {
     if (!email || !token || !newPassword) {
       return res.status(400).json({ error: "email, token, and newPassword are required" });
     }
-    if (newPassword.length < 8) {
-      return res.status(400).json({ error: "Password must be at least 8 characters" });
+    if (typeof newPassword !== "string" || newPassword.length > 256) {
+      return res.status(400).json({ error: "That password can't be used" });
     }
 
     const user = await prisma.user.findUnique({ where: { email } });
@@ -709,6 +755,24 @@ export async function resetPassword(req, res) {
       return res.status(400).json({ error: "This reset link is invalid or has expired" });
     }
 
+    // Figbloom sign-in (FLEET_COGNITO_CONTRACT.md section 2): someone with a
+    // Figbloom account sets its first password here (the "Set your password"
+    // email). Once it has one, it changes on the Figbloom sign-in page, except
+    // that a driver keeps resetting Fleet's own password, for the app.
+    if (cognitoSignInEnabled() && user.identitySub) {
+      try {
+        await figbloomAccounts.setInitialPassword(user.identitySub, newPassword);
+        await prisma.user.update({ where: { id: user.id }, data: { resetPasswordTokenHash: null, resetPasswordExpires: null } });
+        return res.json({ message: "Password set. Sign in with Figbloom.", figbloom: true });
+      } catch (err) {
+        const appPassword = err instanceof FigbloomAccountError && err.code === "use_figbloom_reset" && (await isDriverSomewhere(user.id));
+        if (!appPassword) throw err;
+      }
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: "Password must be at least 8 characters" });
+    }
     await prisma.user.update({
       where: { id: user.id },
       data: { passwordHash: await bcrypt.hash(newPassword, 10), resetPasswordTokenHash: null, resetPasswordExpires: null },
@@ -720,6 +784,7 @@ export async function resetPassword(req, res) {
 
     return res.json({ message: "Password updated. You can now sign in." });
   } catch (err) {
+    if (err instanceof FigbloomAccountError) return sendAccountError(res, err);
     console.error(err);
     return res.status(500).json({ error: "Failed to reset password" });
   }

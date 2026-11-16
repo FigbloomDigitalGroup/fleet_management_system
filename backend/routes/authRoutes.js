@@ -3,6 +3,7 @@ import { authenticate, authenticateIdentity, authorize } from "../middleware/aut
 import { handleSpreadsheetUpload } from "../middleware/upload.js";
 import {
   loginLimiter,
+  cognitoExchangeLimiter,
   forgotPasswordLimiter,
   resetPasswordLimiter,
   registerLimiter,
@@ -20,11 +21,15 @@ import {
   myMemberships,
   switchFleet,
 } from "../controllers/authController.js";
+import { cognitoExchange } from "../controllers/cognitoController.js";
 
 const router = express.Router();
 
 router.post("/register-company", registerLimiter, registerCompany);
 router.post("/login", loginLimiter, login);
+// Figbloom sign-in (ERP/FLEET_COGNITO_CONTRACT.md): the web dashboard's
+// callback page hands over the code from Cognito's hosted login.
+router.post("/cognito/exchange", cognitoExchangeLimiter, cognitoExchange);
 router.post("/refresh", refresh);
 router.post("/logout", logout);
 router.post("/forgot-password", forgotPasswordLimiter, forgotPassword);
