@@ -332,7 +332,7 @@ export default function RegisterPage() {
                     setPassword(e.target.value);
                     clearError("password");
                   }}
-                  placeholder={FIGBLOOM ? "At least 12 characters" : `At least ${MIN_PASSWORD} characters`}
+                  placeholder={FIGBLOOM ? "At least 8 characters" : `At least ${MIN_PASSWORD} characters`}
                   aria-invalid={!!fieldErrors.password}
                   aria-describedby="password-hint"
                   className={inputClass(!!fieldErrors.password)}

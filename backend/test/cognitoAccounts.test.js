@@ -45,7 +45,7 @@ let platformCalls;
 const fakeClient = {
   async createUser({ email, name, password, email_proven }) {
     platformCalls.push({ call: "createUser", email, name, password, email_proven });
-    if (password !== undefined && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(password)) {
+    if (password !== undefined && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password)) {
       throw new PlatformError("weak", 400, "invalid_password");
     }
     const found = accounts.get(email);
@@ -58,7 +58,7 @@ const fakeClient = {
     platformCalls.push({ call: "setInitialPassword", sub, password, emailProven });
     const account = [...accounts.values()].find((a) => a.sub === sub);
     if (!account || !account.createdByFleet || account.password) throw new PlatformError("set", 409, "password_already_set");
-    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(password)) throw new PlatformError("weak", 400, "invalid_password");
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password)) throw new PlatformError("weak", 400, "invalid_password");
     account.password = password;
     if (emailProven) account.emailVerified = true;
     return { ok: true };
@@ -201,7 +201,7 @@ test("sign-up: a password the pool refuses is a 400 with the rule; Fleet's 8 cha
   const weak = await call("POST", "/api/auth/register-company", { body: { ownerName: "Juma", email: "juma@x.test", password: "longbutweak" } });
   assert.equal(weak.status, 400);
   assert.equal(weak.body.code, "invalid_password");
-  assert.match(weak.body.error, /12 characters/);
+  assert.match(weak.body.error, /8 characters/);
   assert.equal(userByEmail("juma@x.test"), undefined);
 });
 

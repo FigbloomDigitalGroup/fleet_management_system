@@ -99,7 +99,7 @@ export default function ResetPasswordForm() {
           autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder={figbloomSignInEnabled() ? "At least 12 characters" : "Your new password"}
+          placeholder={figbloomSignInEnabled() ? "At least 8 characters" : "Your new password"}
           className="w-full px-3.5 py-2.5 rounded text-sm border border-gray-300 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
         />
         {figbloomSignInEnabled() && (
