@@ -6,7 +6,7 @@ import { PlatformError, sharedPlatformClient } from "./platform/client.js";
 
 // What a person reads when their password doesn't meet the Figbloom rule
 // (the customers pool's policy, figbloom-platform users.ts).
-export const FIGBLOOM_PASSWORD_RULE = "at least 12 characters, with an upper-case letter, a lower-case letter, a digit and a symbol";
+export const FIGBLOOM_PASSWORD_RULE = "at least 8 characters, with an upper-case letter, a lower-case letter, a digit and a symbol";
 
 // A refusal to show the person, or a failure to log: status and code are
 // what Fleet answers with.

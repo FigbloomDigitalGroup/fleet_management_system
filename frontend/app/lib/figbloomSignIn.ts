@@ -32,7 +32,7 @@ const POOLS: Record<FigbloomPool, { domain?: string; clientId?: string; callback
 
 // What a person reads when their password doesn't meet the Figbloom rule
 // (the API and the platform say the same).
-export const FIGBLOOM_PASSWORD_RULE = "at least 12 characters, with an upper-case letter, a lower-case letter, a digit and a symbol";
+export const FIGBLOOM_PASSWORD_RULE = "at least 8 characters, with an upper-case letter, a lower-case letter, a digit and a symbol";
 
 export function figbloomSignInEnabled(): boolean {
   return process.env.NEXT_PUBLIC_FIGBLOOM_SIGN_IN === "on";
@@ -41,7 +41,7 @@ export function figbloomSignInEnabled(): boolean {
 // null when the password is fine; otherwise what to fix.
 export function figbloomPasswordProblem(password: string): string | null {
   const missing: string[] = [];
-  if (password.length < 12) missing.push(`at least 12 characters (you've typed ${password.length})`);
+  if (password.length < 8) missing.push(`at least 8 characters (you've typed ${password.length})`);
   if (!/[A-Z]/.test(password)) missing.push("an upper-case letter");
   if (!/[a-z]/.test(password)) missing.push("a lower-case letter");
   if (!/\d/.test(password)) missing.push("a digit");
