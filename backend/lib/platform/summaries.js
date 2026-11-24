@@ -1,7 +1,8 @@
 // Company summaries for the Figbloom console (GET /api/platform/companies):
 // per company its id, name, status, created date, owner name and email, plan,
 // counts (vehicles, drivers, admins, trips in the last 30 days) and when a
-// location ping last arrived. No location data, and nothing about drivers
+// location ping last arrived, and when it asked for Figbloom HR
+// (hrRequestedAt). No location data, and nothing about drivers
 // beyond the count.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -22,6 +23,7 @@ export async function companySummaries(db, { id, now = new Date() } = {}) {
       subscriptionPlan: true,
       trialEndsAt: true,
       createdAt: true,
+      hrRequestedAt: true,
       memberships: {
         where: { role: "COMPANY_OWNER" },
         orderBy: { createdAt: "asc" },
@@ -86,6 +88,8 @@ export async function companySummaries(db, { id, now = new Date() } = {}) {
       plan: { name: c.subscriptionPlan, trialEndsAt: c.trialEndsAt },
       counts: { vehicles: p.vehicles, drivers: p.drivers, admins: p.admins, tripsLast30Days: p.tripsLast30Days },
       lastLocationPingAt: p.lastPing,
+      // the company asked for Figbloom HR (POST /api/hr/request); null if not
+      hrRequestedAt: c.hrRequestedAt ?? null,
       platform: {
         organizationId: p.organization?.platformId ?? null,
         tenantId: p.tenant?.platformId ?? null,

@@ -257,7 +257,8 @@ test("My HR passes HR's refusals on, and hides HR's own failures", async () => {
 test("status tells the web app what to show", async () => {
   const { h } = hr();
   const r = await call(h.status, { user: { id: "a", role: "ACCOUNTANT", companyId: "c1" } });
-  assert.deepEqual(r.body, { enabled: true, canOpenHr: true, hasMyHr: true });
+  // this fake platform has no access check: the connection can't be worked out
+  assert.deepEqual(r.body, { enabled: true, canOpenHr: true, hasMyHr: true, canRequestHr: true, connection: "unknown", requestedAt: null });
   const off = await call(hr({ env: {} }).h.status, { user: { id: "a", role: "ACCOUNTANT", companyId: "c1" } });
-  assert.deepEqual(off.body, { enabled: false, canOpenHr: false, hasMyHr: false });
+  assert.deepEqual(off.body, { enabled: false, canOpenHr: false, hasMyHr: false, canRequestHr: false, connection: null, requestedAt: null });
 });

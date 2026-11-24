@@ -21,6 +21,7 @@ import {
 } from "react-icons/fi";
 import { Role } from "../types/auth";
 import { isStaffRole, staffPageAllowed } from "./staffRoles";
+import { HrConnection, hrOpensDirectly } from "./hrLaunch";
 import { IoCarSportSharp } from "react-icons/io5";
 
 // One flat menu per role, always visible on desktop and the same list in the
@@ -35,6 +36,12 @@ export interface FleetNavItem {
   // Other pages that belong to this item (e.g. Routes under "Jobs & routes"),
   // so the item stays highlighted there.
   also?: string[];
+  // "hr": a plain click opens Figbloom HR in a new tab (lib/hrLaunch.ts)
+  // instead of going to href; href stays the in-app page it belongs to.
+  launch?: "hr";
+  // A small marker at the end of the item: "external" (opens another
+  // product in a new tab) or "connect" (not set up yet).
+  trailing?: "external" | "connect";
 }
 
 export interface FleetNav {
@@ -80,6 +87,7 @@ export function fleetNav(
     canManageTeam = false,
     showHr = false,
     showMyHr = false,
+    hrConnection = null,
   }: {
     isOwner: boolean;
     canEditCompany: boolean;
@@ -90,8 +98,14 @@ export function fleetNav(
     // HR & Payroll (one click into Figbloom HR) and My HR, when HR is on
     showHr?: boolean;
     showMyHr?: boolean;
+    // Whether HR is there for the company: connected (or not known) opens
+    // HR in a new tab; otherwise the item goes to the HR & Payroll page.
+    hrConnection?: HrConnection | null;
   }
 ): FleetNav {
+  const hrItem: FleetNavItem = hrOpensDirectly(hrConnection)
+    ? { label: "HR & Payroll", href: `${base}/hr`, icon: FiBookOpen, launch: "hr", trailing: "external" }
+    : { label: "HR & Payroll", href: `${base}/hr`, icon: FiBookOpen, trailing: "connect" };
   const items: FleetNavItem[] = [
     { label: "Overview", href: `${base}/dashboard`, icon: FiHome },
     { label: "Live map", href: `${base}/live-map`, icon: FiMapPin },
@@ -111,7 +125,7 @@ export function fleetNav(
     ...(!isOwner && canManageTeam ? [{ label: "Team", href: `${base}/team`, icon: FiUserPlus }] : []),
     // Billing isn't shown to Figbloom staff in a support view.
     ...((isOwner || role === "ACCOUNTANT") && !supportView ? [{ label: "Billing", href: `${base}/billing`, icon: FiCreditCard }] : []),
-    ...(showHr ? [{ label: "HR & Payroll", href: `${base}/hr`, icon: FiBookOpen }] : []),
+    ...(showHr ? [hrItem] : []),
     ...(showMyHr ? [{ label: "My HR", href: `${base}/my-hr`, icon: FiUser }] : []),
     ...(canEditCompany ? [{ label: "Settings", href: `${base}/settings`, icon: FiSliders }] : []),
   ];

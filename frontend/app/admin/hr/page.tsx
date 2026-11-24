@@ -1,8 +1,9 @@
 "use client";
 
-import HrHandoff from "../../components/HrHandoff";
+import HrPayrollCard from "../../components/HrPayrollCard";
 
-// HR & Payroll: one click into Figbloom HR (owner, full admins, accountants).
+// HR & Payroll: Figbloom HR for the company (owner, full admins, accountants):
+// open it in a new tab, or ask Figbloom for it.
 export default function HrPage() {
-  return <HrHandoff />;
+  return <HrPayrollCard />;
 }

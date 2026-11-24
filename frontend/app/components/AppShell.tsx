@@ -3,8 +3,8 @@
 import { MouseEvent, ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react";
 import { InShellContext } from "./InShell";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { FiBell, FiEye, FiHelpCircle, FiLogOut, FiMenu, FiX } from "react-icons/fi";
+import { usePathname, useRouter } from "next/navigation";
+import { FiBell, FiExternalLink, FiEye, FiHelpCircle, FiLogOut, FiMenu, FiX } from "react-icons/fi";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import { FaLocationPinLock } from "react-icons/fa6";
 import { useAuth } from "../context/AuthContext";
@@ -12,6 +12,7 @@ import { useAdminAccess } from "../lib/adminAccess";
 import { FleetNav, FleetNavItem, activeNavItem, fleetNav, platformNav } from "../lib/fleetNav";
 import { canManageTeam } from "../lib/staffRoles";
 import { useHrStatus } from "../lib/hrStatus";
+import { HR_LAUNCH_PATH, openHrLaunchTab } from "../lib/hrLaunch";
 import { apiRequest } from "../lib/api";
 import Avatar from "./Avatar";
 import BrandIcon from "./BrandIcon";
@@ -128,6 +129,7 @@ const TAB_LABELS: Record<string, string> = {
 
 export default function AppShell({ children, portal }: { children: ReactNode; portal: "admin" | "company" | "platform" }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout, exitSupportView } = useAuth();
   const { access } = useAdminAccess();
   const isOwner = user?.role === "COMPANY_OWNER";
@@ -150,8 +152,9 @@ export default function AppShell({ children, portal }: { children: ReactNode; po
             canManageTeam: manageTeam,
             showHr: hr.canOpenHr,
             showMyHr: hr.hasMyHr,
+            hrConnection: hr.connection,
           }),
-    [isPlatform, portal, isOwner, access, supportView, role, manageTeam, hr.canOpenHr, hr.hasMyHr]
+    [isPlatform, portal, isOwner, access, supportView, role, manageTeam, hr.canOpenHr, hr.hasMyHr, hr.connection]
   );
   // The item just tapped lights up straight away, before its page has
   // loaded; it is only kept while the address is still the one it was
@@ -221,6 +224,27 @@ export default function AppShell({ children, portal }: { children: ReactNode; po
     <div className={`print:hidden ${statsAtBottom ? "mt-6" : "mb-6"}`}>{header.stats}</div>
   );
 
+  // Figbloom HR, when it's there: a plain click opens it in a new tab and
+  // this page stays put (ctrl/cmd/middle-click open the same page anyway).
+  const launch = (e: MouseEvent) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    openHrLaunchTab(router.push);
+    setDrawerOpen(false);
+  };
+
+  function trailingFor(item: FleetNavItem) {
+    if (item.trailing === "external") return <FiExternalLink size={12} aria-hidden className="shrink-0 text-teal-300" />;
+    if (item.trailing === "connect") {
+      return (
+        <span className="shrink-0 rounded-full bg-orange-500/20 px-1.5 py-0.5 text-[10px] font-medium leading-none text-orange-200">
+          Connect
+        </span>
+      );
+    }
+    return null;
+  }
+
   function badgeFor(item: FleetNavItem) {
     if (item.badge === "alerts") return <CountBadge count={alertCount} tone="red" />;
     if (item.badge === "messages") return <CountBadge count={unreadMessages} tone="orange" />;
@@ -286,19 +310,41 @@ export default function AppShell({ children, portal }: { children: ReactNode; po
               {nav.items.map((item) => {
                 const Icon = item.icon;
                 const active = item === activeItem;
+                const itemClass = `flex min-h-11 items-center gap-3 rounded px-3 py-2 text-[13px] font-medium transition-colors lg:min-h-0 lg:text-xs ${
+                  active ? "bg-teal-800 text-white" : "text-teal-50 hover:bg-teal-900"
+                }`;
+                if (item.launch === "hr") {
+                  return (
+                    <a
+                      key={item.href}
+                      href={HR_LAUNCH_PATH}
+                      target="_blank"
+                      rel="noopener"
+                      onClick={launch}
+                      aria-current={active ? "page" : undefined}
+                      className={itemClass}
+                    >
+                      <Icon size={16} className="shrink-0" />
+                      <span className="flex-1">
+                        {item.label}
+                        <span className="sr-only"> (opens in a new tab)</span>
+                      </span>
+                      {trailingFor(item)}
+                    </a>
+                  );
+                }
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={(e) => navigateTo(e, item.href)}
                     aria-current={active ? "page" : undefined}
-                    className={`flex min-h-11 items-center gap-3 rounded px-3 py-2 text-[13px] font-medium transition-colors lg:min-h-0 lg:text-xs ${
-                      active ? "bg-teal-800 text-white" : "text-teal-50 hover:bg-teal-900"
-                    }`}
+                    className={itemClass}
                   >
                     <Icon size={16} className="shrink-0" />
                     <span className="flex-1">{item.label}</span>
                     {badgeFor(item)}
+                    {trailingFor(item)}
                   </Link>
                 );
               })}

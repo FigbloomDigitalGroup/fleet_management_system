@@ -2,7 +2,11 @@
 // section 3): one-click into HR (HR & Payroll) and My HR.
 //
 // - HR & Payroll (owner, full admins, accountants): POST /handoffs on the
-//   platform (target "hr") gives a one-time sign-in link; the browser opens it.
+//   platform (target "hr") gives a one-time sign-in link; the browser opens it
+//   (the web app's /hr/launch tab). Whether HR is there for the company
+//   (status.connection) is asked of the platform and kept a minute; a company
+//   without it can ask Figbloom for it (POST /api/hr/request, seen in the
+//   console's company summaries).
 // - My HR (everyone in a company, drivers included; the app will use the same
 //   routes later): payslips (HR doesn't make PDFs: the web app prints the
 //   payslip), leave, attendance and KPIs. Fleet calls HR's
@@ -35,22 +39,120 @@ const MY_HR_ROUTES = [
   ["GET", /^\/kpis$/],
 ];
 
+// How long a company's HR connection is remembered (the platform's own
+// cache_seconds, at most a minute); a failed check only briefly.
+const CONNECTION_CACHE_SECONDS = 60;
+const UNKNOWN_CACHE_SECONDS = 15;
+
 const fail = (res, status, code, error) => res.status(status).json({ error, code });
 
 /** deps: { db, getClient () -> PlatformClient | null, env, fetch } */
-export function makeHrHandlers({ db, getClient, env = process.env, fetch: fetchFn = globalThis.fetch, log = console }) {
+export function makeHrHandlers({ db, getClient, env = process.env, fetch: fetchFn = globalThis.fetch, log = console, now = Date.now }) {
   const enabled = () => hrIntegrationEnabled(env);
 
+  // Is Figbloom HR there for a company? (worked out from the platform, kept
+  // in memory a minute per company)
+  //   not_connected  no platform account yet, or HR isn't active for it
+  //   setting_up     HR is switched on but HR hasn't created/linked the company yet
+  //   connected      HR is on and linked: the handoff will work
+  //   unknown        the platform couldn't be asked; the launch page says why
+  const connections = new Map();
+
+  async function connectionOf(companyId) {
+    const cached = connections.get(companyId);
+    if (cached && cached.until > now()) return cached.value;
+    const { value, seconds } = await askPlatform(companyId);
+    connections.set(companyId, { value, until: now() + seconds * 1000 });
+    return value;
+  }
+
+  async function askPlatform(companyId) {
+    const client = getClient();
+    if (!client) return { value: "unknown", seconds: UNKNOWN_CACHE_SECONDS };
+    try {
+      const link = await db.platformLink.findUnique({
+        where: { kind_localId: { kind: "tenant", localId: String(companyId) } },
+        select: { platformId: true },
+      });
+      if (!link?.platformId) return { value: "not_connected", seconds: CONNECTION_CACHE_SECONDS };
+      const module = await client.getTenantModule(link.platformId, "hr");
+      const asked = Number(module?.cache_seconds);
+      const seconds = asked > 0 ? Math.min(asked, CONNECTION_CACHE_SECONDS) : CONNECTION_CACHE_SECONDS;
+      if (module?.module_status !== "active") return { value: "not_connected", seconds };
+      try {
+        await client.getTenantLink(link.platformId, "hr");
+        return { value: "connected", seconds };
+      } catch (err) {
+        if (err?.status === 404) return { value: "setting_up", seconds };
+        throw err;
+      }
+    } catch (err) {
+      log.error("[hr] connection check failed:", err?.code || err?.message || err);
+      return { value: "unknown", seconds: UNKNOWN_CACHE_SECONDS };
+    }
+  }
+
+  const requestedAtOf = async (companyId) => {
+    const company = await db.company.findUnique({ where: { id: companyId }, select: { hrRequestedAt: true } });
+    return company?.hrRequestedAt ? new Date(company.hrRequestedAt).toISOString() : null;
+  };
+
+  // GET /api/hr/status -> { enabled, canOpenHr, hasMyHr, canRequestHr,
+  // connection (null unless canOpenHr), requestedAt }
   async function status(req, res) {
     const on = enabled();
+    const opens = on && canOpenHr(req.user) && !!req.user.companyId;
+    let connection = null;
+    let requestedAt = null;
+    if (opens) {
+      try {
+        [connection, requestedAt] = await Promise.all([connectionOf(req.user.companyId), requestedAtOf(req.user.companyId)]);
+      } catch (err) {
+        log.error("[hr] status failed:", err?.message || err);
+        connection = "unknown";
+      }
+    }
     return res.json({
       enabled: on,
       canOpenHr: on && canOpenHr(req.user),
       hasMyHr: on && hasMyHr(req.user) && !!hrMyHrUrl(env),
+      canRequestHr: opens,
+      connection,
+      requestedAt,
     });
   }
 
-  // POST /api/hr/handoff { returnTo? } -> { url, expiresAt }
+  // POST /api/hr/request -> { requestedAt }: the company asks Figbloom for HR
+  // (staff see it in the console and switch HR on there). Asking again
+  // answers the first request's time.
+  async function request(req, res) {
+    if (!enabled()) return fail(res, 404, "hr_off", "Figbloom HR isn't switched on for Fleet yet.");
+    if (!canOpenHr(req.user) || !req.user.companyId) {
+      return fail(res, 403, "role_forbidden", "Only the fleet owner, full admins and accountants can request HR & Payroll.");
+    }
+    const companyId = req.user.companyId;
+    try {
+      const connection = await connectionOf(companyId);
+      if (connection === "connected" || connection === "setting_up") {
+        return fail(res, 409, "already_connected", "Figbloom HR is already switched on for your company.");
+      }
+      await db.company.updateMany({
+        where: { id: companyId, hrRequestedAt: null },
+        data: { hrRequestedAt: new Date(now()), hrRequestedById: req.user.id },
+      });
+      connections.delete(companyId);
+      return res.json({ requestedAt: await requestedAtOf(companyId) });
+    } catch (err) {
+      log.error("[hr] request failed:", err?.message || err);
+      return fail(res, 500, "internal_error", "Couldn't send the request. Try again.");
+    }
+  }
+
+  // POST /api/hr/handoff { returnTo? } -> { url, expiresAt }, or { error,
+  // code }: 404 hr_off, 403 role_forbidden, 503 platform_not_configured,
+  // 409 hr_not_enabled_for_company (HR isn't on for the company), 409
+  // hr_setting_up (on, but HR hasn't linked the company yet), 429
+  // rate_limited, 502 platform_unavailable.
   async function handoff(req, res) {
     if (!enabled()) return fail(res, 404, "hr_off", "Figbloom HR isn't switched on for Fleet yet.");
     if (!canOpenHr(req.user)) return fail(res, 403, "role_forbidden", "Only the fleet owner, full admins and accountants open HR & Payroll.");
@@ -70,9 +172,15 @@ export function makeHrHandlers({ db, getClient, env = process.env, fetch: fetchF
       });
       return res.json({ url: answer.url, expiresAt: answer.expires_at ?? null });
     } catch (err) {
-      if (["target_not_enabled", "target_not_linked", "tenant_not_found"].includes(err?.code) || err?.status === 404) {
+      if (err?.code === "target_not_linked") {
+        connections.delete(req.user.companyId);
+        return fail(res, 409, "hr_setting_up", "Figbloom HR is still being set up for your company.");
+      }
+      if (["target_not_enabled", "tenant_not_found"].includes(err?.code) || err?.status === 404) {
+        connections.delete(req.user.companyId);
         return fail(res, 409, "hr_not_enabled_for_company", "HR & Payroll isn't set up for your company yet. Ask Figbloom to switch it on.");
       }
+      if (err?.status === 429) return fail(res, 429, "rate_limited", "Too many attempts. Wait a minute and try again.");
       log.error("[hr] handoff failed:", err?.code || err?.message || err);
       return fail(res, 502, "platform_unavailable", "Figbloom HR didn't answer. Try again in a minute.");
     }
@@ -156,5 +264,5 @@ export function makeHrHandlers({ db, getClient, env = process.env, fetch: fetchF
     }
   }
 
-  return { status, handoff, myHr, unavailability };
+  return { status, request, handoff, myHr, unavailability };
 }

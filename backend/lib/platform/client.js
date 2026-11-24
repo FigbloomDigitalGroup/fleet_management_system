@@ -84,6 +84,21 @@ export class PlatformClient {
     return this.call("POST", "/handoffs", body);
   }
 
+  // GET /tenants/{id}/modules/{module}: whether another product (e.g. "hr")
+  // is switched on for a customer account. -> { module_status: "trial" |
+  // "active" | "past_due" | "suspended" | "cancelled" | null, cache_seconds,
+  // ... }; 404 tenant_not_found.
+  getTenantModule(tenantId, module) {
+    return this.call("GET", `/tenants/${encodeURIComponent(tenantId)}/modules/${encodeURIComponent(module)}`);
+  }
+
+  // GET /tenants/{id}/links/{module}: that product's own record for the
+  // account, once it has created one. -> { local_tenant_id, ... }; 404
+  // not_linked while it hasn't.
+  getTenantLink(tenantId, module) {
+    return this.call("GET", `/tenants/${encodeURIComponent(tenantId)}/links/${encodeURIComponent(module)}`);
+  }
+
   // POST /users: the person's Figbloom account (ERP/FLEET_COGNITO_CONTRACT.md
   // section 1). { email, name, password?, email_proven? } ->
   // { user_sub, created }. An existing account comes back unchanged
