@@ -1,0 +1,211 @@
+/* The "Opening Figbloom HR" screen: the same full-screen orbit loader HR's
+   /handoff page and boot screen show (bloomHR FigbloomLoader + index.css),
+   so the hand-off to HR looks like one screen. Scoped to /hr/launch (CSS
+   module: class and keyframe names are local, so globals.css's .fb-loader
+   is untouched). Light only, whatever the app's theme. */
+
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  overflow-y: auto;
+  padding: 24px 16px;
+  background: rgb(246 248 246);
+  color-scheme: light;
+  font-family: var(--fb-outfit), Outfit, system-ui, sans-serif;
+  font-weight: 300;
+  color: rgb(75 85 99);
+}
+
+/* margin: auto centres both ways and still scrolls when taller than the screen */
+.loader,
+.error {
+  margin: auto;
+}
+
+.loader {
+  --fb-green: rgb(23 64 42);
+  --fb-sweep: rgb(242 106 27);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.logo circle,
+.logo path {
+  stroke: var(--fb-green);
+}
+
+.logo .leaf {
+  stroke: none;
+  fill: var(--fb-green);
+}
+
+.arc {
+  stroke-dasharray: 80 280;
+  stroke-dashoffset: -50;
+}
+
+.label {
+  font-size: 15px;
+  letter-spacing: .02em;
+  text-align: center;
+}
+
+.still {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.dot {
+  animation: fb-dots 1.4s ease-in-out infinite;
+}
+
+.dot:nth-child(2) {
+  animation-delay: .2s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: .4s;
+}
+
+.animated .arc {
+  transform-box: view-box;
+  transform-origin: 32px 29px;
+  animation: fb-orbit 2.2s infinite;
+}
+
+.animated .leaf {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+  animation: fb-leaf 2.2s infinite;
+}
+
+.animated .bowl {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: fb-bowl 2.2s infinite;
+}
+
+@keyframes fb-orbit {
+  0% { transform: rotate(0deg); stroke-dasharray: 80 280; stroke-dashoffset: -50; stroke: var(--fb-green); animation-timing-function: cubic-bezier(.55,0,.25,1); }
+  12% { transform: rotate(0deg); stroke-dasharray: 80 280; stroke-dashoffset: -50; stroke: var(--fb-green); animation-timing-function: cubic-bezier(.6,0,.4,1); }
+  45% { transform: rotate(200deg); stroke-dasharray: 190 170; stroke-dashoffset: 5; stroke: var(--fb-sweep); animation-timing-function: cubic-bezier(.3,0,.2,1); }
+  78% { transform: rotate(360deg); stroke-dasharray: 80 280; stroke-dashoffset: -50; stroke: var(--fb-green); }
+  100% { transform: rotate(360deg); stroke-dasharray: 80 280; stroke-dashoffset: -50; stroke: var(--fb-green); }
+}
+
+@keyframes fb-leaf {
+  0%, 16% { transform: scale(1) rotate(0deg); opacity: 1; animation-timing-function: cubic-bezier(.5,0,.75,0); }
+  26% { transform: scale(0) rotate(-35deg); opacity: 0; }
+  62% { transform: scale(0) rotate(-35deg); opacity: 0; animation-timing-function: cubic-bezier(.2,.8,.3,1.2); }
+  72% { transform: scale(1.22) rotate(10deg); opacity: 1; animation-timing-function: ease-in-out; }
+  80% { transform: scale(.92) rotate(-5deg); opacity: 1; animation-timing-function: ease-in-out; }
+  88%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes fb-bowl {
+  0%, 74% { transform: scale(1); }
+  80% { transform: scale(.94); }
+  88% { transform: scale(1.03); }
+  95%, 100% { transform: scale(1); }
+}
+
+@keyframes fb-dots {
+  0%, 100% { opacity: .25; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animated .arc,
+  .animated .leaf,
+  .animated .bowl,
+  .dot {
+    animation: none;
+  }
+}
+
+/* Error: the static logo above the message and buttons, on the same page
+   colour and font, no card. */
+.error {
+  --fb-green: rgb(23 64 42);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.title {
+  margin-top: 24px;
+  font-size: 22px;
+  line-height: 1.3;
+  color: rgb(17 24 39);
+  outline: none;
+}
+
+.message {
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 280px;
+  margin-top: 28px;
+}
+
+.primary,
+.secondary,
+.link {
+  display: block;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font: inherit;
+  font-size: 15px;
+  text-align: center;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.primary {
+  border: 1px solid var(--fb-green);
+  background: var(--fb-green);
+  color: #fff;
+}
+
+.primary:hover {
+  background: rgb(15 46 30);
+}
+
+.secondary {
+  border: 1px solid rgb(209 213 219);
+  background: transparent;
+  color: rgb(55 65 81);
+}
+
+.secondary:hover {
+  background: rgb(255 255 255);
+}
+
+.link {
+  border: 1px solid transparent;
+  color: var(--fb-green);
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.primary:focus-visible,
+.secondary:focus-visible,
+.link:focus-visible {
+  outline: 2px solid rgb(242 106 27);
+  outline-offset: 2px;
+}
