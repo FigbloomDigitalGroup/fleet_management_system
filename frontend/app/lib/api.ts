@@ -14,6 +14,9 @@ interface ApiRequestOptions extends RequestInit {
   // itself, next to the form (sign-in, sign-up). Connection and server
   // problems still pop up.
   notifyErrors?: boolean;
+  // true: no popup at all, not even for connection or server problems (a
+  // page that shows every failure itself, e.g. the HR launch tab).
+  silent?: boolean;
 }
 
 // What a failed request throws: the message a person should read, plus the
@@ -153,7 +156,7 @@ export async function apiRequest<T = any>(
   // FormData bodies (file uploads) must NOT get an explicit Content-Type —
   // the browser sets its own multipart boundary only when we leave it unset.
   const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
-  const { successMessage, notifyErrors = true, ...init } = options;
+  const { successMessage, notifyErrors = true, silent = false, ...init } = options;
   const method = (init.method || "GET").toUpperCase();
 
   // A Figbloom staff support view is read-only; the API refuses changes too,
@@ -174,7 +177,7 @@ export async function apiRequest<T = any>(
       },
     });
   } catch {
-    throw failed(isOffline() ? OFFLINE_MESSAGE : UNREACHABLE_MESSAGE);
+    throw failed(isOffline() ? OFFLINE_MESSAGE : UNREACHABLE_MESSAGE, undefined, undefined, !silent);
   }
 
   // The support view ran out (or was ended): back to the staff session.
@@ -207,7 +210,7 @@ export async function apiRequest<T = any>(
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    const quiet = !notifyErrors && res.status < 500;
+    const quiet = silent || (!notifyErrors && res.status < 500);
     throw failed(friendlyStatusMessage(res.status, data.error), res.status, data, !quiet);
   }
 

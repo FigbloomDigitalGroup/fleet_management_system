@@ -93,7 +93,8 @@ export const STAFF_PERMISSIONS = {
       [["PATCH", "DELETE"], new RegExp(`^/api/expenses/(?!mine$)${ID}$`)],
       ["PATCH", new RegExp(`^/api/expenses/${ID}/review$`)],
       ["POST", /^\/api\/billing\/checkout$/],
-      ["POST", /^\/api\/hr\/handoff$/],
+      // HR & Payroll: open it, or ask Figbloom for it
+      ["POST", /^\/api\/hr\/(handoff|request)$/],
     ],
   },
   MECHANIC: {

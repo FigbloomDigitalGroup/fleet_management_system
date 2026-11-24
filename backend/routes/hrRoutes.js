@@ -13,6 +13,7 @@ const hr = makeHrHandlers({ db: prisma, getClient: sharedPlatformClient });
 const router = express.Router();
 router.use(authenticate);
 router.get("/status", hr.status);
+router.post("/request", hr.request);
 router.post("/handoff", hr.handoff);
 router.get("/unavailability", hr.unavailability);
 router.use("/my", hr.myHr);
