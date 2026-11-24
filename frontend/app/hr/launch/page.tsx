@@ -2,18 +2,30 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { IconType } from "react-icons";
-import { FiAlertCircle, FiClock, FiLock, FiSettings, FiShield, FiWifiOff } from "react-icons/fi";
+import localFont from "next/font/local";
 import { apiRequest, type ApiError } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { HR_LAUNCH_PATH, hrAreaFor } from "../../lib/hrLaunch";
-import BrandIcon from "../../components/BrandIcon";
+import styles from "./launch.module.css";
+
+// Outfit, as Figbloom HR uses: self-hosted (app/fonts, SIL OFL) so the build
+// never fetches Google Fonts.
+const outfit = localFont({
+  src: "../../fonts/outfit-latin-300-normal.woff2",
+  weight: "300",
+  style: "normal",
+  display: "swap",
+  variable: "--fb-outfit",
+});
 
 // The new tab Figbloom HR opens in (opened by the HR & Payroll menu item and
 // card). It asks Fleet for a one-time sign-in link (POST /api/hr/handoff,
 // signed in the same way as the rest of the app: this tab shares the
 // session) and replaces itself with it. If that fails, it says why in plain
 // words. The link holds a one-time code: never shown or logged.
+//
+// It looks exactly like Figbloom HR's own "Opening Figbloom HR" screen (its
+// /handoff page and boot screen), so going from Fleet to HR is one screen.
 
 type Problem = "not_enabled" | "setting_up" | "forbidden" | "session" | "rate_limited" | "unreachable";
 
@@ -31,34 +43,28 @@ function problemOf(err: unknown): Problem {
   return "unreachable";
 }
 
-const PROBLEMS: Record<Problem, { icon: IconType; title: string; message: string }> = {
+const PROBLEMS: Record<Problem, { title: string; message: string }> = {
   not_enabled: {
-    icon: FiSettings,
     title: "Figbloom HR isn't set up for your company yet",
     message: "Ask Figbloom to switch on HR & Payroll for your company, and we'll get in touch to set it up.",
   },
   setting_up: {
-    icon: FiClock,
     title: "Figbloom HR is still being set up",
     message: "Figbloom HR is switched on for your company and is being prepared. The owner will receive an email invitation once it's ready.",
   },
   forbidden: {
-    icon: FiShield,
     title: "Only owners and admins can open HR & Payroll",
     message: "Ask your fleet owner or a full admin if you need access to HR & Payroll.",
   },
   session: {
-    icon: FiLock,
     title: "Your session has ended",
     message: "Sign in to Figbloom Fleet again, then open HR & Payroll.",
   },
   rate_limited: {
-    icon: FiClock,
     title: "Too many attempts",
     message: "Wait a minute and try again.",
   },
   unreachable: {
-    icon: FiWifiOff,
     title: "We couldn't reach Figbloom HR",
     message: "Figbloom HR didn't answer. Check your connection and try again in a minute.",
   },
@@ -116,79 +122,74 @@ export default function HrLaunchPage() {
   }
 
   const shown = problem ? PROBLEMS[problem] : null;
-  const Icon = shown?.icon ?? FiAlertCircle;
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-gray-50 px-4 py-10 text-gray-900">
-      <span className="mb-6 flex items-center gap-2 text-lg font-bold text-teal-900">
-        <BrandIcon variant="dark" className="h-6 w-6" />
-        FIGBLOOM FLEET
-      </span>
-      <div className="w-full max-w-md rounded-lg bg-white p-8 text-center shadow-sm ring-1 ring-black/5">
-        {!shown ? (
-          <div role="status" aria-live="polite">
-            <span
-              aria-hidden
-              className="mx-auto block h-12 w-12 animate-spin rounded-full border-4 border-teal-100 border-t-teal-600"
-            />
-            <h1 className="mt-6 text-lg font-semibold">Connecting you to Figbloom HR</h1>
-            <p className="mt-2 text-sm text-gray-600">Signing you in securely. This takes a moment.</p>
-            {slowAttempt === attempt && <p className="mt-3 text-sm text-gray-500">Still working…</p>}
+    <div className={`${outfit.variable} ${styles.screen}`}>
+      {!shown ? (
+        <div className={`${styles.loader} ${styles.animated}`} role="status" aria-live="polite" aria-label="Opening Figbloom HR">
+          <FigbloomMark size={120} />
+          <div className={styles.label}>
+            <div>
+              Opening Figbloom HR
+              <span className={styles.dot}>.</span>
+              <span className={styles.dot}>.</span>
+              <span className={styles.dot}>.</span>
+            </div>
+            {slowAttempt === attempt && <div className={styles.still}>Still working…</div>}
           </div>
-        ) : (
-          <div role="alert">
-            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-orange-50 text-orange-600">
-              <Icon size={22} aria-hidden />
-            </span>
-            <h1 ref={titleRef} tabIndex={-1} className="mt-5 text-lg font-semibold outline-none">
-              {shown.title}
-            </h1>
-            <p className="mt-2 text-sm text-gray-600">{shown.message}</p>
-            <div className="mt-6 flex flex-col gap-2">
-              {problem === "session" ? (
-                <Link
-                  href={`/login?next=${encodeURIComponent(HR_LAUNCH_PATH)}`}
-                  className="rounded bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
-                >
-                  Sign in
-                </Link>
-              ) : (
-                <>
-                  {problem === "not_enabled" && (
-                    <Link href={`${area}/hr`} className="rounded bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700">
-                      Request Figbloom HR
-                    </Link>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setAttempt((n) => n + 1)}
-                    className={
-                      problem === "not_enabled"
-                        ? "rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                        : "rounded bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
-                    }
-                  >
-                    Try again
-                  </button>
-                </>
-              )}
-              {cantClose ? (
-                <Link href={`${area}/dashboard`} className="px-4 py-2 text-sm font-medium text-teal-700 hover:underline">
-                  Back to Figbloom Fleet
-                </Link>
-              ) : (
+        </div>
+      ) : (
+        <div className={styles.error} role="alert">
+          <FigbloomMark size={64} />
+          <h1 ref={titleRef} tabIndex={-1} className={styles.title}>
+            {shown.title}
+          </h1>
+          <p className={styles.message}>{shown.message}</p>
+          <div className={styles.actions}>
+            {problem === "session" ? (
+              <Link href={`/login?next=${encodeURIComponent(HR_LAUNCH_PATH)}`} className={styles.primary}>
+                Sign in
+              </Link>
+            ) : (
+              <>
+                {problem === "not_enabled" && (
+                  <Link href={`${area}/hr`} className={styles.primary}>
+                    Request Figbloom HR
+                  </Link>
+                )}
                 <button
                   type="button"
-                  onClick={closeTab}
-                  className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  onClick={() => setAttempt((n) => n + 1)}
+                  className={problem === "not_enabled" ? styles.secondary : styles.primary}
                 >
-                  Close tab
+                  Try again
                 </button>
-              )}
-            </div>
+              </>
+            )}
+            {cantClose ? (
+              <Link href={`${area}/dashboard`} className={styles.link}>
+                Back to Figbloom Fleet
+              </Link>
+            ) : (
+              <button type="button" onClick={closeTab} className={styles.secondary}>
+                Close tab
+              </button>
+            )}
           </div>
-        )}
-      </div>
-    </main>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The Figbloom HR orbit logo (bloomHR FigbloomLoader). It moves only inside
+// .animated (the loading screen); the error state shows it still.
+function FigbloomMark({ size }: { size: number }) {
+  return (
+    <svg className={styles.logo} viewBox="8 5 48 48" aria-hidden="true" width={size} height={size}>
+      <circle className={styles.arc} cx="32" cy="29" r="19" pathLength="360" fill="none" strokeWidth="5.5" strokeLinecap="round" />
+      <circle className={styles.bowl} cx="32" cy="29" r="9" fill="none" strokeWidth="6.5" />
+      <path className={styles.leaf} d="M33 14.5 C33 8.5 38 5.5 43 5.5 C43 11.5 39 14.5 33 14.5 Z" />
+    </svg>
   );
 }
